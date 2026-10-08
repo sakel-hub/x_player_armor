@@ -1,5 +1,12 @@
 # X Player Armor (`x_player_armor`)
 
+[![ContentDB](https://content.luanti.org/packages/SaKeL/x_player_armor/shields/title/)](https://content.luanti.org/packages/SaKeL/x_player_armor/)
+[![ContentDB Downloads](https://content.luanti.org/packages/SaKeL/x_player_armor/shields/downloads/)](https://content.luanti.org/packages/SaKeL/x_player_armor/)
+![Luanti](https://img.shields.io/badge/Luanti-5.10%2B-5599ff.svg)
+[![Luacheck](https://github.com/sakel-hub/x_player_armor/actions/workflows/luacheck.yml/badge.svg)](https://github.com/sakel-hub/x_player_armor/actions)
+[![License: LGPL 2.1](https://img.shields.io/badge/License-LGPL_v2.1-blue.svg)](LICENSE.txt)
+[![Media License: CC-BY 4.0](https://img.shields.io/badge/Media-CC_BY_4.0-lightgrey.svg)](LICENSE.txt)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/sakel-hub/x_player_armor/pulls)
 ![AI-Assisted](https://img.shields.io/badge/AI--assisted-gray)
 
 A modern, high-performance player armor and shield mod for Luanti. Built to give players full 3D visual gear, active shield combat, and elemental survival perks while keeping your character skin completely intact and multiplayer gameplay butter-smooth.

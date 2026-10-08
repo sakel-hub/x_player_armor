@@ -17,6 +17,8 @@ High-performance modular player armor, shield defense, durability, and damage mi
 - [Effects & Physics Subsystem](#effects--physics-subsystem)
 - [Armor Stand Subsystem](#armor-stand-subsystem)
 - [Items & Registration Subsystem](#items--registration-subsystem)
+- [Crafting Recipes Subsystem](#crafting-recipes-subsystem)
+- [Skins & Textures Subsystem](#skins--textures-subsystem)
 - [UI & Formspecs Subsystem](#ui--formspecs-subsystem)
 - [HUD Subsystems](#hud-subsystems)
   - [Combat HUD Overlay](#combat-hud-overlay)
@@ -112,7 +114,7 @@ High-performance modular player armor, shield defense, durability, and damage mi
 | `GROUP_ELEMENTS` | `table` | Inverted mapping derived programmatically from ELEMENT_GROUPS |
 | `SLOT_LABELS` | `{ head = any, torso = any, legs = any, feet = any, shield = any, ... }` |  |
 | `MODELS` | `{ head = "x_player_armor_helmet.glb", torso = "x_player_armor_chestplate.glb", ... }` |  |
-| `PREVIEW_SLOTS` | `{ body = 0, head = 1, torso = 2, legs = 3, feet = 4, shield = 5, ... }` |  |
+| `PREVIEW_SLOTS` | `{ body = 0, body10 = 0, body18 = 1, head = 2, torso = 3, legs = 4, ... }` |  |
 | `BONES` | `{ head = "Head", body = "Body", arm_l = "Arm_Left", arm_r = "Arm_Right", ... }` |  |
 | `ELEMENT_PIECES` | `{ head = ("head"), torso = ("torso","sleeve_l","sleeve_r"), ... }` |  |
 | `ATTACH_TRANSFORMS` | `{ glb = table, b3d = table }` |  |
@@ -132,6 +134,7 @@ High-performance modular player armor, shield defense, durability, and damage mi
 | `COMBAT_HUD_TIMEOUT` | `number` |  |
 | `COMBAT_HUD_POSITION` | `any` |  |
 | `COMBAT_HUD_SCALE` | `number` |  |
+| `SHIELD_HUD_ENABLE` | `any` |  |
 | `SHIELD_HUD_DELAY` | `number` |  |
 | `BLOCK_CONE_ANGLE` | `integer` | Shield blocking & projectile deflection baseline constants |
 | `BLOCK_ASYMMETRIC_BIAS` | `integer` |  |
@@ -312,6 +315,22 @@ x_player_armor.register_on_update(func: fun(player: ObjectRef)) -> nil
 
 ---
 
+### `x_player_armor.register_on_block(func)`
+
+Registers a callback when a player successfully blocks an incoming attack or deflects a projectile with a shield.
+
+```lua
+x_player_armor.register_on_block(func: fun(player: ObjectRef, hitter_or_proj: (ObjectRef|table), damage: number, shield_stack: ItemStack)) -> nil
+```
+
+**Parameters:**
+- `func` (`fun(player: ObjectRef, hitter_or_proj: (ObjectRef|table), damage: number, shield_stack: ItemStack)`)
+
+**Returns:**
+- (`nil`)
+
+---
+
 ### `x_player_armor.run_callbacks(event_name, ...)`
 
 Dispatches a registered callback event across listeners.
@@ -360,6 +379,39 @@ x_player_armor.register_material(material: string, def: table) -> nil
 
 **Returns:**
 - (`nil`)
+
+---
+
+### `x_player_armor.get_legacy_replacement(name)`
+
+Resolves the modern x_player_armor item technical name if the given name is a legacy item.
+
+```lua
+x_player_armor.get_legacy_replacement(name: string) -> string?
+```
+
+**Parameters:**
+- `name` (`string`) — Technical item name (e.g. "3d_armor:helmet_diamond" or ":3d_armor:helmet_diamond")
+
+**Returns:**
+- `modern_name` (`string?`) — Replacement modern technical name, or nil if not superseded
+
+---
+
+### `x_player_armor.get_armor_def(item_name)`
+
+Retrieves the armor definition table for a registered armor item.
+Checks internal registered_armors first, falling back to core.registered_tools or core.registered_items.
+
+```lua
+x_player_armor.get_armor_def(item_name: string) -> table?
+```
+
+**Parameters:**
+- `item_name` (`string`) — Technical item name
+
+**Returns:**
+- `def` (`table?`) — Registered armor item definition or nil
 
 ---
 
@@ -1033,6 +1085,38 @@ x_player_armor.cleanup_orphaned_visuals() -> number
 
 ---
 
+### `x_player_armor.resolve_player_skin(player)`
+
+Resolves the player's active skin and produces the canonical dual-slot texture pair.
+
+```lua
+x_player_armor.resolve_player_skin(player: ObjectRef) -> SkinResolution
+```
+
+**Parameters:**
+- `player` (`ObjectRef`) — Target player
+
+**Returns:**
+- `resolution` (`SkinResolution`)
+
+---
+
+### `x_player_armor.get_skin_info(player)`
+
+Retrieves skin information for a player.
+
+```lua
+x_player_armor.get_skin_info(player: ObjectRef) -> SkinResolution
+```
+
+**Parameters:**
+- `player` (`ObjectRef`) — Target player
+
+**Returns:**
+- `resolution` (`SkinResolution`)
+
+---
+
 ### `x_player_armor.can_block(player)`
 
 Evaluates whether a player is capable of blocking with an equipped shield.
@@ -1179,6 +1263,21 @@ x_player_armor.format_armor_tooltip_from_def(name: string, def: table) -> string
 
 **Returns:**
 - `tooltip` (`string?`) — Formatted tooltip or nil
+
+---
+
+### `x_player_armor.force_alias(legacy_name, modern_name)`
+
+```lua
+x_player_armor.force_alias(legacy_name: string, modern_name: string) -> nil
+```
+
+**Parameters:**
+- `legacy_name` (`string`) — Old or legacy item name
+- `modern_name` (`string`) — Replacement modern item name
+
+**Returns:**
+- (`nil`)
 
 ---
 
@@ -1858,11 +1957,135 @@ x_player_armor.stand.get_stand_shield(pos: vector) -> ObjectRef?
 
 Armor item registration, tier generation, textures, and craft recipe orchestration.
 
-*No exported public functions in this section.*
+### `x_player_armor.items.get_materials()`
+
+Returns the defined armor material configurations table.
+
+```lua
+x_player_armor.items.get_materials() -> table<string,table>
+```
+
+**Returns:**
+- `materials` (`table<string,table>`)
+
+---
+
+### `x_player_armor.items.get_pieces()`
+
+Returns the defined armor equipment pieces configuration table.
+
+```lua
+x_player_armor.items.get_pieces() -> table<string,table>
+```
+
+**Returns:**
+- `pieces` (`table<string,table>`)
+
+---
+
+## Crafting Recipes Subsystem
+
+Crafting recipe definitions and ingredient queries for armor equipment.
+
+### `x_player_armor.crafting.get_recipe_ingredients()`
+
+Returns the registered crafting recipe ingredients mapping by material key.
+
+```lua
+x_player_armor.crafting.get_recipe_ingredients() -> table<string,string>
+```
+
+**Returns:**
+- `ingredients` (`table<string,string>`) — Table mapping material keys to crafting ingredient strings
+
+---
+
+## Skins & Textures Subsystem
+
+Player skin resolution, 1.0 vs 1.8 format detection, and clothing layer compositing.
+
+### `x_player_armor.skins.detect_texture_format(texture_name)`
+
+Detects whether a skin texture represents a 1.8 (64x64) or 1.0 (64x32) layout.
+Inspects naming conventions, skinsdb metadata, and cached dimensions.
+
+```lua
+x_player_armor.skins.detect_texture_format(texture_name: string) -> string
+```
+
+**Parameters:**
+- `texture_name` (`string`) — Texture filename or modifier string
+
+**Returns:**
+- `format` (`string`) — Format identifier ("1.0" or "1.8")
+
+---
+
+### `x_player_armor.skins.get_clothing_overlay(player_name)`
+
+Resolves active clothing overlays for a player if the clothing mod is installed.
+
+```lua
+x_player_armor.skins.get_clothing_overlay(player_name: string) -> string?
+```
+
+**Parameters:**
+- `player_name` (`string`) — Technical player name
+
+**Returns:**
+- `overlay_string` (`string?`) — Combined clothing overlay texture string or nil
+
+---
+
+### `x_player_armor.skins.resolve_player_skin(player)`
+
+Resolves the player's active skin and produces the canonical dual-slot texture pair.
+
+```lua
+x_player_armor.skins.resolve_player_skin(player: ObjectRef) -> SkinResolution
+```
+
+**Parameters:**
+- `player` (`ObjectRef`) — Target player
+
+**Returns:**
+- `resolution` (`SkinResolution`) — Resolved skin data with body10 and body18 textures
+
+---
+
+### `x_player_armor.skins.get_skin_info(player)`
+
+Convenience accessor for skin info.
+
+```lua
+x_player_armor.skins.get_skin_info(player: ObjectRef) -> SkinResolution
+```
+
+**Parameters:**
+- `player` (`ObjectRef`) — Target player
+
+**Returns:**
+- `resolution` (`SkinResolution`) — Resolved skin data
+
+---
 
 ## UI & Formspecs Subsystem
 
 Modern responsive formspecs, sfinv tab integration, unified_inventory, and i3 adapters.
+
+### `x_player_armor.ui.get_player_skin(player)`
+
+```lua
+x_player_armor.ui.get_player_skin(player: ObjectRef) -> string
+```
+
+**Parameters:**
+- `player` (`ObjectRef`)
+
+**Returns:**
+- `skin_texture` (`string`)
+
+---
 
 ### `x_player_armor.ui.get_composite_armor_texture(player)`
 
@@ -1916,7 +2139,7 @@ x_player_armor.ui.get_wield_texture(player: ObjectRef) -> string
 ### `x_player_armor.ui.get_preview_texture(player, _preview_model)`
 
 Builds the composite preview texture for the 3D formspec model.
-For 8-material meshes (e.g. x_player_armor_preview.glb): returns "skin,head,torso,legs,feet,shield_std,shield_tower,wield"
+For 9-material meshes (e.g. x_player_armor_preview.glb): returns "body10,body18,head,torso,legs,feet,shield_std,shield_tower,wield"
 
 ```lua
 x_player_armor.ui.get_preview_texture(player: ObjectRef, _preview_model: string?) -> string
@@ -2357,7 +2580,7 @@ x_player_armor.shield_hud.get_shield_texture(player: ObjectRef) -> string?
 ### `x_player_armor.shield_hud.show(player, immediate)`
 
 Displays or updates the 2D shield block HUD indicator on the target player.
-When the HUD is not yet visible, debounces presentation by SHIELD_HUD_DELAY (default 0.18s)
+When the HUD is not yet visible, debounces presentation by SHIELD_HUD_DELAY (default 0.35s)
 to prevent flashing the overlay on right-click taps for block placement or node interaction.
 
 ```lua
@@ -2581,6 +2804,23 @@ x_player_armor.utils.get_item_material(item_name: string) -> string?
 
 **Returns:**
 - `material` (`string?`) — Material identifier (e.g. "steel", "diamond", "wood") or nil
+
+---
+
+### `x_player_armor.utils.force_alias(legacy_name, modern_name)`
+
+Registers a forced alias for backwards compatibility, overriding any existing legacy definition.
+
+```lua
+x_player_armor.utils.force_alias(legacy_name: string, modern_name: string) -> nil
+```
+
+**Parameters:**
+- `legacy_name` (`string`) — Old or legacy item name
+- `modern_name` (`string`) — Replacement modern item name
+
+**Returns:**
+- (`nil`)
 
 ---
 

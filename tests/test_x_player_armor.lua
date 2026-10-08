@@ -11,6 +11,7 @@ _G.core = {
 	registered_tools = {},
 	registered_items = {},
 	registered_nodes = {},
+	registered_craftitems = {},
 	registered_entities = {},
 	registered_aliases = {},
 	registered_crafts = {},
@@ -25,6 +26,7 @@ _G.core = {
 		on_player_hpchange = {},
 		on_shutdown = {},
 		on_respawnplayer = {},
+		on_player_receive_fields = {},
 		globalstep = {},
 	},
 	settings = {
@@ -33,6 +35,26 @@ _G.core = {
 	},
 }
 _G.minetest = _G.core
+
+core.registered_globalsteps = core.callbacks.globalstep
+core.registered_on_joinplayers = core.callbacks.on_joinplayer
+core.registered_on_leaveplayers = core.callbacks.on_leaveplayer
+core.registered_on_dieplayers = core.callbacks.on_dieplayer
+core.registered_on_respawnplayers = core.callbacks.on_respawnplayer
+core.registered_on_punchplayers = core.callbacks.on_punchplayer
+core.registered_on_player_hpchanges = core.callbacks.on_player_hpchange
+core.registered_on_player_receive_fields = core.callbacks.on_player_receive_fields
+
+if not table.copy then
+	function table.copy(t)
+		if type(t) ~= "table" then return t end
+		local copy = {}
+		for k, v in pairs(t) do
+			copy[k] = (type(v) == "table" and table.copy(v)) or v
+		end
+		return copy
+	end
+end
 
 core.mock_gametime = 100
 function core.get_gametime()
@@ -140,21 +162,60 @@ function core.log(level, msg)
 end
 
 function core.register_tool(name, def)
-	core.registered_tools[name] = def
-	core.registered_items[name] = def
+	local clean_name = name:gsub("^:", "")
+	core.registered_tools[clean_name] = def
+	core.registered_items[clean_name] = def
 end
 
 function core.register_node(name, def)
-	core.registered_nodes[name] = def
-	core.registered_items[name] = def
+	local clean_name = name:gsub("^:", "")
+	core.registered_nodes[clean_name] = def
+	core.registered_items[clean_name] = def
 end
 
 function core.register_entity(name, def)
 	core.registered_entities[name] = def
 end
 
+function core.unregister_item(name)
+	if core.registered_items then core.registered_items[name] = nil end
+	if core.registered_tools then core.registered_tools[name] = nil end
+	if core.registered_nodes then core.registered_nodes[name] = nil end
+	if core.registered_craftitems then core.registered_craftitems[name] = nil end
+end
+
 function core.register_alias(alias, orig)
 	core.registered_aliases[alias] = orig
+end
+
+function core.register_alias_force(alias, orig)
+	core.unregister_item(alias)
+	core.registered_aliases[alias] = orig
+end
+
+function core.clear_craft(recipe)
+	if not recipe or not recipe.output then return false end
+	local target = recipe.output
+	local cleared = false
+	for i = #core.registered_crafts, 1, -1 do
+		local c = core.registered_crafts[i]
+		if c.output and (c.output == target or c.output:find("^" .. target .. "%s")) then
+			table.remove(core.registered_crafts, i)
+			cleared = true
+		end
+	end
+	return cleared
+end
+
+function core.get_all_craft_recipes(query)
+	if not query or query == "" then return nil end
+	local result = {}
+	for _, c in ipairs(core.registered_crafts) do
+		if c.output and (c.output == query or c.output:find("^" .. query .. "%s")) then
+			table.insert(result, c)
+		end
+	end
+	return #result > 0 and result or nil
 end
 
 function core.register_craft(def)
@@ -199,6 +260,10 @@ end
 
 function core.register_globalstep(fn)
 	table.insert(core.callbacks.globalstep, fn)
+end
+
+function core.register_on_player_receive_fields(fn)
+	table.insert(core.callbacks.on_player_receive_fields, fn)
 end
 
 core.mock_players = {}
@@ -331,6 +396,11 @@ end
 function core.get_node(pos)
 	local key = string.format("%d,%d,%d", pos.x, pos.y, pos.z)
 	return core.nodes[key] or {name = "air", param2 = 0}
+end
+
+function core.remove_node(pos)
+	local key = string.format("%d,%d,%d", pos.x, pos.y, pos.z)
+	core.nodes[key] = {name = "air", param2 = 0}
 end
 
 function core.get_node_or_nil(pos)
@@ -527,6 +597,16 @@ local function create_mock_itemstack(itemstring)
 		name = parts[1] or ""
 		count = tonumber(parts[2]) or 1
 		wear = tonumber(parts[3]) or 0
+	elseif type(itemstring) == "table" then
+		if itemstring.get_name then
+			name = itemstring:get_name()
+			count = itemstring:get_count()
+			wear = itemstring:get_wear()
+		else
+			name = itemstring.name or ""
+			count = itemstring.count or 1
+			wear = itemstring.wear or 0
+		end
 	end
 
 	local obj = {}
@@ -876,7 +956,7 @@ test("Formspec v7 & 3D Model Preview Generation", function()
 	assert(fs:find("0,%-150"), "Formspec must specify angled preview rotation 0,-150")
 	assert(fs:find("x_player_armor_preview.glb"), "Formspec model must reference x_player_armor_preview.glb")
 	assert(fs:find("x_player_armor_diamond.png"), "Formspec preview texture must use unified 64x32 sheet")
-	assert(fs:find("x_player_armor_character.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,blank.png,blank.png,blank.png"), "Formspec must pass 8-material texture string for GLB preview model")
+	assert(fs:find("x_player_armor_character.png,blank.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,blank.png,blank.png,blank.png"), "Formspec must pass 9-material texture string for GLB preview model")
 	assert(fs:find("list%[current_player;main;1.4,7.4;8,3;8%]"), "Formspec must render all 3 rows of main inventory")
 	assert(fs:find("list%[current_player;main;1.4,11.0;8,1;0%]"), "Formspec must render player hotbar")
 	assert(fs:find("hypertext%[5.50,4.25;5.30,2.25;armor_stats;"), "Formspec must include scrollable hypertext stats element")
@@ -884,22 +964,22 @@ test("Formspec v7 & 3D Model Preview Generation", function()
 	assert(fs:find("ACTIVE PERKS"), "Formspec must include ACTIVE PERKS in hypertext")
 	assert(fs:find("listring"), "Formspec must include listring for shift-click loop")
 
-	-- Test standard shield rendering in preview model (Slot 5: Standard, Slot 6: Tower blank)
+	-- Test standard shield rendering in preview model (Slot 6: Standard, Slot 7: Tower blank)
 	inv:set_stack("armor", 5, ItemStack("x_player_armor:shield_steel"))
 	local std_shield_fs = x_player_armor.ui.get_formspec(player)
-	assert(std_shield_fs:find("x_player_armor_character.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,x_player_armor_steel.png,blank.png,blank.png"), "Standard shield must populate Slot 5 and keep Slot 6 blank")
+	assert(std_shield_fs:find("x_player_armor_character.png,blank.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,x_player_armor_steel.png,blank.png,blank.png"), "Standard shield must populate Slot 6 and keep Slot 7 blank")
 
-	-- Test tower shield rendering in preview model (Slot 5: Standard blank, Slot 6: Tower)
+	-- Test tower shield rendering in preview model (Slot 6: Standard blank, Slot 7: Tower)
 	inv:set_stack("armor", 5, ItemStack("x_player_armor:shield_enhanced_cactus"))
 	local tower_shield_fs = x_player_armor.ui.get_formspec(player)
-	assert(tower_shield_fs:find("x_player_armor_character.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,blank.png,x_player_armor_shield_enhanced_cactus.png,blank.png"), "Tower shield must populate Slot 6 and keep Slot 5 blank")
+	assert(tower_shield_fs:find("x_player_armor_character.png,blank.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,blank.png,x_player_armor_shield_enhanced_cactus.png,blank.png"), "Tower shield must populate Slot 7 and keep Slot 6 blank")
 
-	-- Test wielded item rendering in preview model (8th slot)
+	-- Test wielded item rendering in preview model (9th slot)
 	inv:set_stack("armor", 5, ItemStack(""))
 	core.register_tool("default:sword_steel", {inventory_image = "default_tool_steelsword.png"})
 	player.wielded_item = ItemStack("default:sword_steel")
 	local wield_fs = x_player_armor.ui.get_formspec(player)
-	assert(wield_fs:find("x_player_armor_character.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,blank.png,blank.png,default_tool_steelsword.png"), "Formspec must include wielded item texture in 8th material slot")
+	assert(wield_fs:find("x_player_armor_character.png,blank.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,blank.png,blank.png,default_tool_steelsword.png"), "Formspec must include wielded item texture in 9th material slot")
 end)
 
 test("Armor Stand Node & Entity", function()
@@ -910,7 +990,7 @@ test("Armor Stand Node & Entity", function()
 	local entity_def = core.registered_entities["x_player_armor:stand_entity"]
 	assert(entity_def, "Armor stand display entity must be registered")
 	assert(entity_def.initial_properties.mesh == "x_player_armor_preview.glb", "Stand entity mesh must be x_player_armor_preview.glb")
-	assert(#entity_def.initial_properties.textures == 8, "Stand entity must have 8 texture slots for preview mesh")
+	assert(#entity_def.initial_properties.textures == 9, "Stand entity must have 9 texture slots for preview mesh")
 	assert(entity_def.on_step == nil, "Stand entity on_step must be nil")
 end)
 
@@ -1485,7 +1565,7 @@ test("Dynamic Wield Item Tracking & Formspec UI Update", function()
 	x_player_armor.ui.sfinv_open_players["test_adventurer"] = true
 	sfinv.set_player_inventory_formspec(adventurer)
 	local initial_fs = adventurer:get_inventory_formspec()
-	assert(initial_fs:find("x_player_armor_character.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,blank.png,blank.png,blank.png"), "Initial preview must have blank.png for empty hand")
+	assert(initial_fs:find("x_player_armor_character.png,blank.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,blank.png,blank.png,blank.png"), "Initial preview must have blank.png for empty hand")
 
 	-- 3. Player switches hotbar slot to mithril sword
 	adventurer:set_wield_index(2)
@@ -1497,7 +1577,7 @@ test("Dynamic Wield Item Tracking & Formspec UI Update", function()
 
 	local sword_fs = adventurer:get_inventory_formspec()
 	assert(sword_fs:find("default_tool_mithrilsword.png"), "Inventory formspec must immediately contain wielding sword texture")
-	assert(sword_fs:find("x_player_armor_character.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,blank.png,blank.png,default_tool_mithrilsword.png"), "8th material slot must be updated with active sword")
+	assert(sword_fs:find("x_player_armor_character.png,blank.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,blank.png,blank.png,default_tool_mithrilsword.png"), "9th material slot must be updated with active sword")
 
 	-- 4. Globalstep monitoring: switch to wooden planks
 	adventurer:set_wield_index(3)
@@ -1509,14 +1589,14 @@ test("Dynamic Wield Item Tracking & Formspec UI Update", function()
 
 	local wood_fs = adventurer:get_inventory_formspec()
 	assert(wood_fs:find("default_wood_planks.png"), "UI globalstep must refresh formspec with node tile")
-	assert(wood_fs:find("x_player_armor_character.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,blank.png,blank.png,default_wood_planks.png"), "8th material slot must be updated with node tile")
+	assert(wood_fs:find("x_player_armor_character.png,blank.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,blank.png,blank.png,default_wood_planks.png"), "9th material slot must be updated with node tile")
 
 	-- 5. Switch back to bare hands
 	adventurer:set_wield_index(1)
 	adventurer.wielded_item = ItemStack("")
 	ui_step(0.25)
 	local bare_fs = adventurer:get_inventory_formspec()
-	assert(bare_fs:find("x_player_armor_character.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,blank.png,blank.png,blank.png"), "Formspec must revert to blank.png when hands are empty")
+	assert(bare_fs:find("x_player_armor_character.png,blank.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,blank.png,blank.png,blank.png"), "Formspec must revert to blank.png when hands are empty")
 
 	-- 6. sfinv on_enter hook guarantees fresh wield state when tab is opened
 	adventurer:set_wield_index(2)
@@ -2305,7 +2385,7 @@ test("1st-Person Shield Blocking HUD Debounce Delay & Right-Click Tap Suppressio
 	-- 1. Simulate right-click tap to place block / interact with node (released within debounce window)
 	state_listener(player, {action = "block", blocking = true}, "stand", "idle")
 	assert(#scheduled_timers == 1, "Debounce timer must be scheduled on RMB press")
-	assert(scheduled_timers[1].delay == 0.18, "Debounce delay must default to 0.18s")
+	assert(scheduled_timers[1].delay == 0.35, "Debounce delay must default to 0.35s")
 	assert(x_player_armor.get_shield_block_hud(player) == nil, "HUD must NOT show immediately on press (zero flash)")
 
 	-- Release RMB before debounce expires (e.g. 50-100ms later)
@@ -2316,13 +2396,13 @@ test("1st-Person Shield Blocking HUD Debounce Delay & Right-Click Tap Suppressio
 	scheduled_timers[1]:run()
 	assert(x_player_armor.get_shield_block_hud(player) == nil, "Cancelled timer must NOT display shield HUD (tap suppressed)")
 
-	-- 2. Simulate holding RMB for intentional combat block (>180ms)
+	-- 2. Simulate holding RMB for intentional combat block (>350ms)
 	scheduled_timers = {}
 	state_listener(player, {action = "block", blocking = true}, "stand", "idle")
 	assert(#scheduled_timers == 1, "Timer must be scheduled for intentional block")
 	assert(x_player_armor.get_shield_block_hud(player) == nil, "HUD still hidden during debounce window")
 
-	-- Timer fires after 180ms delay while player is still holding block
+	-- Timer fires after 350ms delay while player is still holding block
 	scheduled_timers[1]:run()
 	local hud_id = x_player_armor.get_shield_block_hud(player)
 	assert(hud_id ~= nil, "HUD must appear once debounce delay expires")
@@ -2349,6 +2429,11 @@ test("1st-Person Shield Blocking HUD Debounce Delay & Right-Click Tap Suppressio
 	end
 	assert(scheduled_timers[1].cancelled == true, "Pending timer must be cancelled on player leave")
 	assert(x_player_armor.shield_hud.pending_timers["debounce_hero"] == nil, "Pending timers tracking must be purged")
+
+	-- 5. Configurable disable toggle: constants.SHIELD_HUD_ENABLE = false silences HUD completely
+	x_player_armor.constants.SHIELD_HUD_ENABLE = false
+	assert(x_player_armor.shield_hud.show(player, true) == nil, "show must return nil when SHIELD_HUD_ENABLE is false")
+	x_player_armor.constants.SHIELD_HUD_ENABLE = true
 
 	-- Restore core.after and cleanup
 	core.after = orig_after
@@ -3508,6 +3593,13 @@ test("Armor Stand Formspec UI, One-Click Wardrobe Swap & Empty Slot Tooltips", f
 		assert(sinv:get_stack("armor", idx):is_empty(), "Stand slot " .. idx .. " must be empty after take-all")
 	end
 
+	-- 6b. Verify foreign formspec quit events (such as default:chest) are never intercepted
+	local foreign_formname = "default:chest"
+	for _, fn in ipairs(core.callbacks.on_player_receive_fields) do
+		local res = fn(player, foreign_formname, {quit = "true"})
+		assert(res ~= true, "Global on_player_receive_fields must not intercept foreign formspec quit events")
+	end
+
 	-- 7. Test Cursed Armor Lock in Swap
 	core.register_tool("custom_mod:cursed_helm", {
 		description = "Cursed Crown",
@@ -3837,22 +3929,22 @@ test("In-World Armor Stand: Dual Variants, Shift+LMB Raycast Take/Swap, glTF 10x
 	sinv:set_stack("armor", 5, ItemStack("x_player_armor:shield_steel"))
 	x_player_armor.stand.update_stand_entity(pos_pub)
 	local tex_shield = stand_ent:get_properties().textures
-	assert(tex_shield[6] == "x_player_armor_steel.png", "Slot 6 material (Shield_Standard) must be steel shield texture")
-	assert(tex_shield[7] == "blank.png", "Slot 7 material (Shield_Tower) must remain blank")
+	assert(tex_shield[7] == "x_player_armor_steel.png", "Slot 6 material (Shield_Standard, Lua index 7) must be steel shield texture")
+	assert(tex_shield[8] == "blank.png", "Slot 7 material (Shield_Tower, Lua index 8) must remain blank")
 
 	-- Mount weapon into slot 6
 	sinv:set_stack("armor", 6, ItemStack("default:sword_steel"))
 	x_player_armor.stand.update_stand_entity(pos_pub)
 	local tex_wield = stand_ent:get_properties().textures
-	assert(tex_wield[8] == "default_tool_steelsword.png", "Slot 8 material (Wielditem) must be steel sword texture")
+	assert(tex_wield[9] == "default_tool_steelsword.png", "Slot 8 material (Wielditem, Lua index 9) must be steel sword texture")
 
 	-- Remove shield and weapon, verify textures reset to blank.png
 	sinv:set_stack("armor", 5, ItemStack(""))
 	sinv:set_stack("armor", 6, ItemStack(""))
 	x_player_armor.stand.update_stand_entity(pos_pub)
 	local tex_clean = stand_ent:get_properties().textures
-	assert(tex_clean[6] == "blank.png", "Shield material must reset to blank.png")
-	assert(tex_clean[8] == "blank.png", "Wielditem material must reset to blank.png")
+	assert(tex_clean[7] == "blank.png", "Shield material must reset to blank.png")
+	assert(tex_clean[9] == "blank.png", "Wielditem material must reset to blank.png")
 
 	-- 8. Screwdriver Rotation (on_rotate)
 	local rot_node = core.get_node(pos_pub)
@@ -4235,6 +4327,707 @@ test("Extended Armor Registration API: Custom Models, Transforms, Audio & Attrib
 
 	-- Cleanup
 	x_player_armor.visuals.clear_all("custom_armor_hero")
+end)
+
+test("Skin Mods Integration & 64x64 Format 1.8 3D Preview", function()
+	-- 1. Test format detection
+	assert(x_player_armor.skins.detect_texture_format("character_18.png") == "1.8", "Texture with _18 suffix must be detected as 1.8")
+	assert(x_player_armor.skins.detect_texture_format("character.png") == "1.0", "Default character.png must be detected as 1.0")
+	assert(x_player_armor.skins.detect_texture_format("custom_skin_1.8.png") == "1.8", "Texture with 1.8 in name must be detected as 1.8")
+
+	-- 2. Test standard 1.0 player skin resolution
+	local player10 = create_mock_player("skin_hero_10")
+	local res10 = x_player_armor.skins.resolve_player_skin(player10)
+	assert(res10.format == "1.0", "Default player must resolve to Format 1.0")
+	assert(res10.body10 == "x_player_armor_character.png", "Body10 must receive default skin")
+	assert(res10.body18 == "blank.png", "Body18 must be blank.png for 1.0 skin")
+
+	-- 3. Test skinsdb 1.8 player skin resolution
+	local player18 = create_mock_player("skin_hero_18")
+	x_player_armor.inventory.init_player_inventory(player18)
+	local _, inv = x_player_armor.get_valid_player(player18)
+	inv:set_stack("armor", 1, ItemStack("x_player_armor:helmet_diamond"))
+
+	-- Mock skinsdb API
+	local mock_skin = {
+		get_texture = function() return "skinsdb_skin_valkyrie.png" end,
+		get_meta = function(self, key)
+			if key == "format" then return "1.8" end
+			return nil
+		end,
+	}
+	rawset(_G, "skins", {
+		get_player_skin = function(p)
+			if p:get_player_name() == "skin_hero_18" then
+				return mock_skin
+			end
+			return nil
+		end,
+	})
+
+	local res18 = x_player_armor.skins.resolve_player_skin(player18)
+	assert(res18.format == "1.8", "Player must resolve to Format 1.8 from skinsdb")
+	assert(res18.body10 == "blank.png", "Body10 must be blank.png for 1.8 skin")
+	assert(res18.body18 == "skinsdb_skin_valkyrie.png", "Body18 must receive 64x64 skin")
+
+	-- Verify formspec preview contains Body10 as blank and Body18 as valkyrie skin
+	local fs18 = x_player_armor.ui.get_formspec(player18)
+	assert(fs18:find("blank.png,skinsdb_skin_valkyrie.png,x_player_armor_diamond.png,"), "Formspec must route 1.8 skin to Body18 and keep Body10 blank")
+
+	-- 4. Test clothing mod overlay compositing
+	rawset(_G, "clothing", {
+		player_textures = {
+			skin_hero_18 = {
+				jacket = "clothing_jacket_blue.png",
+				pants = "clothing_pants_dark.png",
+				cape = "clothing_cape.png", -- capes excluded from skin texture
+			},
+		},
+	})
+
+	local res_clothing = x_player_armor.skins.resolve_player_skin(player18)
+	assert(res_clothing.body18:find("skinsdb_skin_valkyrie.png%^clothing_"), "Clothing overlays must be composited onto active skin")
+	assert(res_clothing.body18:find("clothing_jacket_blue.png"), "Jacket overlay must be present")
+	assert(res_clothing.body18:find("clothing_pants_dark.png"), "Pants overlay must be present")
+	assert(not res_clothing.body18:find("clothing_cape.png"), "Cape must not be composited into body skin overlay")
+
+	-- 5. Test armor stand mannequin 9-slot properties
+	local stand_pos = {x = 100, y = 20, z = 100}
+	core.set_node(stand_pos, {name = "x_player_armor:stand", param2 = 0})
+	local meta = core.get_meta(stand_pos)
+	local stand_inv = meta:get_inventory()
+	stand_inv:set_size("armor", 6)
+	stand_inv:set_stack("armor", 1, ItemStack("x_player_armor:helmet_diamond"))
+	x_player_armor.stand.update_stand_entity(stand_pos)
+
+	-- Find the spawned stand entity
+	local objs = core.get_objects_inside_radius(stand_pos, 0.8)
+	local found_stand_ent = false
+	for _, obj in ipairs(objs) do
+		local luaent = obj:get_luaentity()
+		if luaent and luaent.name == "x_player_armor:stand_entity" then
+			found_stand_ent = true
+			local props = obj:get_properties()
+			assert(#props.textures == 9, "Stand entity properties must contain 9 texture slots")
+			assert(props.textures[1] == "blank.png", "Stand entity Slot 0 (Body10) must be blank.png")
+			assert(props.textures[2] == "blank.png", "Stand entity Slot 1 (Body18) must be blank.png")
+			assert(props.textures[3] == "x_player_armor_diamond.png", "Stand entity Slot 2 (Head) must receive helmet texture")
+			break
+		end
+	end
+	assert(found_stand_ent == true, "Stand entity must be spawned and verified")
+
+	-- Cleanup mocks
+	rawset(_G, "skins", nil)
+	rawset(_G, "clothing", nil)
+end)
+
+test("Armor Stand & 3D Preview: 9-Slot Alignment, Shield Isolation & Wield Item", function()
+	local stand_pos = {x = 105, y = 20, z = 105}
+	core.set_node(stand_pos, {name = "x_player_armor:stand", param2 = 0})
+	local meta = core.get_meta(stand_pos)
+	local stand_inv = meta:get_inventory()
+	stand_inv:set_size("armor", 6)
+
+	-- Register mock tool for wielditem testing
+	core.register_tool("default:sword_diamond", {
+		description = "Diamond Sword",
+		inventory_image = "default_tool_diamondsword.png",
+	})
+
+	-- 1. Full loadout with standard diamond shield and diamond sword
+	stand_inv:set_stack("armor", 1, ItemStack("x_player_armor:helmet_diamond"))
+	stand_inv:set_stack("armor", 2, ItemStack("x_player_armor:chestplate_diamond"))
+	stand_inv:set_stack("armor", 3, ItemStack("x_player_armor:leggings_diamond"))
+	stand_inv:set_stack("armor", 4, ItemStack("x_player_armor:boots_diamond"))
+	stand_inv:set_stack("armor", 5, ItemStack("x_player_armor:shield_diamond"))
+	stand_inv:set_stack("armor", 6, ItemStack("default:sword_diamond"))
+	x_player_armor.stand.update_stand_entity(stand_pos)
+
+	local objs = core.get_objects_inside_radius(stand_pos, 0.8)
+	local found = false
+	for _, obj in ipairs(objs) do
+		local luaent = obj:get_luaentity()
+		if luaent and luaent.name == "x_player_armor:stand_entity" then
+			found = true
+			local props = obj:get_properties()
+			assert(#props.textures == 9, "Must have exactly 9 texture slots")
+			assert(props.textures[1] == "blank.png", "Slot 1 (Body10) must be blank.png")
+			assert(props.textures[2] == "blank.png", "Slot 2 (Body18) must be blank.png")
+			assert(props.textures[3]:find("diamond"), "Slot 3 (Head) must have diamond helmet texture")
+			assert(props.textures[4]:find("diamond"), "Slot 4 (Torso) must have diamond chestplate texture")
+			assert(props.textures[5]:find("diamond"), "Slot 5 (Legs) must have diamond leggings texture")
+			assert(props.textures[6]:find("diamond"), "Slot 6 (Feet) must have diamond boots texture")
+			assert(props.textures[7] == "x_player_armor_diamond.png", "Slot 7 (Shield_Standard) must have standard diamond shield texture")
+			assert(props.textures[8] == "blank.png", "Slot 8 (Shield_Tower) must be blank.png when standard shield is equipped")
+			assert(props.textures[9] == "default_tool_diamondsword.png", "Slot 9 (Wielditem) must show sword texture")
+			break
+		end
+	end
+	assert(found, "Stand entity must be present")
+
+	-- 2. Tower shield loadout: verify standard shield becomes blank and tower shield is populated
+	stand_inv:set_stack("armor", 5, ItemStack("x_player_armor:shield_enhanced_cactus"))
+	x_player_armor.stand.update_stand_entity(stand_pos)
+
+	for _, obj in ipairs(objs) do
+		local luaent = obj:get_luaentity()
+		if luaent and luaent.name == "x_player_armor:stand_entity" then
+			local props = obj:get_properties()
+			assert(props.textures[7] == "blank.png", "Slot 7 (Shield_Standard) must be blank.png when tower shield is equipped")
+			assert(props.textures[8]:find("cactus"), "Slot 8 (Shield_Tower) must receive tower shield texture")
+			assert(props.textures[9] == "default_tool_diamondsword.png", "Slot 9 (Wielditem) must still render weapon")
+			break
+		end
+	end
+
+	-- 3. No shield loadout: verify both shield slots become blank.png
+	stand_inv:set_stack("armor", 5, ItemStack(""))
+	x_player_armor.stand.update_stand_entity(stand_pos)
+
+	for _, obj in ipairs(objs) do
+		local luaent = obj:get_luaentity()
+		if luaent and luaent.name == "x_player_armor:stand_entity" then
+			local props = obj:get_properties()
+			assert(props.textures[7] == "blank.png", "Slot 7 (Shield_Standard) must be blank.png when unequipped")
+			assert(props.textures[8] == "blank.png", "Slot 8 (Shield_Tower) must be blank.png when unequipped")
+			break
+		end
+	end
+
+	-- 4. Verify glTF preview model structure directly from disk
+	local modpath = core.get_modpath("x_player_armor")
+	local f = io.open(modpath .. "/models/x_player_armor_preview.glb", "rb")
+	assert(f, "x_player_armor_preview.glb must exist")
+	local header = f:read(20)
+	f:close()
+	assert(#header == 20, "GLB header must be at least 20 bytes")
+	local magic = header:sub(1, 4)
+	assert(magic == "glTF", "GLB magic header must be glTF")
+end)
+
+test("Legacy 3d_armor Dynamic Runtime Override & Technic Armor Ingestion", function()
+	-- 1. Setup mock legacy 3d_armor environment prior to takeover
+	local legacy_globalstep_called = false
+	local legacy_hpchange_called = false
+	local other_mod_step_called = false
+
+	-- Create functions with debug source simulation
+	-- In Lua, functions created in files have debug info matching that file.
+	-- We can create mock functions loaded from string with chunkname.
+	local legacy_step_fn = loadstring("return function() legacy_step_hit = true end", "@/mods/3d_armor/3d_armor/init.lua")()
+	local legacy_join_fn = loadstring("return function(player) end", "@/mods/3d_armor/3d_armor/init.lua")()
+	local legacy_hp_fn = loadstring("return function(player, hp) legacy_hp_hit = true end", "@/mods/3d_armor/3d_armor/init.lua")()
+	local other_step_fn = loadstring("return function() other_step_hit = true end", "@/mods/my_custom_mod/init.lua")()
+
+	table.insert(core.registered_globalsteps, legacy_step_fn)
+	table.insert(core.registered_globalsteps, other_step_fn)
+	table.insert(core.registered_on_joinplayers, legacy_join_fn)
+	table.insert(core.registered_on_player_hpchanges, {func = legacy_hp_fn, run_at_every_calculation = true})
+
+	-- Mock legacy 3d_armor global table
+	local mock_legacy_armor = {
+		version = "0.4.13",
+		_is_x_player_armor = nil,
+		registered_armors = {
+			["technic_armor:helmet_lead"] = {
+				description = "Lead Helmet",
+				groups = {armor_head = 8, armor_radiation = 80, armor_use = 500},
+				armor_groups = {fleshy = 8},
+			},
+		},
+		registered_callbacks = {
+			on_equip = {
+				loadstring("return function(p, i, s) end", "@/mods/3rd_party/init.lua")(),
+			},
+		},
+	}
+	rawset(_G, "armor", mock_legacy_armor)
+
+	-- Mock 3rd-party armor item registered directly in core.registered_tools (e.g. technic shield)
+	core.registered_tools["technic_armor:shield_lead"] = {
+		description = "Lead Shield",
+		groups = {armor_shield = 10, shield = 1, armor_radiation = 50, armor_uses = 600},
+	}
+
+	-- Mock duplicate sfinv page from 3d_armor_sfinv
+	local sfinv_api = x_player_armor.get_mod_api("sfinv")
+	if sfinv_api then
+		sfinv_api.pages["3d_armor:armor"] = {title = "Legacy Armor"}
+		sfinv_api.pages_unordered = sfinv_api.pages_unordered or {}
+		table.insert(sfinv_api.pages_unordered, {name = "3d_armor:armor", title = "Legacy Armor"})
+	end
+
+	-- 2. Verify legacy callback detection
+	assert(x_player_armor.override.is_legacy_callback(legacy_step_fn) == true, "Must detect legacy 3d_armor callback")
+	assert(x_player_armor.override.is_legacy_callback(other_step_fn) == false, "Must not flag 3rd-party mod callback")
+
+	-- 3. Execute takeover
+	x_player_armor.override.takeover_legacy_armor()
+
+	-- Re-run compat.armor initialization to ensure _G.armor is modern
+	dofile(core.get_modpath("x_player_armor") .. "/modules/compat/armor.lua")
+
+	-- 4. Verify callbacks neutralization in core.registered_*
+	assert(core.registered_globalsteps[#core.registered_globalsteps - 1] ~= legacy_step_fn, "Legacy step function must be replaced")
+	assert(core.registered_globalsteps[#core.registered_globalsteps] == other_step_fn, "3rd-party step function must be preserved")
+
+	-- Call the neutralized slot to verify it is a safe no-op
+	core.registered_globalsteps[#core.registered_globalsteps - 1]()
+	assert(legacy_globalstep_called == false, "Neutralized function must not trigger legacy code")
+
+	-- Verify hpchange neutralization
+	local hp_entry = core.registered_on_player_hpchanges[#core.registered_on_player_hpchanges]
+	assert(hp_entry.func ~= legacy_hp_fn, "Legacy hpchange function must be neutralized")
+	hp_entry.func()
+	assert(legacy_hpchange_called == false, "Neutralized hpchange must not trigger legacy code")
+
+	-- 5. Verify armor items ingestion into x_player_armor
+	assert(x_player_armor.registered_armors["technic_armor:helmet_lead"] ~= nil, "technic_armor:helmet_lead must be ingested")
+	local helm_def = x_player_armor.registered_armors["technic_armor:helmet_lead"]
+	assert(helm_def.element == "head", "Lead helmet element must be head")
+	assert(helm_def.groups.armor_head == 8, "Lead helmet defense level must be 8")
+
+	assert(x_player_armor.registered_armors["technic_armor:shield_lead"] ~= nil, "technic_armor:shield_lead must be ingested")
+	local shield_def = x_player_armor.registered_armors["technic_armor:shield_lead"]
+	assert(shield_def.element == "shield", "Lead shield element must be shield")
+	assert(shield_def.groups.armor_shield == 10, "Lead shield level must be 10")
+
+	-- 6. Verify duplicate sfinv tab suppression
+	if sfinv_api then
+		assert(sfinv_api.pages["3d_armor:armor"] == nil, "sfinv 3d_armor:armor page must be deleted")
+		local found_in_unordered = false
+		for _, page in ipairs(sfinv_api.pages_unordered) do
+			if page.name == "3d_armor:armor" then
+				found_in_unordered = true
+				break
+			end
+		end
+		assert(found_in_unordered == false, "sfinv 3d_armor:armor must be removed from pages_unordered")
+	end
+
+	-- 7. Verify _G.armor is now modern x_player_armor compat table
+	assert(_G.armor ~= nil, "Global armor table must exist")
+	assert(_G.armor._is_x_player_armor == true, "Global armor table must be x_player_armor compat")
+
+	-- 8. Verify clean player model restoration with x_player_api priority
+	local test_player = create_mock_player("model_test_user")
+	local x_api_called_model = nil
+	local p_api_called_model = nil
+
+	-- Mock x_player_api with 3d_armor model currently set
+	rawset(_G, "x_player_api", {
+		get_model_name = function(p) return "3d_armor_character.b3d" end,
+		get_default_model = function() return "character" end,
+		set_model = function(p, model) x_api_called_model = model end,
+	})
+	rawset(_G, "player_api", {
+		get_model = function(p) return "3d_armor_character.b3d" end,
+		set_model = function(p, model) p_api_called_model = model end,
+	})
+
+	-- Invoke the latest registered joinplayer callback (which restores clean model)
+	local join_fn = core.registered_on_joinplayers[#core.registered_on_joinplayers]
+	join_fn(test_player)
+
+	assert(x_api_called_model == "character", "x_player_api.set_model must be prioritized and reset model to clean default")
+	assert(p_api_called_model == nil, "Standard player_api must not be called when x_player_api handles it")
+
+	-- Clean up mocks
+	core.registered_tools["technic_armor:shield_lead"] = nil
+	x_player_armor.registered_armors["technic_armor:helmet_lead"] = nil
+	x_player_armor.registered_armors["technic_armor:shield_lead"] = nil
+end)
+
+test("Legacy 3D Armor & Shields De-duplication, Registration Override & Recipe Cleanup", function()
+	-- 1. Setup simulated duplicate legacy registrations in core registries
+	core.registered_tools["3d_armor:helmet_diamond"] = {
+		description = "Legacy Diamond Helmet",
+		groups = {armor_head = 1, armor_heal = 12, armor_use = 200},
+	}
+	core.registered_items["3d_armor:helmet_diamond"] = core.registered_tools["3d_armor:helmet_diamond"]
+
+	core.registered_tools["3d_armor:chestplate_wood"] = {
+		description = "Legacy Wood Chestplate",
+		groups = {armor_torso = 1, armor_heal = 0, armor_use = 2000},
+	}
+	core.registered_items["3d_armor:chestplate_wood"] = core.registered_tools["3d_armor:chestplate_wood"]
+
+	core.registered_tools["shields:shield_diamond"] = {
+		description = "Legacy Diamond Shield",
+		groups = {armor_shield = 1, shield = 1, armor_heal = 12, armor_use = 200},
+	}
+	core.registered_items["shields:shield_diamond"] = core.registered_tools["shields:shield_diamond"]
+
+	core.registered_tools["shields:shield_enhanced_wood"] = {
+		description = "Legacy Enhanced Wood Shield",
+		groups = {armor_shield = 1, shield = 1, armor_use = 2000},
+	}
+	core.registered_items["shields:shield_enhanced_wood"] = core.registered_tools["shields:shield_enhanced_wood"]
+
+	core.registered_nodes["3d_armor_stand:armor_stand"] = {
+		description = "Legacy Armor Stand",
+	}
+	core.registered_items["3d_armor_stand:armor_stand"] = core.registered_nodes["3d_armor_stand:armor_stand"]
+
+	core.registered_items["adminshield"] = {
+		description = "Legacy Admin Shield",
+	}
+
+	-- 2. Setup duplicate craft recipes
+	core.register_craft({output = "3d_armor:helmet_diamond", recipe = {{"default:diamond"}}})
+	core.register_craft({output = "shields:shield_diamond", recipe = {{"default:diamond"}}})
+	core.register_craft({output = "3d_armor_stand:armor_stand", recipe = {{"group:fence"}}})
+
+	-- Also register a 3rd party armor item and craft (must be preserved)
+	core.registered_tools["technic_armor:helmet_silver"] = {
+		description = "Silver Helmet",
+		groups = {armor_head = 6, armor_radiation = 50, armor_use = 400},
+	}
+	core.registered_items["technic_armor:helmet_silver"] = core.registered_tools["technic_armor:helmet_silver"]
+	core.register_craft({output = "technic_armor:helmet_silver", recipe = {{"technic:silver_ingot"}}})
+
+	-- 3. Execute takeover and legacy armor cleanup
+	x_player_armor.override.takeover_legacy_armor()
+
+	-- 4. Verify duplicate legacy armors are unregistered and removed from registries
+	assert(core.registered_tools["3d_armor:helmet_diamond"] == nil, "3d_armor:helmet_diamond must be unregistered from registered_tools")
+	assert(core.registered_items["3d_armor:helmet_diamond"] == nil, "3d_armor:helmet_diamond must be unregistered from registered_items")
+	assert(x_player_armor.registered_armors["3d_armor:helmet_diamond"] == nil, "3d_armor:helmet_diamond must not be ingested into registered_armors")
+	assert(core.registered_aliases["3d_armor:helmet_diamond"] == "x_player_armor:helmet_diamond", "Alias must point to x_player_armor:helmet_diamond")
+
+	assert(core.registered_tools["3d_armor:chestplate_wood"] == nil, "3d_armor:chestplate_wood must be unregistered from registered_tools")
+	assert(core.registered_items["3d_armor:chestplate_wood"] == nil, "3d_armor:chestplate_wood must be unregistered from registered_items")
+	assert(x_player_armor.registered_armors["3d_armor:chestplate_wood"] == nil, "3d_armor:chestplate_wood must not be ingested into registered_armors")
+	assert(core.registered_aliases["3d_armor:chestplate_wood"] == "x_player_armor:chestplate_wood", "Alias must point to x_player_armor:chestplate_wood")
+
+	assert(core.registered_tools["shields:shield_diamond"] == nil, "shields:shield_diamond must be unregistered from registered_tools")
+	assert(core.registered_items["shields:shield_diamond"] == nil, "shields:shield_diamond must be unregistered from registered_items")
+	assert(x_player_armor.registered_armors["shields:shield_diamond"] == nil, "shields:shield_diamond must not be ingested into registered_armors")
+	assert(core.registered_aliases["shields:shield_diamond"] == "x_player_armor:shield_diamond", "Alias must point to x_player_armor:shield_diamond")
+
+	assert(core.registered_tools["shields:shield_enhanced_wood"] == nil, "shields:shield_enhanced_wood must be unregistered")
+	assert(core.registered_aliases["shields:shield_enhanced_wood"] == "x_player_armor:shield_enhanced_wood", "Alias must point to x_player_armor:shield_enhanced_wood")
+
+	assert(core.registered_nodes["3d_armor_stand:armor_stand"] == nil, "3d_armor_stand:armor_stand must be unregistered from registered_nodes")
+	assert(core.registered_aliases["3d_armor_stand:armor_stand"] == "x_player_armor:stand", "Stand alias must point to x_player_armor:stand")
+	assert(core.registered_aliases["adminshield"] == "x_player_armor:shield_admin", "adminshield alias must point to x_player_armor:shield_admin")
+
+	-- 5. Verify legacy crafting recipes were erased
+	for _, c in ipairs(core.registered_crafts) do
+		assert(c.output ~= "3d_armor:helmet_diamond", "Craft output for 3d_armor:helmet_diamond must be cleared")
+		assert(c.output ~= "shields:shield_diamond", "Craft output for shields:shield_diamond must be cleared")
+		assert(c.output ~= "3d_armor_stand:armor_stand", "Craft output for 3d_armor_stand:armor_stand must be cleared")
+	end
+
+	-- 6. Verify 3rd-party non-duplicate armor is preserved and ingested
+	assert(x_player_armor.registered_armors["technic_armor:helmet_silver"] ~= nil, "technic_armor:helmet_silver must be ingested")
+	assert(core.registered_tools["technic_armor:helmet_silver"] ~= nil, "technic_armor:helmet_silver must remain in registered_tools")
+	local silver_craft_found = false
+	for _, c in ipairs(core.registered_crafts) do
+		if c.output == "technic_armor:helmet_silver" then
+			silver_craft_found = true
+			break
+		end
+	end
+	assert(silver_craft_found == true, "3rd-party craft recipe must be preserved")
+
+	-- 7. Test late registration of superseded item via armor shim
+	_G.armor.register_armor(":3d_armor:helmet_gold", {
+		description = "Late Gold Helmet",
+		groups = {armor_head = 1, armor_heal = 6, armor_use = 300},
+	})
+	assert(core.registered_tools["3d_armor:helmet_gold"] == nil, "Late registration of 3d_armor:helmet_gold must NOT create duplicate tool")
+	assert(x_player_armor.registered_armors["3d_armor:helmet_gold"] == nil, "Late registration must NOT pollute registered_armors")
+	assert(core.registered_aliases["3d_armor:helmet_gold"] == "x_player_armor:helmet_gold", "Late registration must ensure alias to modern armor")
+
+	-- 8. Test late registration of 3rd party armor via armor shim with colon prefix (e.g. armor_expanded)
+	local registered_tool_passed_name = nil
+	local orig_register_tool = core.register_tool
+	core.register_tool = function(tname, tdef)
+		registered_tool_passed_name = tname
+		return orig_register_tool(tname, tdef)
+	end
+
+	_G.armor.register_armor(":armor_expanded:helmet_leather", {
+		description = "Leather Cap",
+		inventory_image = "armor_expanded_inv_helmet_leather.png",
+		groups = {armor_head = 1, armor_heal = 0, armor_use = 800, flammable = 1},
+		armor_groups = {fleshy = 7},
+		damage_groups = {cracky = 3, snappy = 2, choppy = 2, crumbly = 2, level = 1},
+	})
+	assert(registered_tool_passed_name == ":armor_expanded:helmet_leather", "core.register_tool must receive ':' prefix for sub-mods")
+	assert(x_player_armor.registered_armors["armor_expanded:helmet_leather"] ~= nil, "armor_expanded:helmet_leather must be registered")
+	assert(core.registered_tools["armor_expanded:helmet_leather"] ~= nil, "armor_expanded:helmet_leather must be in registered_tools")
+	assert(x_player_armor.registered_armors["armor_expanded:helmet_leather"].texture == "armor_expanded_helmet_leather.png", "Texture fallback must be populated from item name")
+	core.register_tool = orig_register_tool
+
+	_G.armor.register_armor("mymod:helmet_ruby", {
+		description = "Ruby Helmet",
+		groups = {armor_head = 15, armor_use = 2000},
+	})
+	assert(x_player_armor.registered_armors["mymod:helmet_ruby"] ~= nil, "3rd-party ruby helmet must be registered")
+
+	-- 9. Test idempotency of subsequent takeover passes (e.g. core.register_on_mods_loaded)
+	local clear_craft_calls = 0
+	local orig_clear_craft = core.clear_craft
+	core.clear_craft = function(recipe)
+		clear_craft_calls = clear_craft_calls + 1
+		return orig_clear_craft(recipe)
+	end
+	x_player_armor.override.takeover_legacy_armor()
+	assert(clear_craft_calls == 0, "Second takeover pass must not invoke clear_craft when no recipes exist")
+	core.clear_craft = orig_clear_craft
+
+	-- Clean up mocks
+	core.registered_tools["technic_armor:helmet_silver"] = nil
+	core.registered_items["technic_armor:helmet_silver"] = nil
+	x_player_armor.registered_armors["technic_armor:helmet_silver"] = nil
+	core.registered_tools["mymod:helmet_ruby"] = nil
+	core.registered_items["mymod:helmet_ruby"] = nil
+	x_player_armor.registered_armors["mymod:helmet_ruby"] = nil
+	core.registered_tools["armor_expanded:helmet_leather"] = nil
+	core.registered_items["armor_expanded:helmet_leather"] = nil
+	x_player_armor.registered_armors["armor_expanded:helmet_leather"] = nil
+end)
+
+test("Shield Block Event Pipeline & Projectile Deflection Callbacks (register_on_block)", function()
+	local player = create_mock_player("block_cb_hero")
+	local attacker = create_mock_player("block_cb_attacker")
+	x_player_armor.inventory.init_player_inventory(player)
+	local _, inv = x_player_armor.get_valid_player(player)
+
+	player.look_dir = {x = 0, y = 0, z = 1}
+	player.controls = {RMB = true}
+
+	-- Equip Steel Shield in slot 5
+	inv:set_stack("armor", 5, ItemStack("x_player_armor:shield_steel 1 0"))
+
+	local block_calls = 0
+	local last_blocked_damage = 0
+	local last_shield_item = nil
+	local last_attacker = nil
+
+	local unregister_cb = function(player_ref, hitter, damage, shield_stack)
+		block_calls = block_calls + 1
+		last_blocked_damage = damage
+		last_shield_item = shield_stack and shield_stack:get_name()
+		last_attacker = hitter
+	end
+	x_player_armor.register_on_block(unregister_cb)
+
+	-- 1. Test punch block callback
+	x_player_armor.combat.handle_punch(player, attacker, 1.0, {}, {x = 0, y = 0, z = -1}, 20)
+
+	assert(block_calls == 1, "register_on_block callback must be triggered on punch block")
+	assert(last_blocked_damage == 20, "Blocked damage passed to callback must be 20")
+	assert(last_shield_item == "x_player_armor:shield_steel", "Shield stack passed to callback must be steel shield")
+	assert(last_attacker == attacker, "Attacker reference passed to callback must match attacker")
+
+	-- 2. Test projectile deflection callback
+	local mock_proj = {
+		valid = true,
+		is_valid = function(self) return self.valid end,
+		get_velocity = function(self) return {x = 0, y = -1, z = -20} end,
+		set_velocity = function(self, v) end,
+		set_acceleration = function(self, a) end,
+		set_rotation = function(self, r) end,
+		get_pos = function(self) return {x = 0, y = 10, z = 2} end,
+		set_pos = function(self, p) end,
+	}
+
+	local deflected = x_player_armor.try_deflect_projectile(player, mock_proj, {x = 0, y = 10, z = 0.5}, {x = 0, y = 0, z = -1})
+	assert(deflected == true, "Projectile must be deflected")
+	assert(block_calls == 2, "register_on_block callback must be triggered on projectile deflection")
+	assert(last_blocked_damage == 0, "Projectile deflection damage passed to callback should be 0")
+	assert(last_attacker == mock_proj, "Projectile object passed to callback must match projectile")
+
+	-- Cleanup
+	for i = #x_player_armor.callbacks.on_block, 1, -1 do
+		if x_player_armor.callbacks.on_block[i] == unregister_cb then
+			table.remove(x_player_armor.callbacks.on_block, i)
+		end
+	end
+end)
+
+test("Armor Stand on_equip and on_take Lifecycle Callbacks", function()
+	local player = create_mock_player("stand_cb_hero")
+	x_player_armor.inventory.init_player_inventory(player)
+	local pos = {x = 55, y = 10, z = 55}
+	core.set_node(pos, {name = "x_player_armor:stand"})
+	local meta = core.get_meta(pos)
+	meta:set_string("owner", "stand_cb_hero")
+	local sinv = meta:get_inventory()
+	sinv:set_size("armor", 5)
+
+	local equip_events = {}
+	local take_events = {}
+
+	local on_equip_cb = function(p, slot, stack, plr)
+		table.insert(equip_events, {pos = p, slot = slot, item = stack:get_name(), player = plr})
+	end
+	local on_take_cb = function(p, slot, stack, plr)
+		table.insert(take_events, {pos = p, slot = slot, item = stack:get_name(), player = plr})
+	end
+
+	x_player_armor.stand.register_on_equip(on_equip_cb)
+	x_player_armor.stand.register_on_take(on_take_cb)
+
+	-- Place steel helmet in stand slot 1
+	sinv:set_stack("armor", 1, ItemStack("x_player_armor:helmet_steel"))
+	sinv:set_stack("armor", 2, ItemStack("x_player_armor:chestplate_steel"))
+
+	-- 1. Test take_all_armor dispatches on_take for each non-empty slot
+	local take_res = x_player_armor.stand.take_all_armor(pos, player)
+	assert(take_res == true, "take_all_armor must return true")
+	assert(#take_events == 2, "take_all_armor must trigger 2 on_take callbacks for 2 armor pieces")
+	assert(take_events[1].slot == 1 and take_events[1].item == "x_player_armor:helmet_steel")
+	assert(take_events[2].slot == 2 and take_events[2].item == "x_player_armor:chestplate_steel")
+
+	-- 2. Test node definition callbacks on_metadata_inventory_put and on_metadata_inventory_take
+	local stand_node_def = core.registered_nodes["x_player_armor:stand"]
+	assert(stand_node_def ~= nil, "x_player_armor:stand node def must exist")
+
+	-- Simulate putting diamond boots into slot 4
+	local boot_stack = ItemStack("x_player_armor:boots_diamond")
+	sinv:set_stack("armor", 4, boot_stack)
+	stand_node_def.on_metadata_inventory_put(pos, "armor", 4, boot_stack, player)
+
+	assert(#equip_events == 1, "on_metadata_inventory_put must trigger on_equip callback")
+	assert(equip_events[1].slot == 4)
+	assert(equip_events[1].item == "x_player_armor:boots_diamond")
+
+	-- Simulate taking diamond boots from slot 4
+	sinv:set_stack("armor", 4, ItemStack(""))
+	stand_node_def.on_metadata_inventory_take(pos, "armor", 4, boot_stack, player)
+
+	assert(#take_events == 3, "on_metadata_inventory_take must trigger on_take callback")
+	assert(take_events[3].slot == 4)
+	assert(take_events[3].item == "x_player_armor:boots_diamond")
+
+	-- Cleanup
+	for i = #x_player_armor.stand.callbacks.on_equip, 1, -1 do
+		if x_player_armor.stand.callbacks.on_equip[i] == on_equip_cb then
+			table.remove(x_player_armor.stand.callbacks.on_equip, i)
+		end
+	end
+	for i = #x_player_armor.stand.callbacks.on_take, 1, -1 do
+		if x_player_armor.stand.callbacks.on_take[i] == on_take_cb then
+			table.remove(x_player_armor.stand.callbacks.on_take, i)
+		end
+	end
+end)
+
+test("Cursed Armor Protection Against Displacement in equip_item and unequip_element", function()
+	local player = create_mock_player("cursed_equip_user")
+	x_player_armor.inventory.init_player_inventory(player)
+	local _, pinv = x_player_armor.get_valid_player(player)
+
+	core.registered_tools["testmod:cursed_chestplate"] = {
+		description = "Cursed Chestplate",
+		groups = {armor_torso = 15, cursed = 1},
+	}
+	core.registered_tools["testmod:holy_chestplate"] = {
+		description = "Holy Chestplate",
+		groups = {armor_torso = 20},
+	}
+
+	-- Equip cursed chestplate directly
+	pinv:set_stack("armor", 2, ItemStack("testmod:cursed_chestplate"))
+	x_player_armor.set_player_armor(player)
+
+	-- 1. Try to unequip torso element programmatically
+	local unequip_res = x_player_armor.inventory.unequip_element(player, "torso")
+	assert(unequip_res:is_empty() == true, "unequip_element must return empty stack when slot is cursed")
+	assert(pinv:get_stack("armor", 2):get_name() == "testmod:cursed_chestplate", "Cursed item must remain equipped")
+
+	-- 2. Try to equip new chestplate over cursed chestplate
+	local equip_res = x_player_armor.inventory.equip_item(player, ItemStack("testmod:holy_chestplate"))
+	assert(equip_res == nil, "equip_item must return nil when target slot contains cursed item")
+	assert(pinv:get_stack("armor", 2):get_name() == "testmod:cursed_chestplate", "Cursed item must not be displaced")
+
+	-- 3. Test non-cursed slot behavior
+	pinv:set_stack("armor", 1, ItemStack("x_player_armor:helmet_steel"))
+	local unequip_head_res = x_player_armor.inventory.unequip_element(player, "head")
+	assert(unequip_head_res:get_name() == "x_player_armor:helmet_steel", "unequip_element must return unequipped item for non-cursed armor")
+	assert(pinv:get_stack("armor", 1):is_empty(), "Non-cursed item must be unequipped")
+
+	-- Cleanup
+	core.registered_tools["testmod:cursed_chestplate"] = nil
+	core.registered_tools["testmod:holy_chestplate"] = nil
+end)
+
+test("Subsystem Inspection Accessors & Definition Lookups (get_armor_def, items, crafting, force_alias)", function()
+	-- 1. get_armor_def lookups
+	local diamond_def = x_player_armor.get_armor_def("x_player_armor:helmet_diamond")
+	assert(diamond_def ~= nil, "get_armor_def must resolve modern armor item")
+	assert(diamond_def.groups and diamond_def.groups.armor_head ~= nil, "Definition must have armor_head group")
+
+	-- Legacy alias resolution
+	local legacy_def = x_player_armor.get_armor_def("3d_armor:helmet_diamond")
+	assert(legacy_def ~= nil, "get_armor_def must resolve legacy alias name")
+	assert(legacy_def.groups and legacy_def.groups.armor_head ~= nil, "Resolved legacy def must have armor_head group")
+
+	-- Invalid lookup returns nil
+	assert(x_player_armor.get_armor_def("") == nil, "get_armor_def for empty string must return nil")
+	assert(x_player_armor.get_armor_def(nil) == nil, "get_armor_def for nil must return nil")
+
+	-- 2. items subsystem accessors
+	local materials = x_player_armor.items.get_materials()
+	assert(type(materials) == "table", "get_materials must return a table")
+	assert(materials.diamond ~= nil, "materials must contain diamond")
+	assert(materials.steel ~= nil, "materials must contain steel")
+
+	local pieces = x_player_armor.items.get_pieces()
+	assert(type(pieces) == "table", "get_pieces must return a table")
+	assert(pieces.helmet ~= nil, "pieces must contain helmet")
+	assert(pieces.shield ~= nil, "pieces must contain shield")
+
+	-- 3. crafting subsystem accessors
+	local ingredients = x_player_armor.crafting.get_recipe_ingredients()
+	assert(type(ingredients) == "table", "get_recipe_ingredients must return a table")
+	assert(ingredients.diamond == "default:diamond", "diamond recipe ingredient must be default:diamond")
+
+	-- 4. utils.force_alias helper
+	x_player_armor.utils.force_alias("test_mod:old_item", "test_mod:new_item")
+	assert(core.registered_aliases["test_mod:old_item"] == "test_mod:new_item", "force_alias must register alias in core.registered_aliases")
+end)
+
+test("Armor Stand Blast Protection and Drop Consistency (on_blast)", function()
+	local pos = {x = 80, y = 20, z = 80}
+	core.set_node(pos, {name = "x_player_armor:stand"})
+	local meta = core.get_meta(pos)
+	local sinv = meta:get_inventory()
+	sinv:set_size("armor", 5)
+
+	sinv:set_stack("armor", 1, ItemStack("x_player_armor:helmet_diamond"))
+	sinv:set_stack("armor", 2, ItemStack("x_player_armor:chestplate_diamond"))
+	sinv:set_stack("armor", 5, ItemStack("x_player_armor:shield_diamond"))
+
+	local stand_node_def = core.registered_nodes["x_player_armor:stand"]
+	assert(stand_node_def ~= nil and type(stand_node_def.on_blast) == "function", "stand node def must define on_blast")
+
+	local drops = stand_node_def.on_blast(pos, 2.0)
+	assert(type(drops) == "table", "on_blast must return a table of drops")
+	assert(#drops == 4, "on_blast must return 3 armor items + 1 stand item (4 total), got " .. #drops)
+
+	local found_helm, found_chest, found_shield, found_stand = false, false, false, false
+	for _, stack in ipairs(drops) do
+		local name = stack:get_name()
+		if name == "x_player_armor:helmet_diamond" then found_helm = true
+		elseif name == "x_player_armor:chestplate_diamond" then found_chest = true
+		elseif name == "x_player_armor:shield_diamond" then found_shield = true
+		elseif name == "x_player_armor:stand" then found_stand = true
+		end
+	end
+
+	assert(found_helm, "drops must include diamond helmet")
+	assert(found_chest, "drops must include diamond chestplate")
+	assert(found_shield, "drops must include diamond shield")
+	assert(found_stand, "drops must include armor stand node")
+
+	-- Node must be removed
+	assert(core.get_node(pos).name == "air", "Armor stand node must be removed from map after blast")
 end)
 
 print(string.format("\n=========================================="))

@@ -109,6 +109,7 @@ async function main() {
             stand: types.find(t => t.name === 'XPlayerArmorStand'),
             items: types.find(t => t.name === 'XPlayerArmorItems'),
             crafting: types.find(t => t.name === 'XPlayerArmorCrafting'),
+            skins: types.find(t => t.name === 'XPlayerArmorSkins'),
             ui: types.find(t => t.name === 'XPlayerArmorUI'),
             shield_hud: types.find(t => t.name === 'XPlayerArmorShieldHUD'),
             combat_hud: types.find(t => t.name === 'XPlayerArmorCombatHUD'),
@@ -148,6 +149,8 @@ async function main() {
         emit('- [Effects & Physics Subsystem](#effects--physics-subsystem)')
         emit('- [Armor Stand Subsystem](#armor-stand-subsystem)')
         emit('- [Items & Registration Subsystem](#items--registration-subsystem)')
+        emit('- [Crafting Recipes Subsystem](#crafting-recipes-subsystem)')
+        emit('- [Skins & Textures Subsystem](#skins--textures-subsystem)')
         emit('- [UI & Formspecs Subsystem](#ui--formspecs-subsystem)')
         emit('- [HUD Subsystems](#hud-subsystems)')
         emit('  - [Combat HUD Overlay](#combat-hud-overlay)')
@@ -264,6 +267,8 @@ async function main() {
             { key: 'effects', title: 'Effects & Physics Subsystem', prefix: 'x_player_armor.effects', desc: 'Periodic environmental protection (fire, drown, heal, feather fall) and player physics monoid integration.' },
             { key: 'stand', title: 'Armor Stand Subsystem', prefix: 'x_player_armor.stand', desc: 'Interactive armor stand node, 3D entity preview, shift-click wardrobe swap, and management UI.' },
             { key: 'items', title: 'Items & Registration Subsystem', prefix: 'x_player_armor.items', desc: 'Armor item registration, tier generation, textures, and craft recipe orchestration.' },
+            { key: 'crafting', title: 'Crafting Recipes Subsystem', prefix: 'x_player_armor.crafting', desc: 'Crafting recipe definitions and ingredient queries for armor equipment.' },
+            { key: 'skins', title: 'Skins & Textures Subsystem', prefix: 'x_player_armor.skins', desc: 'Player skin resolution, 1.0 vs 1.8 format detection, and clothing layer compositing.' },
             { key: 'ui', title: 'UI & Formspecs Subsystem', prefix: 'x_player_armor.ui', desc: 'Modern responsive formspecs, sfinv tab integration, unified_inventory, and i3 adapters.' },
             { key: 'combat_hud', title: 'Combat HUD Overlay', prefix: 'x_player_armor.combat_hud', desc: 'Screen overlay displaying equipment durability and active loadout during combat.' },
             { key: 'shield_hud', title: 'Shield Blocking Indicator HUD', prefix: 'x_player_armor.shield_hud', desc: '1st-person perspective dynamic shield blocking guard and cooldown crosshair HUD indicator.' },
