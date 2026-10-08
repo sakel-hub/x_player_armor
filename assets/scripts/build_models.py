@@ -148,6 +148,7 @@ def extract_and_export_piece(name, faces_data, rel_tex_path, transform_fn):
         export_materials="EXPORT",
         export_yup=True,
     )
+    patch_glb_materials(glb_path)
     print(f"Built {name}: blend={os.path.getsize(blend_path)}B, glb={os.path.getsize(glb_path)}B ({len(faces)} polygons)")
 
 
@@ -346,6 +347,7 @@ def build_solid_shield_model():
         export_materials="EXPORT",
         export_yup=True,
     )
+    patch_glb_materials(glb_path)
     print(f"Built solid {name}: blend={os.path.getsize(blend_path)}B, glb={os.path.getsize(glb_path)}B ({len(mesh.polygons)} polygons)")
 
 
@@ -451,11 +453,120 @@ def add_voxel_extruder_to_bm(bm, uv_layer, dvert_lay, base, axis_u, axis_v, axis
                     l[uv_layer].uv = (cuc, cvc)
 
 
+SKINSDB_BLEND = os.path.join(MINETEST_MODS, "skinsdb", "models", "skinsdb_3d_armor_character_5.blend")
+if not os.path.exists(SKINSDB_BLEND):
+    SKINSDB_BLEND = os.path.join(MINETEST_MODS, "x_player_bridge", "assets", "skinsdb_3d_armor_character_5.blend")
+
+
+def patch_glb_materials(glb_path):
+    """
+    Patches the exported glTF binary to:
+    1. Ensure all materials have alphaMode: MASK with alphaCutoff: 0.5.
+    2. Ensure each material i (0..N-1) has a dedicated baseColorTexture with index i,
+       and the textures array has N entries with sampler 0. This guarantees Luanti's
+       CGLTFMeshFileLoader sets getTextureSlot(meshbufNr) = i for 1-to-1 texture slot mapping.
+    3. Completely strip embedded images and image sources from glTF, eliminating
+       Luanti's 'embedded images are not supported' warning and ensuring all textures
+       are bound dynamically at runtime via Luanti object properties.
+    """
+    import struct
+    import json
+    with open(glb_path, "rb") as f:
+        data = f.read()
+    magic, version, _ = struct.unpack_from("<4sII", data, 0)
+    chunk_len, chunk_type = struct.unpack_from("<II", data, 12)
+    json_bytes = data[20:20+chunk_len]
+    json_data = json.loads(json_bytes.decode("utf-8"))
+
+    materials = json_data.get("materials", [])
+    num_materials = len(materials)
+
+    # Ensure default sampler is present for nearest-neighbor / clamp wrapping
+    samplers = json_data.get("samplers", [])
+    if not samplers:
+        samplers = [{"magFilter": 9728, "minFilter": 9728, "wrapS": 10497, "wrapT": 10497}]
+        json_data["samplers"] = samplers
+
+    # Map each material 1-to-1 to its corresponding texture slot
+    json_data["textures"] = [{"sampler": 0} for _ in range(num_materials)]
+
+    for i, mat in enumerate(materials):
+        mat["alphaMode"] = "MASK"
+        mat["alphaCutoff"] = 0.5
+        pbr = mat.setdefault("pbrMetallicRoughness", {})
+        pbr["baseColorTexture"] = {"index": i}
+
+    # Completely strip embedded images so Luanti never warns or falls back to baked pixels
+    if "images" in json_data:
+        del json_data["images"]
+
+    new_json_str = json.dumps(json_data, separators=(",", ":"))
+    new_json_bytes = new_json_str.encode("utf-8")
+    pad_len = (4 - (len(new_json_bytes) % 4)) % 4
+    new_json_bytes += b" " * pad_len
+    new_chunk_len = len(new_json_bytes)
+
+    bin_chunk = data[20+chunk_len:]
+    new_total_len = 12 + 8 + new_chunk_len + len(bin_chunk)
+    new_header = struct.pack("<4sII", magic, version, new_total_len)
+    new_chunk_header = struct.pack("<II", new_chunk_len, chunk_type)
+
+    with open(glb_path, "wb") as f:
+        f.write(new_header)
+        f.write(new_chunk_header)
+        f.write(new_json_bytes)
+        f.write(bin_chunk)
+    print(f"Patched {glb_path}: {num_materials} slot(s), stripped images, alphaMode: MASK")
+
+
 def build_preview_model():
-    print(f"Building 7-material 3D preview model from {ARMOR_BLEND}...")
-    bpy.ops.wm.open_mainfile(filepath=ARMOR_BLEND)
+    print(f"Building 9-material universal 3D preview model from {ARMOR_BLEND} and {SKINSDB_BLEND}...")
 
     from mathutils import Vector
+
+    scale_xy = 1.05
+    scale_z_body = 6.3 / 6.75
+    scale_z_head = 1.05
+
+    def transform_f18(co):
+        x = co.x * scale_xy
+        y = co.y * scale_xy
+        if co.z <= 0.0:
+            z = 0.0
+        elif co.z <= 13.5:
+            z = co.z * scale_z_body
+        else:
+            z = 12.6 + (co.z - 13.5) * scale_z_head
+        return (x, y, z)
+
+    # 1. Extract 72 Format 1.8 faces (36 base body + 36 3D outer layers) from skinsdb model
+    f18_data = []
+    if os.path.exists(SKINSDB_BLEND):
+        print(f"Extracting Format 1.8 3D meshes from {SKINSDB_BLEND}...")
+        bpy.ops.wm.open_mainfile(filepath=SKINSDB_BLEND)
+        s_player = bpy.data.objects.get("Player")
+        if s_player and s_player.data:
+            s_mesh = s_player.data
+            s_uv = s_mesh.uv_layers.active.data
+            vg_names = {vg.index: vg.name for vg in s_player.vertex_groups}
+
+            for p in s_mesh.polygons:
+                if p.material_index == 1:
+                    v_cos = [transform_f18(s_mesh.vertices[v].co) for v in p.vertices]
+                    loop_uvs = [s_uv[l].uv[:] for l in p.loop_indices]
+                    v_weights = []
+                    for v in p.vertices:
+                        w_dict = {}
+                        for g in s_mesh.vertices[v].groups:
+                            gname = vg_names.get(g.group)
+                            if gname:
+                                w_dict[gname] = g.weight
+                        v_weights.append(w_dict)
+                    f18_data.append((v_cos, loop_uvs, v_weights))
+            print(f"Extracted {len(f18_data)} Format 1.8 faces with 3D outer layers.")
+
+    # 2. Open base 3d_armor blend file
+    bpy.ops.wm.open_mainfile(filepath=ARMOR_BLEND)
 
     # Clean out non-essential objects (lights, cameras, extra meshes)
     for obj in list(bpy.data.objects):
@@ -466,28 +577,35 @@ def build_preview_model():
     player_mesh = player_obj.data
 
     # Exact polygon classification:
-    # 0 = Body, 1 = Head, 2 = Torso, 3 = Legs, 4 = Feet, -1 = Delete (cape, legacy stacked shield 96..157, legacy stacked sword 158..219)
+    # 0 = Body (Format 1.0, 64x32)
+    # 1 = Body18 (Format 1.8, 64x64, inserted via bmesh)
+    # 2 = Head (Helmet)
+    # 3 = Torso (Chestplate + Sleeves)
+    # 4 = Legs (Leggings)
+    # 5 = Feet (Boots)
+    # -1 = Delete (cape 42..47, legacy stacked shield 96..157, legacy stacked sword 158..219)
     poly_mat = {}
     for p in player_mesh.polygons:
         idx = p.index
         if idx in range(42, 48) or idx >= 96:
             poly_mat[idx] = -1  # Delete cape (42..47) and legacy stacked planes
         elif idx < 42:
-            poly_mat[idx] = 0   # Base character body
+            poly_mat[idx] = 0   # Base character body (Format 1.0)
         elif idx in range(48, 54):
-            poly_mat[idx] = 2   # Chestplate -> Torso
+            poly_mat[idx] = 3   # Chestplate -> Torso
         elif idx in range(54, 60):
-            poly_mat[idx] = 1   # Helmet -> Head
+            poly_mat[idx] = 2   # Helmet -> Head
         elif idx in range(60, 72):
-            poly_mat[idx] = 2   # Sleeves Left/Right -> Torso
+            poly_mat[idx] = 3   # Sleeves Left/Right -> Torso
         elif idx in range(72, 84):
-            poly_mat[idx] = 3   # Leggings Left/Right (including bottom caps 73 & 83) -> Legs
+            poly_mat[idx] = 4   # Leggings Left/Right (including bottom caps 73 & 83) -> Legs
         elif idx in range(84, 96):
-            poly_mat[idx] = 4   # Boots Left/Right -> Feet
+            poly_mat[idx] = 5   # Boots Left/Right -> Feet
 
-    # Assign 8 dedicated material slots
+    # Assign 9 dedicated material slots
     mat_configs = [
         ("Body", "../textures/x_player_armor_character.png"),
+        ("Body18", "../textures/blank.png"),
         ("Head", "../textures/x_player_armor_steel.png"),
         ("Torso", "../textures/x_player_armor_steel.png"),
         ("Legs", "../textures/x_player_armor_steel.png"),
@@ -522,15 +640,10 @@ def build_preview_model():
     bmesh.update_edit_mesh(player_mesh)
     bpy.ops.object.mode_set(mode="OBJECT")
 
-    # Apply canonical skeletal scaling to preview mesh vertices
-    scale_xy = 1.05
-    scale_z_body = 6.3 / 6.75
-    scale_z_head = 1.05
-
-    # Identify boot vertices (material_index == 4)
+    # Identify boot vertices (material_index == 5)
     boot_vert_indices = set()
     for f in player_mesh.polygons:
-        if f.material_index == 4:
+        if f.material_index == 5:
             for v_idx in f.vertices:
                 boot_vert_indices.add(v_idx)
 
@@ -550,7 +663,8 @@ def build_preview_model():
             else:
                 v.co.z = 12.6 + (v.co.z - 13.5) * scale_z_head
 
-    # Generate 3D Voxel Extruder Grid for Standard Shield (Slot 5), Tower Shield (Slot 6), and Wielditem (Slot 7)
+    # Generate 3D Voxel Extruder Grid for Standard Shield (Slot 6), Tower Shield (Slot 7), and Wielditem (Slot 8)
+    # and append Format 1.8 faces to Body18 (Slot 1)
     bpy.ops.object.mode_set(mode="EDIT")
     bm = bmesh.from_edit_mesh(player_mesh)
     uv_layer = bm.loops.layers.uv.active
@@ -559,23 +673,36 @@ def build_preview_model():
     arm_l_idx = player_obj.vertex_groups["Arm_Left"].index
     arm_r_idx = player_obj.vertex_groups["Arm_Right"].index
 
-    # 1. Shield Standard (Slot 5) on Arm_Left (Medium heater/buckler shield)
+    # Append Format 1.8 geometry (Slot 1)
+    vg_indices = {vg.name: vg.index for vg in player_obj.vertex_groups}
+    for v_cos, loop_uvs, v_weights in f18_data:
+        verts = [bm.verts.new(co) for co in v_cos]
+        for v, w_dict in zip(verts, v_weights):
+            for gname, weight in w_dict.items():
+                if gname in vg_indices:
+                    v[dvert_lay][vg_indices[gname]] = weight
+        face = bm.faces.new(verts)
+        face.material_index = 1  # Body18
+        for l, uv in zip(face.loops, loop_uvs):
+            l[uv_layer].uv = uv
+
+    # 1. Shield Standard (Slot 6) on Arm_Left (Medium heater/buckler shield)
     shield_base = Vector((-2.40, 4.33, 3.68))
     shield_axis_u = Vector((-2.32, -6.57, -0.07))
     shield_axis_v = Vector((-1.18, 0.34, 6.08))
     shield_axis_n = Vector((-0.925, 0.329, -0.198))
     shield_uv_rect = (0.0, 0.5, 0.25, 1.0)
-    add_voxel_extruder_to_bm(bm, uv_layer, dvert_lay, shield_base, shield_axis_u, shield_axis_v, shield_axis_n, 0.35, shield_uv_rect, 5, arm_l_idx)
+    add_voxel_extruder_to_bm(bm, uv_layer, dvert_lay, shield_base, shield_axis_u, shield_axis_v, shield_axis_n, 0.35, shield_uv_rect, 6, arm_l_idx)
 
-    # 2. Shield Tower (Slot 6) on Arm_Left (Tall boots-to-neckline tower shield)
+    # 2. Shield Tower (Slot 7) on Arm_Left (Tall boots-to-neckline tower shield)
     # Raised bottom to Z=1.80 (mid-boot / ankle level) to prevent ground clipping while preserving neckline coverage
     shield_base_tower = Vector((-2.46, 4.68, 1.80))
     shield_axis_u_tower = Vector((-2.40, -6.80, -0.07))
     shield_axis_v_tower = Vector((-2.00, 0.58, 10.70))
     shield_axis_n_tower = Vector((-0.925, 0.329, -0.198))
-    add_voxel_extruder_to_bm(bm, uv_layer, dvert_lay, shield_base_tower, shield_axis_u_tower, shield_axis_v_tower, shield_axis_n_tower, 0.35, shield_uv_rect, 6, arm_l_idx)
+    add_voxel_extruder_to_bm(bm, uv_layer, dvert_lay, shield_base_tower, shield_axis_u_tower, shield_axis_v_tower, shield_axis_n_tower, 0.35, shield_uv_rect, 7, arm_l_idx)
 
-    # 3. Wielditem (Slot 7) on Arm_Right (Universal 16x16 Extruder)
+    # 3. Wielditem (Slot 8) on Arm_Right (Universal 16x16 Extruder)
     # Canonical Luanti wield orientation:
     # Diagonal tool axis extends horizontally forward (+Y) from hand (base Y=-0.15 -> tip Y=+7.60 at Z=7.35)
     # Grip sits comfortably in palm/fingers (Y=+0.88..+1.92), crossguard emerges in front of hand (Y=+1.92..+3.80)
@@ -586,7 +713,7 @@ def build_preview_model():
     wield_axis_v = Vector((0.0, 4.13, -4.13))
     wield_axis_n = Vector((1.0, 0.0, 0.0))   # +X normal (facing outward)
     wield_uv_rect = (0.0, 0.0, 1.0, 1.0)
-    add_voxel_extruder_to_bm(bm, uv_layer, dvert_lay, wield_base, wield_axis_u, wield_axis_v, wield_axis_n, 0.35, wield_uv_rect, 7, arm_r_idx)
+    add_voxel_extruder_to_bm(bm, uv_layer, dvert_lay, wield_base, wield_axis_u, wield_axis_v, wield_axis_n, 0.35, wield_uv_rect, 8, arm_r_idx)
 
     bmesh.update_edit_mesh(player_mesh)
     bpy.ops.object.mode_set(mode="OBJECT")
@@ -654,6 +781,7 @@ def build_preview_model():
         export_yup=True,
     )
     print(f"Exported multi-material preview: blend={os.path.getsize(preview_blend)}B, glb={os.path.getsize(preview_glb)}B ({len(player_mesh.polygons)} polygons, {len(player_obj.material_slots)} materials)")
+    patch_glb_materials(preview_glb)
 
     # Reset preview blend file UI to modern default Blender factory workspaces and layout
     # (replaces legacy screen layouts inherited from 3d_armor_character.blend)
@@ -869,6 +997,7 @@ def build_stand_models():
 
     stand_glb = os.path.join(MODELS_DIR, "x_player_armor_stand.glb")
     bpy.ops.export_scene.gltf(filepath=stand_glb, export_format="GLB", export_yup=True)
+    patch_glb_materials(stand_glb)
     print(f"Exported stand: blend={os.path.getsize(stand_blend)}B, glb={os.path.getsize(stand_glb)}B ({len(mesh.polygons)} polygons)")
 
 

@@ -328,6 +328,20 @@ def build_poster_scene():
     ]
     assign_materials_safely(stand_mannequin, stand_mats)
 
+    # Adjust wield item mesh on Stand Mannequin so sword emerges cleanly from the wooden hand:
+    # The wooden stand arm is narrower in depth than the player character arm and pitched downward,
+    # so shift Slot 7 wield vertices forward along +Y and down in Z to match the wooden hand's grip position.
+    wield_v_indices = set()
+    for p in stand_mannequin.data.polygons:
+        if p.material_index == 7:
+            for v in p.vertices:
+                wield_v_indices.add(v)
+
+    delta_stand_wield = Vector((0.0, 1.20, -0.25))
+    for i in wield_v_indices:
+        stand_mannequin.data.vertices[i].co += delta_stand_wield
+    stand_mannequin.data.update()
+
     # Align mannequin exactly with stand base slab (slab top Z = 5.0 - 4.375 = 0.625)
     stand_arm.location = Vector((-5.8, -0.6, 0.625 + 10.9))
     stand_arm.rotation_euler = Euler((0.0, 0.0, math.radians(18)), "XYZ")
