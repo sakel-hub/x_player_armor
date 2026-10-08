@@ -4,6 +4,8 @@
 
 A modern, high-performance player armor and shield mod for Luanti. Built to give players full 3D visual gear, active shield combat, and elemental survival perks while keeping your character skin completely intact and multiplayer gameplay butter-smooth.
 
+![X Player Armor Showcase](screenshot.png)
+
 ---
 
 ## Gameplay & Features
@@ -13,7 +15,7 @@ A modern, high-performance player armor and shield mod for Luanti. Built to give
 - **Dynamic Combat HUD**: During battle, a sleek on-screen armor HUD appears automatically to show your gear's real-time durability so you always know when an item needs repair without opening your inventory.
 - **Sound Effects & Particle Sparks**: Enjoy distinct audio effects and particle sparks when equipping gear, absorbing strikes, deflecting arrows, or shattering broken armor.
 - **Interactive Armor Stands**: Display your favorite armor sets in your base. Right-click to open a visual wardrobe manager, or simply Shift+Left Click with an empty hand to swap your equipped armor with the stand in one click.
-- **3D Inventory Preview**: Rotate and inspect your character in real-time 3D right inside your inventory screen (`sfinv`, `unified_inventory`, or `i3`).
+- **3D Inventory Preview**: Rotate and inspect your character in real-time 3D right inside your inventory screen (`sfinv`, `unified_inventory`, or `i3`). Features full dual-format support for classic 64x32 skins and 64x64 Format 1.8 skins with 3D outer layers (hat, jacket, sleeves, pants) from `skinsdb`, `clothing`, and other skin mods.
 - **Matching Set Bonus**: Wearing a full 4-piece or 5-piece matching armor suit grants an automatic **+10% defense bonus**.
 - **Lag-Free Multiplayer**: Engineered for busy multiplayer servers. Equipping dozens of players and placing armor stands causes zero server tick overhead.
 - **Full Drop-in Compatibility**: Works out-of-the-box with mods that expect classic `3d_armor`, `shields`, or `3d_armor_stand` APIs, and automatically migrates older saved inventories.
@@ -58,13 +60,17 @@ x_player_armor.register_armor("mymod:helmet_obsidian", {
     damage_groups = {cracky = 2, snappy = 1, level = 3},
 })
 
--- Listen for armor equip and damage events
+-- Listen for armor equip, damage, and shield block events
 x_player_armor.register_on_equip(function(player, index, stack)
     -- Triggered when an armor item is equipped
 end)
 
 x_player_armor.register_on_damage(function(player, index, stack, uses)
     -- Triggered when armor absorbs damage
+end)
+
+x_player_armor.register_on_block(function(player, hitter_or_proj, damage, shield_stack)
+    -- Triggered when an attack or projectile is successfully blocked with a shield
 end)
 ```
 
@@ -77,7 +83,7 @@ For complete class definitions, parameter types, callbacks, and subsystem method
 The mod includes full developer scripts, testing harnesses, and Luanti static analysis:
 
 ```bash
-# Run the 62-assertion automated unit test suite
+# Run the 71-assertion automated unit test suite
 npm test
 
 # Run Luanti static analysis (Luacheck)
