@@ -1,0 +1,34 @@
+{
+    "name": "x_player_armor",
+    "version": "2.0.0",
+    "description": "High-performance modular player armor, shield defense, durability, and damage mitigation system attaching visual entities directly to skeletal bones.",
+    "main": "init.lua",
+    "type": "module",
+    "engines": {
+        "node": ">=16.0.0",
+        "npm": ">=8.0.0"
+    },
+    "scripts": {
+        "test": "lua tests/test_x_player_armor.lua",
+        "lint": "luacheck .",
+        "doc": "node ./scripts/compile_docs.mjs",
+        "push:ci": "node ./scripts/deploy.mjs"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/sakel-hub/x_player_armor.git"
+    },
+    "author": "SaKeL",
+    "license": "LGPL-2.1-or-later",
+    "bugs": {
+        "url": "https://github.com/sakel-hub/x_player_armor/issues"
+    },
+    "homepage": "https://github.com/sakel-hub/x_player_armor#readme",
+    "devDependencies": {
+        "node-fetch": "^3.3.2",
+        "yargs": "^17.7.2"
+    },
+    "dependencies": {
+        "dotenv": "^16.4.5"
+    }
+}

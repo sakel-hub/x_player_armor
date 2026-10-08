@@ -1,0 +1,519 @@
+# X Player Armor (x_player_armor) Translation Template
+# Copyright (C) 2026 SaKeL
+# This file is distributed under the same license as the x_player_armor package.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: x_player_armor\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-06 12:00+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Helmet"
+msgstr ""
+
+msgid "Chestplate"
+msgstr ""
+
+msgid "Leggings"
+msgstr ""
+
+msgid "Boots"
+msgstr ""
+
+msgid "Shield"
+msgstr ""
+
+msgid "Armor Stand"
+msgstr ""
+
+msgid "Armor Stand (Owned by @1)"
+msgstr ""
+
+msgid "ARMOR & EQUIPMENT"
+msgstr ""
+
+msgid "Drag to rotate 3D view"
+msgstr ""
+
+msgid "Defense Level"
+msgstr ""
+
+msgid "Regenerative Ward"
+msgstr ""
+
+msgid "★ Full Set +10% Bonus"
+msgstr ""
+
+msgid "🔥 Fire Immunity"
+msgstr ""
+
+msgid "💧 Water Breathing"
+msgstr ""
+
+msgid "🪶 Feather Falling"
+msgstr ""
+
+msgid "Equipped Armor Slots"
+msgstr ""
+
+msgid "Defense"
+msgstr ""
+
+msgid "Ward"
+msgstr ""
+
+msgid "Armor"
+msgstr ""
+
+msgid "Armor & Equipment"
+msgstr ""
+
+msgid "Open armor and equipment inventory"
+msgstr ""
+
+msgid "Warning: Your @1 is almost broken!"
+msgstr ""
+
+msgid "Wood"
+msgstr ""
+
+msgid "Cactus"
+msgstr ""
+
+msgid "Steel"
+msgstr ""
+
+msgid "Bronze"
+msgstr ""
+
+msgid "Diamond"
+msgstr ""
+
+msgid "Gold"
+msgstr ""
+
+msgid "Mithril"
+msgstr ""
+
+msgid "Crystal"
+msgstr ""
+
+msgid "Nether"
+msgstr ""
+
+msgid "Admin"
+msgstr ""
+
+msgid "@1 Helmet"
+msgstr ""
+
+msgid "Helmet forged from @1."
+msgstr ""
+
+msgid "@1 Chestplate"
+msgstr ""
+
+msgid "Chestplate forged from @1."
+msgstr ""
+
+msgid "@1 Leggings"
+msgstr ""
+
+msgid "Leggings forged from @1."
+msgstr ""
+
+msgid "@1 Boots"
+msgstr ""
+
+msgid "Boots forged from @1."
+msgstr ""
+
+msgid "@1 Shield"
+msgstr ""
+
+msgid "Shield crafted with @1."
+msgstr ""
+
+msgid "Enhanced Wood Shield"
+msgstr ""
+
+msgid "Enhanced Cactus Shield"
+msgstr ""
+
+msgid "ARMOR ATTRIBUTES"
+msgstr ""
+
+msgid "Damage Reduction"
+msgstr ""
+
+msgid "Absorbs @1% of incoming physical damage"
+msgstr ""
+
+msgid "Absorbs @1% incoming hit damage"
+msgstr ""
+
+msgid "Ward Barrier"
+msgstr ""
+
+msgid "@1% chance to negate damage"
+msgstr ""
+
+msgid "ACTIVE PERKS"
+msgstr ""
+
+msgid "★ Full Set Bonus (+10% Total Defense)"
+msgstr ""
+
+msgid "★ Set Bonus: +10% Defense"
+msgstr ""
+
+msgid "Matching 4-piece set equipped"
+msgstr ""
+
+msgid "🪶 Feather Fall: Dampened"
+msgstr ""
+
+msgid "-@1 Fall impact damage"
+msgstr ""
+
+msgid "🪶 Feather Fall: Reduced Impact (-@1 HP)"
+msgstr ""
+
+msgid "🔥 Fire Ward: Protected"
+msgstr ""
+
+msgid "🔥 Fire Ward: Lava & Heat Immunity"
+msgstr ""
+
+msgid "Immune to heat and lava"
+msgstr ""
+
+msgid "💧 Water Ward: Breathing"
+msgstr ""
+
+msgid "💧 Water Ward: Infinite Breathing"
+msgstr ""
+
+msgid "Infinite underwater breath"
+msgstr ""
+
+msgid "No active perks"
+msgstr ""
+
+msgid "Equip 4 matching pieces"
+msgstr ""
+
+msgid "for +10% Set Bonus defense"
+msgstr ""
+
+msgid "No active enchantments (equip 4 matching pieces for set bonus)"
+msgstr ""
+
+msgid "No active enchantments"
+msgstr ""
+
+msgid "Equip 4 matching pieces for set bonus"
+msgstr ""
+
+msgid "Absorbs @1% incoming hit damage (+10% set bonus)"
+msgstr ""
+
+msgid "Armor Healing"
+msgstr ""
+
+msgid "@1% chance on hit to nullify damage & heal"
+msgstr ""
+
+msgid "0% - No regenerative healing ward"
+msgstr ""
+
+msgid "Mobility"
+msgstr ""
+
+msgid "Shield Defense"
+msgstr ""
+
+msgid "Active"
+msgstr ""
+
+msgid "Blocks up to 80% damage in frontal arc (Hold RMB)"
+msgstr ""
+
+msgid "Healing Ward: @1% Chance to Absorb & Heal"
+msgstr ""
+
+msgid "Shield Guard: Frontal Block & Parry"
+msgstr ""
+
+msgid "Thorns: Damages Attacker's Weapon"
+msgstr ""
+
+msgid "Swiftness: +@1% Movement Speed"
+msgstr ""
+
+msgid "Heavy Load: @1% Movement Speed"
+msgstr ""
+
+msgid "High Jump: +@1% Jump Height"
+msgstr ""
+
+msgid "Type: Helmet (Head Slot)"
+msgstr ""
+
+msgid "Type: Chestplate (Torso Slot)"
+msgstr ""
+
+msgid "Type: Leggings (Legs Slot)"
+msgstr ""
+
+msgid "Type: Boots (Feet Slot)"
+msgstr ""
+
+msgid "Type: Shield (Off-Hand Slot)"
+msgstr ""
+
+msgid "Type: Tower Shield (Reinforced Off-Hand)"
+msgstr ""
+
+msgid "Type: Armor Equipment"
+msgstr ""
+
+msgid "Type: Equipment Display / Storage"
+msgstr ""
+
+msgid "Capacity: "
+msgstr ""
+
+msgid "Full 5-Piece Armor Set"
+msgstr ""
+
+msgid "Passive Defense: "
+msgstr ""
+
+msgid "Damage Reduction"
+msgstr ""
+
+msgid "Durability: "
+msgstr ""
+
+msgid "Unbreakable (Infinite)"
+msgstr ""
+
+msgid "@1 Uses"
+msgstr ""
+
+msgid "✦ Healing Ward: +@1% Chance on hit to nullify damage & heal"
+msgstr ""
+
+msgid "✦ Fire Ward: +1 Heat Tier (Tier 5 Molten Immunity at 4+ pieces)"
+msgstr ""
+
+msgid "✦ Fire Ward: +1 Heat Tier (Protects against torches & hot flora)"
+msgstr ""
+
+msgid "✦ Water Ward: Underwater Breathing (Infinite Drown Immunity)"
+msgstr ""
+
+msgid "✦ Feather Fall: -@1 Fall Damage (@2 Hearts Absorbed)"
+msgstr ""
+
+msgid "✦ Shield Guard (Hold RMB):"
+msgstr ""
+
+msgid "✦ Reinforced Tower Guard (Hold RMB):"
+msgstr ""
+
+msgid "  • Block Mitigation: @1% damage absorbed"
+msgstr ""
+
+msgid "  • Block Mitigation: @1% damage absorbed (reinforced)"
+msgstr ""
+
+msgid "  • Frontal Guard Arc: @1° cone (@2° off-hand bias)"
+msgstr ""
+
+msgid "  • Projectile Deflection: Bounces arrows & fireballs"
+msgstr ""
+
+msgid "  • Thorns: Damages melee attacker's weapon"
+msgstr ""
+
+msgid "✦ Thorns: Damages melee attacker's weapon"
+msgstr ""
+
+msgid "✦ Swiftness: @1% Movement Speed"
+msgstr ""
+
+msgid "✦ High Jump: @1% Jump Height"
+msgstr ""
+
+msgid "✦ Gravity: @1%"
+msgstr ""
+
+msgid "★ Set Synergy (4+ Pieces): +10% Total Defense"
+msgstr ""
+
+msgid "★ Tower Shield: Counts toward matching 4-piece set bonus"
+msgstr ""
+
+msgid "  Combine 4 wood pieces for early-game defense bonus."
+msgstr ""
+
+msgid "  Combine 4 cactus pieces for early-game thorny protection."
+msgstr ""
+
+msgid "  Combine 4 steel pieces for solid all-around mid-game defense."
+msgstr ""
+
+msgid "  Combine 4 bronze pieces for heavy durable defense exceeding steel."
+msgstr ""
+
+msgid "  Combine 4 diamond pieces for elite end-game damage absorption."
+msgstr ""
+
+msgid "  Full set yields +12% (+15% w/ shield) healing ward chance!"
+msgstr ""
+
+msgid "  Combine set for high durability, healing ward & feather falling!"
+msgstr ""
+
+msgid "  Hybrid Set: Water breathing (head), fire ward (chest) & healing (shield)!"
+msgstr ""
+
+msgid "  Full 4+ piece set grants Tier 5 Molten & Lava Immunity!"
+msgstr ""
+
+msgid "★ Omnipotent Set: Total immunity, infinite durability & 100% healing ward."
+msgstr ""
+
+msgid "✦ Wardrobe Management & Quick Swap:"
+msgstr ""
+
+msgid "  • Live 3D character display mannequin"
+msgstr ""
+
+msgid "  • Right-click: Open Stand UI with one-click Swap button"
+msgstr ""
+
+msgid "  • Sneak + Right-click: Instant quick-swap loadout"
+msgstr ""
+
+msgid "  • Preserves item wear, enchants, and custom metadata"
+msgstr ""
+
+msgid "Armor Stand (Owned by @1)\nEquipped: @2"
+msgstr ""
+
+msgid "Armor Stand (Owned by @1) [Empty]"
+msgstr ""
+
+msgid "Armor Stand\nEquipped: @1"
+msgstr ""
+
+msgid "Armor Stand [Empty]"
+msgstr ""
+
+msgid "Tip: Right-click in hand to quick-equip or swap"
+msgstr ""
+
+msgid "Tip: Equip in shield slot; hold RMB to raise guard"
+msgstr ""
+
+msgid "Tip: Equip in shield slot; hold RMB to raise heavy guard"
+msgstr ""
+
+msgid "Tip: Point crosshair at stand to view equipped pieces"
+msgstr ""
+
+msgid "Helmet Slot"
+msgstr ""
+
+msgid "Equip a helmet or headpiece here for defense."
+msgstr ""
+
+msgid "Chestplate Slot"
+msgstr ""
+
+msgid "Equip a chestplate or body armor here for core protection."
+msgstr ""
+
+msgid "Shield Slot"
+msgstr ""
+
+msgid "Equip a shield here for active frontal damage blocking."
+msgstr ""
+
+msgid "Leggings Slot"
+msgstr ""
+
+msgid "Equip leggings or greaves here for lower-body defense."
+msgstr ""
+
+msgid "Boots Slot"
+msgstr ""
+
+msgid "Equip boots here for foot protection and mobility."
+msgstr ""
+
+msgid "Accessory Slot"
+msgstr ""
+
+msgid "Equip extra armor or an accessory here."
+msgstr ""
+
+msgid "Place a helmet or headpiece here."
+msgstr ""
+
+msgid "Place a chestplate or cuirass here."
+msgstr ""
+
+msgid "Place a shield here."
+msgstr ""
+
+msgid "Place leggings or greaves here."
+msgstr ""
+
+msgid "Place boots here."
+msgstr ""
+
+msgid "ARMOR STAND - @1"
+msgstr ""
+
+msgid "ARMOR STAND"
+msgstr ""
+
+msgid "STAND ARMOR"
+msgstr ""
+
+msgid "YOUR ARMOR"
+msgstr ""
+
+msgid "Swap"
+msgstr ""
+
+msgid "Swap all equipped armor between player and stand"
+msgstr ""
+
+msgid "Take"
+msgstr ""
+
+msgid "Take all armor from stand into player inventory"
+msgstr ""
+
+msgid "Cannot swap armor: @1 is cursed!"
+msgstr ""
+
+msgid "You do not have permission to access this armor stand."
+msgstr ""
+
+msgid "Close"
+msgstr ""
+

@@ -1,0 +1,47 @@
+# Configuration settings for X Player Armor (x_player_armor)
+
+# Level multiplier applied to armor defense calculations (default 1.0)
+x_player_armor_level_multiplier (Armor Level Multiplier) float 1.0 0.1 5.0
+
+# Heal percentage multiplier for regenerative armor items (default 1.0)
+x_player_armor_heal_multiplier (Armor Heal Multiplier) float 1.0 0.0 5.0
+
+# Enable full-set 10% bonus when wearing matching helmet, chestplate, leggings, and boots (default true)
+x_player_armor_set_bonus (Enable Full Set Bonus) bool true
+
+# Enable fire and lava protection mechanics on equipped items with fire group (default true)
+x_player_armor_fire_protect (Enable Fire Protection) bool true
+
+# Enable torches to deal minor heat damage requiring level 1 fire protection (default false)
+x_player_armor_fire_protect_torch (Enable Torch Heat Damage) bool false
+
+# Enable underwater breath preservation on equipped items with water group (default true)
+x_player_armor_water_protect (Enable Water Breathing) bool true
+
+# Enable fall velocity reduction on equipped items with feather group (default true)
+x_player_armor_feather_fall (Enable Feather Falling) bool true
+
+# Enable audio effects for equip, unequip, impact, and breakage (default true)
+x_player_armor_enable_sounds (Enable Armor Audio) bool true
+
+# Drop equipped armor items upon player death (default true)
+x_player_armor_drop_on_death (Drop Armor on Death) bool true
+
+# Destroy armor items upon player death instead of dropping them (default false)
+x_player_armor_destroy_on_death (Destroy Armor on Death) bool false
+
+# Enable automatic combat armor HUD overlay showing blueprint items and durability on incoming damage (default true)
+x_player_armor_combat_hud (Enable Combat Armor HUD) bool true
+
+# Timeout in seconds before combat armor HUD automatically hides after last incoming damage (default 5.0)
+x_player_armor_combat_hud_timeout (Combat HUD Timeout) float 5.0 1.0 30.0
+
+# Screen anchor position for the combat armor HUD overlay
+x_player_armor_combat_hud_position (Combat HUD Position) enum bottom_right bottom_right,bottom_left,top_right,middle_right
+
+# Scale factor for the combat armor HUD overlay (default 1.0)
+x_player_armor_combat_hud_scale (Combat HUD Scale) float 1.0 0.5 2.0
+
+# Delay in seconds before displaying 1st-person shield HUD overlay when holding right-click (default 0.18)
+# Debounces short right-click taps for block placement and node interaction to prevent flashing overlay. Set to 0 to disable debounce.
+x_player_armor_shield_hud_delay (1st-Person Shield HUD Delay) float 0.18 0.0 1.0

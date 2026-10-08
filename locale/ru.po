@@ -1,0 +1,473 @@
+# Russian translation for x_player_armor
+# Copyright (C) 2026 SaKeL
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: x_player_armor\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-06 12:00+0200\n"
+"PO-Revision-Date: 2026-10-06 12:00+0200\n"
+"Last-Translator: SaKeL\n"
+"Language-Team: Russian\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+msgid "Helmet"
+msgstr "Шлем"
+
+msgid "Chestplate"
+msgstr "Нагрудник"
+
+msgid "Leggings"
+msgstr "Поножи"
+
+msgid "Boots"
+msgstr "Ботинки"
+
+msgid "Shield"
+msgstr "Щит"
+
+msgid "Armor Stand"
+msgstr "Стойка для брони"
+
+msgid "Armor Stand (Owned by @1)"
+msgstr "Стойка для брони (Владелец: @1)"
+
+msgid "ARMOR & EQUIPMENT"
+msgstr "БРОНЯ И СНАРЯЖЕНИЕ"
+
+msgid "Drag to rotate 3D view"
+msgstr "Перетащите для вращения 3D-вида"
+
+msgid "Defense Level"
+msgstr "Уровень защиты"
+
+msgid "Regenerative Ward"
+msgstr "Оберег регенерации"
+
+msgid "★ Full Set +10% Bonus"
+msgstr "★ Полный комплект +10% бонус"
+
+msgid "🔥 Fire Immunity"
+msgstr "🔥 Невосприимчивость к огню"
+
+msgid "💧 Water Breathing"
+msgstr "💧 Дыхание под водой"
+
+msgid "🪶 Feather Falling"
+msgstr "🪶 Мягкое падение"
+
+msgid "Equipped Armor Slots"
+msgstr "Слоты экипированной брони"
+
+msgid "Defense"
+msgstr "Защита"
+
+msgid "Ward"
+msgstr "Оберег"
+
+msgid "Armor"
+msgstr "Броня"
+
+msgid "Armor & Equipment"
+msgstr "Броня и снаряжение"
+
+msgid "Open armor and equipment inventory"
+msgstr "Открыть инвентарь брони и снаряжения"
+
+msgid "Warning: Your @1 is almost broken!"
+msgstr "Внимание: Ваш предмет @1 почти сломан!"
+
+msgid "Wood"
+msgstr "Деревянный"
+
+msgid "Cactus"
+msgstr "Кактусовый"
+
+msgid "Steel"
+msgstr "Стальной"
+
+msgid "Bronze"
+msgstr "Бронзовый"
+
+msgid "Diamond"
+msgstr "Алмазный"
+
+msgid "Gold"
+msgstr "Золотой"
+
+msgid "Mithril"
+msgstr "Мифриловый"
+
+msgid "Crystal"
+msgstr "Кристальный"
+
+msgid "Nether"
+msgstr "Незеритовый"
+
+msgid "Admin"
+msgstr "Админский"
+
+msgid "@1 Helmet"
+msgstr "@1 шлем"
+
+msgid "Helmet forged from @1."
+msgstr "Шлем, выкованный из материала: @1."
+
+msgid "@1 Chestplate"
+msgstr "@1 нагрудник"
+
+msgid "Chestplate forged from @1."
+msgstr "Нагрудник, выкованный из материала: @1."
+
+msgid "@1 Leggings"
+msgstr "@1 поножи"
+
+msgid "Leggings forged from @1."
+msgstr "Поножи, выкованные из материала: @1."
+
+msgid "@1 Boots"
+msgstr "@1 ботинки"
+
+msgid "Boots forged from @1."
+msgstr "Ботинки, выкованные из материала: @1."
+
+msgid "@1 Shield"
+msgstr "@1 щит"
+
+msgid "Shield crafted with @1."
+msgstr "Щит, сделанный из материала: @1."
+
+msgid "Enhanced Wood Shield"
+msgstr "Усиленный деревянный щит"
+
+msgid "Enhanced Cactus Shield"
+msgstr "Усиленный кактусовый щит"
+
+msgid "ARMOR ATTRIBUTES"
+msgstr "ХАРАКТЕРИСТИКИ БРОНИ"
+
+msgid "Damage Reduction"
+msgstr "Снижение урона"
+
+msgid "Absorbs @1% incoming hit damage"
+msgstr "Поглощает @1% входящего урона от ударов"
+
+msgid "Absorbs @1% incoming hit damage (+10% set bonus)"
+msgstr "Поглощает @1% входящего урона (+10% бонус комплекта)"
+
+msgid "Armor Healing"
+msgstr "Исцеление брони"
+
+msgid "@1% chance on hit to nullify damage & heal"
+msgstr "@1% шанс при ударе свести урон к нулю и исцелить"
+
+msgid "0% - No regenerative healing ward"
+msgstr "0% - Регенеративный щит не активен"
+
+msgid "Mobility"
+msgstr "Мобильность"
+
+msgid "Shield Defense"
+msgstr "Защита щитом"
+
+msgid "Active"
+msgstr "Активна"
+
+msgid "Blocks up to 80% damage in frontal arc (Hold RMB)"
+msgstr "Блокирует до 80% урона спереди (Удерживайте ПКМ)"
+
+msgid "ACTIVE PERKS"
+msgstr "АКТИВНЫЕ НАВЫКИ"
+
+msgid "★ Set Bonus: +10% Defense"
+msgstr "★ Бонус комплекта: +10% защиты"
+
+msgid "Healing Ward: @1% Chance to Absorb & Heal"
+msgstr "Исцеляющий щит: @1% шанс поглотить и исцелить"
+
+msgid "Shield Guard: Frontal Block & Parry"
+msgstr "Защита щитом: Фронтальный блок и парирование"
+
+msgid "Thorns: Damages Attacker's Weapon"
+msgstr "Шипы: Повреждает оружие атакующего"
+
+msgid "Feather Fall: Dampened (-@1 HP)"
+msgstr "Падение перышком: Смягчено (-@1 ОЗ)"
+
+msgid "Fire Ward: Protected (Heat Immune)"
+msgstr "Огненный щит: Защита (Иммунитет к жару)"
+
+msgid "Water Ward: Breathing (Infinite)"
+msgstr "Водный щит: Дыхание (Бесконечное)"
+
+msgid "Swiftness: +@1% Movement Speed"
+msgstr "Стремительность: +@1% скорость передвижения"
+
+msgid "Heavy Load: @1% Movement Speed"
+msgstr "Тяжелая нагрузка: @1% скорость передвижения"
+
+msgid "High Jump: +@1% Jump Height"
+msgstr "Высокий прыжок: +@1% высота прыжка"
+
+msgid "No active enchantments"
+msgstr "Нет активных чар"
+
+msgid "Equip 4 matching pieces for set bonus"
+msgstr "Наденьте 4 предмета одного типа для бонуса"
+
+msgid "Type: Helmet (Head Slot)"
+msgstr "Тип: Шлем (Голова)"
+
+msgid "Type: Chestplate (Torso Slot)"
+msgstr "Тип: Нагрудник (Торс)"
+
+msgid "Type: Leggings (Legs Slot)"
+msgstr "Тип: Поножи (Ноги)"
+
+msgid "Type: Boots (Feet Slot)"
+msgstr "Тип: Ботинки (Ступни)"
+
+msgid "Type: Shield (Off-Hand Slot)"
+msgstr "Тип: Щит (Вторая рука)"
+
+msgid "Type: Tower Shield (Reinforced Off-Hand)"
+msgstr "Тип: Башенный щит (Усиленный во второй руке)"
+
+msgid "Type: Armor Equipment"
+msgstr "Тип: Снаряжение брони"
+
+msgid "Type: Equipment Display / Storage"
+msgstr "Тип: Стойка для снаряжения / Хранилище"
+
+msgid "Capacity: "
+msgstr "Вместимость: "
+
+msgid "Full 5-Piece Armor Set"
+msgstr "Полный комплект из 5 предметов"
+
+msgid "Passive Defense: "
+msgstr "Пассивная защита: "
+
+msgid "Damage Reduction"
+msgstr "Снижение урона"
+
+msgid "Durability: "
+msgstr "Прочность: "
+
+msgid "Unbreakable (Infinite)"
+msgstr "Нерушимый (Бесконечная)"
+
+msgid "@1 Uses"
+msgstr "@1 использований"
+
+msgid "✦ Healing Ward: +@1% Chance on hit to nullify damage & heal"
+msgstr "✦ Исцеляющий щит: +@1% шанс при ударе свести урон к нулю и исцелить"
+
+msgid "✦ Fire Ward: +1 Heat Tier (Tier 5 Molten Immunity at 4+ pieces)"
+msgstr "✦ Огненный щит: +1 уровень жаростойкости (5 уровень иммунитета к лаве при 4+ предметах)"
+
+msgid "✦ Fire Ward: +1 Heat Tier (Protects against torches & hot flora)"
+msgstr "✦ Огненный щит: +1 уровень жаростойкости (Защищает от факелов и горячей флоры)"
+
+msgid "✦ Water Ward: Underwater Breathing (Infinite Drown Immunity)"
+msgstr "✦ Водный щит: Дыхание под водой (Бесконечный иммунитет к утоплению)"
+
+msgid "✦ Feather Fall: -@1 Fall Damage (@2 Hearts Absorbed)"
+msgstr "✦ Падение перышком: -@1 урон от падения (@2 сердца поглощено)"
+
+msgid "✦ Shield Guard (Hold RMB):"
+msgstr "✦ Блок щитом (Удерживайте ПКМ):"
+
+msgid "✦ Reinforced Tower Guard (Hold RMB):"
+msgstr "✦ Усиленный башенный блок (Удерживайте ПКМ):"
+
+msgid "  • Block Mitigation: @1% damage absorbed"
+msgstr "  • Смягчение блоком: @1% урона поглощено"
+
+msgid "  • Block Mitigation: @1% damage absorbed (reinforced)"
+msgstr "  • Смягчение блоком: @1% урона поглощено (усилено)"
+
+msgid "  • Frontal Guard Arc: @1° cone (@2° off-hand bias)"
+msgstr "  • Фронтальный угол блока: сектор @1° (смещение влево @2°)"
+
+msgid "  • Projectile Deflection: Bounces arrows & fireballs"
+msgstr "  • Отражение снарядов: Отбивает стрелы и огненные шары"
+
+msgid "  • Thorns: Damages melee attacker's weapon"
+msgstr "  • Шипы: Повреждает оружие атакующего в ближнем бою"
+
+msgid "✦ Thorns: Damages melee attacker's weapon"
+msgstr "✦ Шипы: Повреждает оружие атакующего в ближнем бою"
+
+msgid "✦ Swiftness: @1% Movement Speed"
+msgstr "✦ Стремительность: @1% скорость передвижения"
+
+msgid "✦ High Jump: @1% Jump Height"
+msgstr "✦ Высокий прыжок: @1% высота прыжка"
+
+msgid "✦ Gravity: @1%"
+msgstr "✦ Гравитация: @1%"
+
+msgid "★ Set Synergy (4+ Pieces): +10% Total Defense"
+msgstr "★ Синергия комплекта (4+ предмета): +10% общая защита"
+
+msgid "★ Tower Shield: Counts toward matching 4-piece set bonus"
+msgstr "★ Башенный щит: Учитывается в бонусе комплекта из 4 предметов"
+
+msgid "  Combine 4 wood pieces for early-game defense bonus."
+msgstr "  Соберите 4 деревянных предмета для начального бонуса защиты."
+
+msgid "  Combine 4 cactus pieces for early-game thorny protection."
+msgstr "  Соберите 4 кактусовых предмета для начальной шипастой защиты."
+
+msgid "  Combine 4 steel pieces for solid all-around mid-game defense."
+msgstr "  Соберите 4 стальных предмета для надежной всесторонней защиты."
+
+msgid "  Combine 4 bronze pieces for heavy durable defense exceeding steel."
+msgstr "  Соберите 4 бронзовых предмета для прочной тяжелой защиты лучше стали."
+
+msgid "  Combine 4 diamond pieces for elite end-game damage absorption."
+msgstr "  Соберите 4 алмазных предмета для максимального поглощения урона."
+
+msgid "  Full set yields +12% (+15% w/ shield) healing ward chance!"
+msgstr "  Полный комплект дает +12% (+15% со щитом) шанс на исцеляющий щит!"
+
+msgid "  Combine set for high durability, healing ward & feather falling!"
+msgstr "  Соберите комплект для высокой прочности, исцеления и мягкого падения!"
+
+msgid "  Hybrid Set: Water breathing (head), fire ward (chest) & healing (shield)!"
+msgstr "  Гибридный сет: дыхание под водой (шлем), защита от огня (торс) и лечение (щит)!"
+
+msgid "  Full 4+ piece set grants Tier 5 Molten & Lava Immunity!"
+msgstr "  Комплект из 4+ предметов дает 5 уровень иммунитета к лаве и огню!"
+
+msgid "★ Omnipotent Set: Total immunity, infinite durability & 100% healing ward."
+msgstr "★ Всемогущий комплект: Полный иммунитет, бесконечная прочность и 100% лечение."
+
+msgid "✦ Wardrobe Management & Quick Swap:"
+msgstr "✦ Управление гардеробом и быстрая смена:"
+
+msgid "  • Live 3D character display mannequin"
+msgstr "  • Живой 3D-манекен персонажа"
+
+msgid "  • Right-click: Open Stand UI with one-click Swap button"
+msgstr "  • ПКМ: Открыть меню стойки с кнопкой быстрой смены"
+
+msgid "  • Sneak + Right-click: Instant quick-swap loadout"
+msgstr "  • Присед + ПКМ: Мгновенная смена комплекта брони"
+
+msgid "  • Preserves item wear, enchants, and custom metadata"
+msgstr "  • Сохраняет износ, чары и пользовательские метаданные"
+
+msgid "Armor Stand (Owned by @1)\nEquipped: @2"
+msgstr "Стойка для брони (Владелец: @1)\nНадето: @2"
+
+msgid "Armor Stand (Owned by @1) [Empty]"
+msgstr "Стойка для брони (Владелец: @1) [Пусто]"
+
+msgid "Armor Stand\nEquipped: @1"
+msgstr "Стойка для брони\nНадето: @1"
+
+msgid "Armor Stand [Empty]"
+msgstr "Стойка для брони [Пусто]"
+
+msgid "Tip: Right-click in hand to quick-equip or swap"
+msgstr "Совет: Нажмите ПКМ в руке для быстрого надевания или замены"
+
+msgid "Tip: Equip in shield slot; hold RMB to raise guard"
+msgstr "Совет: Наденьте в слот щита; удерживайте ПКМ для блока"
+
+msgid "Tip: Equip in shield slot; hold RMB to raise heavy guard"
+msgstr "Совет: Наденьте в слот щита; удерживайте ПКМ для тяжелого блока"
+
+msgid "Tip: Point crosshair at stand to view equipped pieces"
+msgstr "Совет: Наведите прицел на стойку, чтобы увидеть надетую броню"
+
+msgid "Helmet Slot"
+msgstr "Слот шлема"
+
+msgid "Equip a helmet or headpiece here for defense."
+msgstr "Поместите сюда шлем или головной убор для защиты."
+
+msgid "Chestplate Slot"
+msgstr "Слот нагрудника"
+
+msgid "Equip a chestplate or body armor here for core protection."
+msgstr "Поместите сюда нагрудник для защиты тела."
+
+msgid "Shield Slot"
+msgstr "Слот щита"
+
+msgid "Equip a shield here for active frontal damage blocking."
+msgstr "Поместите сюда щит для активного блокирования ударов спереди."
+
+msgid "Leggings Slot"
+msgstr "Слот поножей"
+
+msgid "Equip leggings or greaves here for lower-body defense."
+msgstr "Поместите сюда поножи для защиты ног."
+
+msgid "Boots Slot"
+msgstr "Слот ботинок"
+
+msgid "Equip boots here for foot protection and mobility."
+msgstr "Поместите сюда ботинки для защиты стоп и подвижности."
+
+msgid "Accessory Slot"
+msgstr "Слот аксессуара"
+
+msgid "Equip extra armor or an accessory here."
+msgstr "Поместите сюда дополнительную броню или аксессуар."
+
+msgid "Place a helmet or headpiece here."
+msgstr "Поместите сюда шлем или головной убор."
+
+msgid "Place a chestplate or cuirass here."
+msgstr "Поместите сюда нагрудник или кирасу."
+
+msgid "Place a shield here."
+msgstr "Поместите сюда щит."
+
+msgid "Place leggings or greaves here."
+msgstr "Поместите сюда поножи."
+
+msgid "Place boots here."
+msgstr "Поместите сюда ботинки."
+
+msgid "ARMOR STAND - @1"
+msgstr "СТОЙКА ДЛЯ БРОНИ - @1"
+
+msgid "ARMOR STAND"
+msgstr "СТОЙКА ДЛЯ БРОНИ"
+
+msgid "STAND ARMOR"
+msgstr "БРОНЯ НА СТОЙКЕ"
+
+msgid "YOUR ARMOR"
+msgstr "ВАША БРОНЯ"
+
+msgid "Swap"
+msgstr "Сменить"
+
+msgid "Swap all equipped armor between player and stand"
+msgstr "Сменить весь комплект брони между игроком и стойкой"
+
+msgid "Take"
+msgstr "Забрать"
+
+msgid "Take all armor from stand into player inventory"
+msgstr "Забрать всю броню со стойки в инвентарь игрока"
+
+msgid "Cannot swap armor: @1 is cursed!"
+msgstr "Невозможно сменить броню: @1 проклят(а)!"
+
+msgid "You do not have permission to access this armor stand."
+msgstr "У вас нет разрешения на доступ к этой стойке для брони."
+
+msgid "Close"
+msgstr "Закрыть"
+

@@ -1,0 +1,15 @@
+{
+  "name": "x_player_armor",
+  "author": "SaKeL",
+  "title": "X Player Armor",
+  "short_description": "High-performance modular player armor and shield system attaching lightweight visual entities directly to skeletal bones.",
+  "type": "mod",
+  "license": "LGPL-2.1-or-later",
+  "media_license": "CC-BY-4.0",
+  "ai_disclosure": "ASSISTED",
+  "provides": [
+    "3d_armor",
+    "shields",
+    "3d_armor_stand"
+  ]
+}

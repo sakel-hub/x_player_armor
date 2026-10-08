@@ -1,0 +1,98 @@
+GNU LESSER GENERAL PUBLIC LICENSE
+Version 2.1, February 1999
+
+Copyright (C) 2026 SaKeL
+Based on 3d_armor Copyright (C) 2013-2020 Stuart Jones and contributors.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU Lesser General Public License as published by
+the Free Software Foundation; either version 2.1 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Lesser General Public License for more details.
+
+-------------------------------------------------------------------------------
+Media & Asset Attribution Manifest
+-------------------------------------------------------------------------------
+
+### 3D Models
+Individual Blender source files in assets/ and glTF 2.0 Binary (.glb) exports in models/:
+- `assets/x_player_armor_helmet.blend` -> `models/x_player_armor_helmet.glb`
+- `assets/x_player_armor_chestplate.blend` -> `models/x_player_armor_chestplate.glb`
+- `assets/x_player_armor_sleeve_l.blend` -> `models/x_player_armor_sleeve_l.glb`
+- `assets/x_player_armor_sleeve_r.blend` -> `models/x_player_armor_sleeve_r.glb`
+- `assets/x_player_armor_leggings_l.blend` -> `models/x_player_armor_leggings_l.glb`
+- `assets/x_player_armor_leggings_r.blend` -> `models/x_player_armor_leggings_r.glb`
+- `assets/x_player_armor_boot_l.blend` -> `models/x_player_armor_boot_l.glb`
+- `assets/x_player_armor_boot_r.blend` -> `models/x_player_armor_boot_r.glb`
+- `assets/x_player_armor_shield.blend` -> `models/x_player_armor_shield.glb`
+- `assets/x_player_armor_preview.blend` -> `models/x_player_armor_preview.glb`
+- `assets/x_player_armor_stand.blend` -> `models/x_player_armor_stand.glb`
+Rigged, UV-mapped, and exported for Luanti by SaKeL under CC-BY 4.0.
+Base geometric references derived from Stuart Jones, MirceaKitsune, and Jordach (LGPL-2.1 / CC-BY 3.0).
+
+### Textures
+All armor and shield texture sheets, inventory sprites, UI textures, and VFX particle sheets (CC-BY 4.0):
+- Unified 64x32 character armor sheets: `textures/x_player_armor_<material>.png` (admin, bronze, cactus, crystal, diamond, gold, mithril, nether, steel, wood)
+- Dedicated 2D pixel-art inventory sprites: `textures/x_player_armor_inv_*.png`
+- Enhanced shields: `textures/x_player_armor_shield_enhanced_cactus.png`, `textures/x_player_armor_shield_enhanced_wood.png`
+- Stand, UI, and character skin textures: `textures/x_player_armor_stand_*.png`, `textures/x_player_armor_icon.png`, `textures/x_player_armor_inventory_plus.png`, `textures/x_player_armor_character.png`
+- Combat VFX particle sheet: `textures/x_player_armor_particles.png` (8 frames: healing sparkles, wards, shield deflection, and armor shatter shards) designed by SaKeL under CC-BY 4.0 / CC0 1.0.
+Authored, redesigned, and packaged for Luanti by SaKeL under CC-BY 4.0.
+
+### Audio & Sound Effects
+
+#### Armor & Shield Equipment Sounds (CC0 1.0 Universal)
+Mastered, sliced, trimmed, anti-click micro-faded, and transcoded to mono 44.1 kHz Ogg Vorbis specifically for Luanti by SaKeL:
+- `sounds/x_player_armor_equip.1.ogg`, `sounds/x_player_armor_equip.2.ogg`, `sounds/x_player_armor_equip.3.ogg`
+- `sounds/x_player_armor_unequip.1.ogg`, `sounds/x_player_armor_unequip.2.ogg`
+- `sounds/x_player_armor_hit_metal.1.ogg`, `sounds/x_player_armor_hit_metal.2.ogg`, `sounds/x_player_armor_hit_metal.3.ogg`
+- `sounds/x_player_armor_hit_wood.1.ogg`, `sounds/x_player_armor_hit_wood.2.ogg`
+- `sounds/x_player_armor_hit_crystal.1.ogg`, `sounds/x_player_armor_hit_crystal.2.ogg`
+- `sounds/x_player_armor_shield_block.1.ogg`, `sounds/x_player_armor_shield_block.2.ogg`, `sounds/x_player_armor_shield_block.3.ogg`
+- `sounds/x_player_armor_break_metal.ogg`
+- `sounds/x_player_armor_break_wood.ogg`
+- `sounds/x_player_armor_break_crystal.ogg`, `sounds/x_player_armor_break_glass.ogg`
+- `sounds/x_player_armor_warn.ogg`
+License: Creative Commons 0 1.0 Universal (CC0 1.0) / Public Domain
+Audio synthesis, mastering, and engineering: SaKeL.
+Original acoustic sources: Ogrebane, TinyWorlds, and rubberduck (CC0 1.0).
+
+#### Armor Stand Node Interaction Sounds (CC0 1.0 Universal)
+Sourced from Freesound.org, sliced, trimmed, anti-click micro-faded, peak-normalized (-1.0 dBFS), and transcoded to mono 44.1 kHz Ogg Vorbis specifically for Luanti by SaKeL:
+- `sounds/x_player_armor_stand_place.1.ogg`:
+  "Wooden Thud (Mono)" (Sound #449955) by Breviceps (CC0 1.0 Universal).
+  Source: https://freesound.org/people/Breviceps/sounds/449955/
+  License: http://creativecommons.org/publicdomain/zero/1.0/
+- `sounds/x_player_armor_stand_dig.1.ogg`:
+  "snd_ImpactSmallWood01.wav" (Sound #381617) by dorian.mastin (CC0 1.0 Universal).
+  Source: https://freesound.org/people/dorian.mastin/sounds/381617/
+  License: http://creativecommons.org/publicdomain/zero/1.0/
+- `sounds/x_player_armor_stand_dig.2.ogg`:
+  "Chop.ogg" (Sound #536736) by egomassive (CC0 1.0 Universal, original recording "Chop" by Kyle Pyke).
+  Source: https://freesound.org/people/egomassive/sounds/536736/
+  License: http://creativecommons.org/publicdomain/zero/1.0/
+- `sounds/x_player_armor_stand_dig.3.ogg`:
+  "Wood impact Single Plank 3" (Sound #569723) by Sheyvan (CC0 1.0 Universal).
+  Source: https://freesound.org/people/Sheyvan/sounds/569723/
+  License: http://creativecommons.org/publicdomain/zero/1.0/
+- `sounds/x_player_armor_stand_dug.1.ogg`:
+  "Crate Break 4.wav" (Sound #66780) by kevinkace (CC0 1.0 Universal).
+  Source: https://freesound.org/people/kevinkace/sounds/66780/
+  License: http://creativecommons.org/publicdomain/zero/1.0/
+- `sounds/x_player_armor_stand_dug.2.ogg`:
+  "Barrel Break 4.wav" (Sound #66772) by kevinkace (CC0 1.0 Universal).
+  Source: https://freesound.org/people/kevinkace/sounds/66772/
+  License: http://creativecommons.org/publicdomain/zero/1.0/
+- `sounds/x_player_armor_stand_footstep.1.ogg`:
+  "Footstep_Wood_Toe_2.wav" (Sound #421152) by GiocoSound (CC0 1.0 Universal).
+  Source: https://freesound.org/people/GiocoSound/sounds/421152/
+  License: http://creativecommons.org/publicdomain/zero/1.0/
+- `sounds/x_player_armor_stand_footstep.2.ogg`:
+  "Footstep_Wood_Toe_1.wav" (Sound #421153) by GiocoSound (CC0 1.0 Universal).
+  Source: https://freesound.org/people/GiocoSound/sounds/421153/
+  License: http://creativecommons.org/publicdomain/zero/1.0/
+
