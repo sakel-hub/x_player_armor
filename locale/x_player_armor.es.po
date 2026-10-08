@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: x_player_armor\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-07 22:32-0400\n"
+"POT-Creation-Date: 2026-10-07 23:00-0400\n"
 "PO-Revision-Date: 2026-10-06 12:00+0200\n"
 "Last-Translator: SaKeL\n"
 "Language-Team: Spanish\n"
@@ -91,7 +91,7 @@ msgstr "Escudo de madera mejorado"
 msgid "Enhanced Cactus Shield"
 msgstr "Escudo de cactus mejorado"
 
-#: modules/stand.lua:265
+#: modules/stand.lua:266
 #, fuzzy
 msgid ""
 "Locked Armor Stand (Owned by @1)\n"
@@ -100,12 +100,12 @@ msgstr ""
 "Soporte de armadura (Propietario: @1)\n"
 "Equipado: @2"
 
-#: modules/stand.lua:267
+#: modules/stand.lua:268
 #, fuzzy
 msgid "Locked Armor Stand (Owned by @1) [Empty]"
 msgstr "Soporte de armadura (Propietario: @1) [Vacío]"
 
-#: modules/stand.lua:271
+#: modules/stand.lua:272
 #, fuzzy
 msgid ""
 "Armor Stand (Placed by @1)\n"
@@ -114,12 +114,12 @@ msgstr ""
 "Soporte de armadura (Propietario: @1)\n"
 "Equipado: @2"
 
-#: modules/stand.lua:273
+#: modules/stand.lua:274
 #, fuzzy
 msgid "Armor Stand (Placed by @1) [Empty]"
 msgstr "Soporte de armadura (Propietario: @1) [Vacío]"
 
-#: modules/stand.lua:277
+#: modules/stand.lua:278
 msgid ""
 "Armor Stand\n"
 "Equipped: @1"
@@ -127,197 +127,197 @@ msgstr ""
 "Soporte de armadura\n"
 "Equipado: @1"
 
-#: modules/stand.lua:279
+#: modules/stand.lua:280
 msgid "Armor Stand [Empty]"
 msgstr "Soporte de armadura [Vacío]"
 
-#: modules/stand.lua:469
+#: modules/stand.lua:470
 #, fuzzy
 msgid "LOCKED ARMOR STAND - @1"
 msgstr "SOPORTE DE ARMADURA - @1"
 
-#: modules/stand.lua:471
+#: modules/stand.lua:472
 msgid "ARMOR STAND - @1"
 msgstr "SOPORTE DE ARMADURA - @1"
 
-#: modules/stand.lua:473
+#: modules/stand.lua:474
 msgid "ARMOR STAND"
 msgstr "SOPORTE DE ARMADURA"
 
-#: modules/stand.lua:492 modules/ui.lua:498
+#: modules/stand.lua:493 modules/ui.lua:500
 msgid "Close"
 msgstr "Cerrar"
 
-#: modules/stand.lua:496
+#: modules/stand.lua:497
 msgid "STAND ARMOR"
 msgstr "ARMADURA EN SOPORTE"
 
-#: modules/stand.lua:503
+#: modules/stand.lua:504
 msgid "Swap"
 msgstr "Cambiar"
 
-#: modules/stand.lua:504
+#: modules/stand.lua:505
 msgid "Swap all equipped armor between player and stand"
 msgstr "Intercambiar todo el equipo entre el jugador y el soporte"
 
-#: modules/stand.lua:508
+#: modules/stand.lua:509
 msgid "Take"
 msgstr "Tomar"
 
-#: modules/stand.lua:509
+#: modules/stand.lua:510
 msgid "Take all armor from stand into player inventory"
 msgstr "Llevar toda la armadura del soporte al inventario"
 
-#: modules/stand.lua:513
+#: modules/stand.lua:514
 msgid "YOUR ARMOR"
 msgstr "TU ARMADURA"
 
-#: modules/stand.lua:557 modules/stand.lua:929
+#: modules/stand.lua:558 modules/stand.lua:930
 msgid "You do not have permission to access this armor stand."
 msgstr "No tienes permiso para acceder a este soporte de armadura."
 
-#: modules/stand.lua:575 modules/stand.lua:583
+#: modules/stand.lua:576 modules/stand.lua:584
 msgid "Cannot swap armor: @1 is cursed!"
 msgstr "No se puede cambiar la armadura: ¡@1 está maldito!"
 
-#: modules/stand.lua:1029 modules/utils.lua:313
+#: modules/stand.lua:1030 modules/utils.lua:313
 msgid "Armor Stand"
 msgstr "Soporte de armadura"
 
-#: modules/stand.lua:1039 modules/utils.lua:313
+#: modules/stand.lua:1040 modules/utils.lua:313
 #, fuzzy
 msgid "Locked Armor Stand"
 msgstr "Soporte de armadura"
 
-#: modules/ui.lua:328
+#: modules/ui.lua:330
 msgid "ARMOR ATTRIBUTES"
 msgstr "ATRIBUTOS DE ARMADURA"
 
-#: modules/ui.lua:331 modules/utils.lua:163
+#: modules/ui.lua:333 modules/utils.lua:163
 msgid "Damage Reduction"
 msgstr "Reducción de daño"
 
-#: modules/ui.lua:337
+#: modules/ui.lua:339
 msgid "Absorbs @1% incoming hit damage (+10% set bonus)"
 msgstr "Absorbe @1% del daño de impacto recibido (+10% bonus de conjunto)"
 
-#: modules/ui.lua:338
+#: modules/ui.lua:340
 msgid "Absorbs @1% incoming hit damage"
 msgstr "Absorbe @1% del daño de impacto recibido"
 
-#: modules/ui.lua:342
+#: modules/ui.lua:344
 msgid "Armor Healing"
 msgstr "Curación de armadura"
 
-#: modules/ui.lua:349
+#: modules/ui.lua:351
 msgid "@1% chance on hit to nullify damage & heal"
 msgstr "@1% de probabilidad al recibir golpe de anular daño y curar"
 
-#: modules/ui.lua:350
+#: modules/ui.lua:352
 msgid "0% - No regenerative healing ward"
 msgstr "0% - Sin guardia regenerativa activa"
 
-#: modules/ui.lua:369
+#: modules/ui.lua:371
 msgid "Mobility"
 msgstr "Movilidad"
 
-#: modules/ui.lua:378
+#: modules/ui.lua:380
 msgid "Shield Defense"
 msgstr "Defensa con escudo"
 
-#: modules/ui.lua:379
+#: modules/ui.lua:381
 msgid "Active"
 msgstr "Activa"
 
-#: modules/ui.lua:383
+#: modules/ui.lua:385
 msgid "Blocks up to 80% damage in frontal arc (Hold RMB)"
 msgstr "Bloquea hasta un 80% de daño en arco frontal (Mantener clic derecho)"
 
-#: modules/ui.lua:388
+#: modules/ui.lua:390
 msgid "ACTIVE PERKS"
 msgstr "VENTAJAS ACTIVAS"
 
-#: modules/ui.lua:394
+#: modules/ui.lua:396
 msgid "★ Set Bonus: +10% Defense"
 msgstr "★ Bonus de conjunto: +10% Defensa"
 
-#: modules/ui.lua:400
+#: modules/ui.lua:402
 msgid "Healing Ward: @1% Chance to Absorb & Heal"
 msgstr "Guardia sanadora: @1% de prob. de absorber y curar"
 
-#: modules/ui.lua:406
+#: modules/ui.lua:408
 msgid "Shield Guard: Frontal Block & Parry"
 msgstr "Guardia con escudo: Bloqueo frontal y parada"
 
-#: modules/ui.lua:412
+#: modules/ui.lua:414
 msgid "Thorns: Damages Attacker's Weapon"
 msgstr "Espinas: Daña el arma del atacante"
 
-#: modules/ui.lua:418
+#: modules/ui.lua:420
 msgid "Feather Fall: Dampened (-@1 HP)"
 msgstr "Caída de pluma: Amortiguada (-@1 PV)"
 
-#: modules/ui.lua:424
+#: modules/ui.lua:426
 msgid "Fire Ward: Protected (Heat Immune)"
 msgstr "Guardia de fuego: Protegido (Inmune al calor)"
 
-#: modules/ui.lua:430
+#: modules/ui.lua:432
 msgid "Water Ward: Breathing (Infinite)"
 msgstr "Guardia de agua: Respiración (Infinita)"
 
-#: modules/ui.lua:436
+#: modules/ui.lua:438
 msgid "Swiftness: +@1% Movement Speed"
 msgstr "Rapidez: +@1% Velocidad de movimiento"
 
-#: modules/ui.lua:441
+#: modules/ui.lua:443
 msgid "Heavy Load: @1% Movement Speed"
 msgstr "Carga pesada: @1% Velocidad de movimiento"
 
-#: modules/ui.lua:447
+#: modules/ui.lua:449
 msgid "High Jump: +@1% Jump Height"
 msgstr "Salto alto: +@1% Altura de salto"
 
-#: modules/ui.lua:454
+#: modules/ui.lua:456
 msgid "No active enchantments"
 msgstr "Sin encantamientos activos"
 
-#: modules/ui.lua:458
+#: modules/ui.lua:460
 msgid "Equip 4 matching pieces for set bonus"
 msgstr "Equipa 4 piezas iguales para el bonus de conjunto"
 
-#: modules/ui.lua:493
+#: modules/ui.lua:495
 msgid "ARMOR & EQUIPMENT"
 msgstr "ARMADURA Y EQUIPO"
 
-#: modules/ui.lua:507 modules/ui.lua:819 modules/ui.lua:908 modules/ui.lua:933
+#: modules/ui.lua:509 modules/ui.lua:821 modules/ui.lua:910 modules/ui.lua:935
 msgid "Drag to rotate 3D view"
 msgstr "Arrastra para rotar la vista 3D"
 
-#: modules/ui.lua:511
+#: modules/ui.lua:513
 msgid "Equipped Armor Slots"
 msgstr "Ranuras de armadura equipada"
 
-#: modules/ui.lua:524
+#: modules/ui.lua:526
 msgid "PLAYER INVENTORY"
 msgstr ""
 
-#: modules/ui.lua:526
+#: modules/ui.lua:528
 msgid "HOTBAR"
 msgstr ""
 
-#: modules/ui.lua:669
+#: modules/ui.lua:671
 msgid "Open armor and equipment inventory"
 msgstr "Abrir inventario de armadura y equipo"
 
-#: modules/ui.lua:787
+#: modules/ui.lua:789
 msgid "Armor"
 msgstr "Armadura"
 
-#: modules/ui.lua:826 modules/ui.lua:915 modules/ui.lua:940
+#: modules/ui.lua:828 modules/ui.lua:917 modules/ui.lua:942
 msgid "EQUIPPED ARMOR"
 msgstr ""
 
-#: modules/ui.lua:893 modules/ui.lua:998
+#: modules/ui.lua:895 modules/ui.lua:1000
 msgid "Armor & Equipment"
 msgstr "Armadura y equipo"
 
