@@ -2,57 +2,44 @@
 
 ![AI-Assisted](https://img.shields.io/badge/AI--assisted-gray)
 
-High-performance, engine-native modular player armor and shield mod for Luanti. Built from the ground up on SOLID architecture principles, `x_player_armor` completely eliminates the limitations of monolithic player mesh replacement by leaving the player's base character model 100% untouched and mounting lightweight visual entities directly to skeletal bones via engine `set_attach`.
+A modern, high-performance player armor and shield mod for Luanti. Built to give players full 3D visual gear, active shield combat, and elemental survival perks while keeping your character skin completely intact and multiplayer gameplay butter-smooth.
 
 ---
 
-## Key Features
+## Gameplay & Features
 
-- **Untouched Player Model**: Compatible with custom player models, female character meshes, modern high-resolution skins, and `x_player_api` multi-track visual proxies.
-- **Multiplayer Performance Blueprint**:
-  - Zero server tick overhead (`on_step = nil`).
-  - Completely bypasses physics, collisions, and raycasting (`physical = false`, `collide_with_objects = false`, `pointable = false`).
-  - Zero database writes (`static_save = false`).
-  - Frustum clipping prevention (`forced_visible = false`).
-  - Static texture path caching in memory.
-- **Modern Interactive UI (`formspec_version[7]`)**:
-  - Interactive 3D model preview with 360° mouse rotation and vertical tilt.
-  - Reactive live updates on armor equip, unequip, and slot swap.
-  - Full drop-in compatibility with `i3`, `unified_inventory`, and `sfinv`.
-- **100% glTF 2.0 Binary Pipeline & Unified Textures**:
-  - All 9 modular armor and shield parts, armor stands, and display mannequins are supplied in high-efficiency binary `.glb` format.
-  - Master `.blend` source files preserved in `assets/`.
-  - Unified 64x32 full-set sheets (`x_player_armor_<mat>.png`) for helmet, chestplate, leggings, boots, and shield, drastically reducing asset count and GPU VRAM footprint.
-  - Formspec v7 3D interactive model preview powered by multi-material slot isolation (`x_player_armor_preview.glb`), featuring dynamic dual-mesh shield support for both compact bucklers and boots-to-neckline tower shields.
-- **Engine-Mastered Audio (`luanti-sounds`)**:
-  - High-fidelity mono 44.1 kHz Ogg Vorbis sound effects with anti-click zero-crossing fades and peak normalization (-1.0 dBFS).
-  - Multi-sample randomized audio variations for equip, unequip, impacts, and shield blocks.
-- **Full Backward Compatibility**:
-  - Optional `_G.armor` shim ensuring third-party mods (`mobs_redo`, custom weapons, quest trees) continue operating transparently.
-  - Automatic migration from legacy `3d_armor_inventory` metadata.
+- **Modular 3D Armor & Shields**: Helmets, chestplates, leggings, boots, and shields fit naturally over your character without replacing or hiding your skin. Works seamlessly with custom player skins and `x_player_api` biomechanical animations.
+- **Active Shield Combat & Parrying**: Hold right-click with a shield equipped to brace for impact. Block frontal melee attacks, deflect flying arrows, and knock aggressive monsters backward with a physical counter-impulse.
+- **Dynamic Combat HUD**: During battle, a sleek on-screen armor HUD appears automatically to show your gear's real-time durability so you always know when an item needs repair without opening your inventory.
+- **Sound Effects & Particle Sparks**: Enjoy distinct audio effects and particle sparks when equipping gear, absorbing strikes, deflecting arrows, or shattering broken armor.
+- **Interactive Armor Stands**: Display your favorite armor sets in your base. Right-click to open a visual wardrobe manager, or simply Shift+Left Click with an empty hand to swap your equipped armor with the stand in one click.
+- **3D Inventory Preview**: Rotate and inspect your character in real-time 3D right inside your inventory screen (`sfinv`, `unified_inventory`, or `i3`).
+- **Matching Set Bonus**: Wearing a full 4-piece or 5-piece matching armor suit grants an automatic **+10% defense bonus**.
+- **Lag-Free Multiplayer**: Engineered for busy multiplayer servers. Equipping dozens of players and placing armor stands causes zero server tick overhead.
+- **Full Drop-in Compatibility**: Works out-of-the-box with mods that expect classic `3d_armor`, `shields`, or `3d_armor_stand` APIs, and automatically migrates older saved inventories.
 
 ---
 
-## Armor Materials & Stats
+## Armor Materials & Survival Perks
 
-| Material | Defense Level | Heal % | Durability | Special Attributes |
+| Material | Defense Level | Health Regen | Durability | Survival Perks |
 | :--- | :---: | :---: | :---: | :--- |
-| **Wood** | 20 | 0% | 80 | Lightweight, early-game crafted from wooden planks |
-| **Cactus** | 24 | 0% | 110 | Thorns protection, early desert survival |
-| **Steel** | 45 | 0% | 350 | Reliable mid-tier metallurgical protection |
-| **Bronze** | 50 | 0% | 450 | Heavy metallurgical alloy protection |
-| **Diamond** | 70 | 0% | 1200 | Superior durability and penetration resistance |
-| **Gold** | 40 | 12% | 200 | High healing resonance with regenerative ward |
-| **Mithril** | 80 | 15% | 1800 | Legendary elven alloy with healing and fall mitigation |
-| **Crystal** | 75 | 10% | 1500 | Water breathing and fireward resonance |
-| **Nether** | 85 | 5% | 2200 | Netherworldly flame immunity and extreme blast defense |
-| **Admin** | 100 | 100% | Infinite | Invulnerability, full flight, and environmental immunity |
-
-Equipping a complete 4-piece or 5-piece matching set grants an automatic **+10% defense bonus**.
+| **Wood** | 20 | 0% | 80 | Lightweight starter gear crafted from wood planks |
+| **Cactus** | 24 | 0% | 110 | Desert survival with thorns that damage attackers |
+| **Steel** | 45 | 0% | 350 | Dependable mid-game metal protection |
+| **Bronze** | 50 | 0% | 450 | Tough copper-tin alloy defense |
+| **Diamond** | 70 | 0% | 1200 | Exceptional durability and strong damage resistance |
+| **Gold** | 40 | 12% | 200 | Regenerates player health over time |
+| **Mithril** | 80 | 15% | 1800 | Legendary alloy with health regen and feather falling |
+| **Crystal** | 75 | 10% | 1500 | Water breathing and fire protection |
+| **Nether** | 85 | 5% | 2200 | Immune to lava, fire, and heavy explosions |
+| **Admin** | 100 | 100% | Infinite | Invulnerability, flight, and environmental immunity |
 
 ---
 
-## API Overview
+## Modding & Extensibility
+
+Mod developers can easily register custom armor items, shields, 3D models, sound effects, and combat callbacks:
 
 ```lua
 -- Register a custom armor item
@@ -81,21 +68,39 @@ x_player_armor.register_on_damage(function(player, index, stack, uses)
 end)
 ```
 
-For detailed classes, signatures, callbacks, and subsystem methods, see [API.md](API.md).
+For complete class definitions, parameter types, callbacks, and subsystem methods, see the full **[API Reference (API.md)](API.md)**.
 
 ---
 
-## Developer Tooling
+## Developer Tooling & Verification
+
+The mod includes full developer scripts, testing harnesses, and Luanti static analysis:
 
 ```bash
-# Run unit tests
+# Run the 62-assertion automated unit test suite
 npm test
 
-# Run Luacheck linter
+# Run Luanti static analysis (Luacheck)
 npm run lint
 
-# Compile API.md from EmmyLua annotations via emmylua_doc_cli
+# Compile API.md from EmmyLua annotations using emmylua_doc_cli
 npm run doc
+
+# Extract, merge, and validate Gettext translations (*.po / *.pot)
+npm run i18n
+
+# Validate PO and POT catalogs
+npm run i18n:check
+
+# Inspect Weblate translation status
+npm run weblate:status
+
+# Sync Weblate translations
+npm run weblate:sync-in
+npm run weblate:sync-out
+
+# Publish release package to ContentDB
+npm run push:ci
 ```
 
 ---

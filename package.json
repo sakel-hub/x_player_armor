@@ -12,7 +12,14 @@
         "test": "lua tests/test_x_player_armor.lua",
         "lint": "luacheck .",
         "doc": "node ./scripts/compile_docs.mjs",
-        "push:ci": "node ./scripts/deploy.mjs"
+        "push:ci": "node ./scripts/deploy.mjs",
+        "i18n:extract": "xgettext -L lua -kS -kPS:1,2 -kcore.translate:1c,2 -kcore.translate_n:1c,2,3 --from-code=UTF-8 --package-name=x_player_armor -o locale/x_player_armor.pot init.lua api.lua modules/*.lua modules/compat/*.lua",
+        "i18n:update": "npm run i18n:extract && for f in locale/*.po; do [ -f \"$f\" ] && msgmerge -U --backup=none \"$f\" locale/x_player_armor.pot; done",
+        "i18n:check": "for f in locale/*.po; do [ -f \"$f\" ] && msgfmt -c -v -o /dev/null \"$f\"; done",
+        "i18n": "npm run i18n:update && npm run i18n:check",
+        "weblate:status": "node scripts/weblate.mjs status",
+        "weblate:sync-in": "node scripts/weblate.mjs refresh",
+        "weblate:sync-out": "node scripts/weblate.mjs push && git pull"
     },
     "repository": {
         "type": "git",

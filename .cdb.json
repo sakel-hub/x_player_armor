@@ -1,15 +1,27 @@
 {
+  "$schema": "https://content.luanti.org/api/cdb_schema/",
+  "type": "MOD",
   "name": "x_player_armor",
   "author": "SaKeL",
   "title": "X Player Armor",
-  "short_description": "High-performance modular player armor and shield system attaching lightweight visual entities directly to skeletal bones.",
-  "type": "mod",
-  "license": "LGPL-2.1-or-later",
-  "media_license": "CC-BY-4.0",
-  "ai_disclosure": "ASSISTED",
+  "short_description": "Modular 3D player armor and shield combat system with active blocking, arrow deflection, interactive armor stands, and zero server lag.",
+  "long_description": "A modern, high-performance player armor and shield mod for Luanti. Built to give players full 3D visual gear, active shield combat, and elemental survival perks while keeping your character skin completely intact and multiplayer gameplay butter-smooth.\n\n## Gameplay & Key Features\n\n- **Modular 3D Armor & Shields**: Helmets, chestplates, leggings, boots, and shields fit naturally over your character without replacing or hiding your skin. Fully compatible with custom skins and `x_player_api` biomechanical animations.\n- **Active Shield Defense**: Hold right-click with a shield to brace for impact. Absorb frontal melee attacks, deflect flying arrows, and knock aggressive monsters backward with a physical counter-impulse.\n- **Dynamic Combat HUD**: During battle, a sleek on-screen armor HUD appears automatically to show your gear's real-time durability so you always know when an item is close to breaking.\n- **Interactive Armor Stands**: Display your favorite armor sets in your base. Right-click to open a visual wardrobe manager, or simply Shift+Left Click with an empty hand to swap your equipped armor with the stand in one click.\n- **3D Inventory Preview**: Rotate and inspect your character in real-time 3D right inside your inventory screen (`sfinv`, `unified_inventory`, or `i3`).\n- **Elemental Survival Perks**:\n  - *Nether & Crystal*: Stride through fire and lava without taking flame damage.\n  - *Crystal*: Dive into deep oceans with underwater breathing.\n  - *Gold & Mithril*: Enjoy passive health regeneration and cushioned fall landings.\n  - *Cactus*: Sharp thorns that retaliate against attackers.\n- **Matching Set Bonus**: Equipping a complete 4-piece or 5-piece matching armor set grants an automatic **+10% defense bonus**.\n- **Smooth Multiplayer Performance**: Designed from the ground up for busy multiplayer servers. Equipping dozens of players and placing armor stands causes zero server tick overhead.\n- **Full Drop-in Compatibility**: Fully backwards-compatible with mods that use legacy `3d_armor`, `shields`, or `3d_armor_stand` APIs, and automatically migrates older saved inventories.\n\n## Armor Materials & Defense Ratings\n\n| Material | Defense Level | Health Regen | Durability | Survival Perks |\n| :--- | :---: | :---: | :---: | :--- |\n| **Wood** | 20 | 0% | 80 | Lightweight starter gear crafted from wood planks |\n| **Cactus** | 24 | 0% | 110 | Desert survival with thorns that damage attackers |\n| **Steel** | 45 | 0% | 350 | Dependable mid-game metal protection |\n| **Bronze** | 50 | 0% | 450 | Tough copper-tin alloy defense |\n| **Diamond** | 70 | 0% | 1200 | Exceptional durability and strong damage resistance |\n| **Gold** | 40 | 12% | 200 | Regenerates player health over time |\n| **Mithril** | 80 | 15% | 1800 | Legendary alloy with health regen and feather falling |\n| **Crystal** | 75 | 10% | 1500 | Water breathing and fire protection |\n| **Nether** | 85 | 5% | 2200 | Immune to lava, fire, and heavy explosions |\n| **Admin** | 100 | 100% | Infinite | Invulnerability, flight, and environmental immunity |\n\n## Developer API\n\nMod developers can easily register custom armor items, shields, 3D models, sound effects, and combat callbacks. Detailed technical documentation, type definitions, and signatures are available in `API.md` on GitHub.\n",
+  "dev_state": "ACTIVELY_DEVELOPED",
+  "tags": [
+    "armor",
+    "combat",
+    "pvp",
+    "tools"
+  ],
   "provides": [
     "3d_armor",
     "shields",
     "3d_armor_stand"
-  ]
+  ],
+  "license": "LGPL-2.1-or-later",
+  "media_license": "CC-BY-4.0",
+  "repo": "https://github.com/sakel-hub/x_player_armor",
+  "issue_tracker": "https://github.com/sakel-hub/x_player_armor/issues",
+  "website": "https://github.com/sakel-hub/x_player_armor/blob/main/API.md",
+  "ai_disclosure": "ASSISTED"
 }

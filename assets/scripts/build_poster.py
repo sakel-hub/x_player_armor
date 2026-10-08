@@ -143,9 +143,11 @@ def build_poster_scene():
         scene.view_settings.view_transform = "Filmic"
 
     looks = [l.name for l in scene.view_settings.bl_rna.properties["look"].enum_items]
-    if "Medium High Contrast" in looks:
-        scene.view_settings.look = "Medium High Contrast"
-    scene.view_settings.exposure = 0.15
+    if "Medium Contrast" in looks:
+        scene.view_settings.look = "Medium Contrast"
+    elif "None" in looks:
+        scene.view_settings.look = "None"
+    scene.view_settings.exposure = -0.10
 
     # World background: Deep dark atmospheric navy studio gradient
     world = bpy.data.worlds.new("Poster_World")
@@ -207,13 +209,13 @@ def build_poster_scene():
         tex_sword = os.path.join(TEXTURES_DIR, "x_player_armor_diamond.png")
 
     mat_hero_body = create_pbr_material("Hero_Body", tex_char, metallic=0.0, roughness=0.75, specular=0.3)
-    mat_hero_helmet = create_pbr_material("Hero_Helmet", tex_diamond, metallic=0.75, roughness=0.35, specular=0.7)
-    mat_hero_torso = create_pbr_material("Hero_Chestplate", tex_diamond, metallic=0.75, roughness=0.35, specular=0.7)
-    mat_hero_legs = create_pbr_material("Hero_Leggings", tex_diamond, metallic=0.75, roughness=0.35, specular=0.7)
-    mat_hero_feet = create_pbr_material("Hero_Boots", tex_diamond, metallic=0.75, roughness=0.35, specular=0.7)
-    mat_hero_shield = create_pbr_material("Hero_Shield", tex_diamond, metallic=0.75, roughness=0.35, specular=0.7)
+    mat_hero_helmet = create_pbr_material("Hero_Helmet", tex_diamond, metallic=0.70, roughness=0.42, specular=0.5)
+    mat_hero_torso = create_pbr_material("Hero_Chestplate", tex_diamond, metallic=0.70, roughness=0.42, specular=0.5)
+    mat_hero_legs = create_pbr_material("Hero_Leggings", tex_diamond, metallic=0.70, roughness=0.42, specular=0.5)
+    mat_hero_feet = create_pbr_material("Hero_Boots", tex_diamond, metallic=0.70, roughness=0.42, specular=0.5)
+    mat_hero_shield = create_pbr_material("Hero_Shield", tex_diamond, metallic=0.70, roughness=0.42, specular=0.5)
     mat_hero_tower = create_pbr_material("Hero_Tower_Shield", None, is_transparent=True)
-    mat_hero_sword = create_pbr_material("Hero_Sword", tex_sword, metallic=0.85, roughness=0.30, specular=0.8)
+    mat_hero_sword = create_pbr_material("Hero_Sword", tex_sword, metallic=0.80, roughness=0.38, specular=0.6)
 
     hero_mats = [
         mat_hero_body,      # 0 Body
@@ -306,13 +308,13 @@ def build_poster_scene():
         tex_steel_sword = os.path.join(TEXTURES_DIR, "x_player_armor_steel.png")
 
     mat_stand_body = create_pbr_material("Stand_Body_Clear", None, is_transparent=True)
-    mat_stand_helmet = create_pbr_material("Stand_Helmet_Gold", tex_gold, metallic=0.88, roughness=0.32, specular=0.8)
-    mat_stand_torso = create_pbr_material("Stand_Torso_Gold", tex_gold, metallic=0.88, roughness=0.32, specular=0.8)
-    mat_stand_legs = create_pbr_material("Stand_Legs_Gold", tex_gold, metallic=0.88, roughness=0.32, specular=0.8)
-    mat_stand_feet = create_pbr_material("Stand_Feet_Gold", tex_gold, metallic=0.88, roughness=0.32, specular=0.8)
-    mat_stand_shield = create_pbr_material("Stand_Shield_Gold", tex_gold, metallic=0.88, roughness=0.32, specular=0.8)
+    mat_stand_helmet = create_pbr_material("Stand_Helmet_Gold", tex_gold, metallic=0.82, roughness=0.40, specular=0.6)
+    mat_stand_torso = create_pbr_material("Stand_Torso_Gold", tex_gold, metallic=0.82, roughness=0.40, specular=0.6)
+    mat_stand_legs = create_pbr_material("Stand_Legs_Gold", tex_gold, metallic=0.82, roughness=0.40, specular=0.6)
+    mat_stand_feet = create_pbr_material("Stand_Feet_Gold", tex_gold, metallic=0.82, roughness=0.40, specular=0.6)
+    mat_stand_shield = create_pbr_material("Stand_Shield_Gold", tex_gold, metallic=0.82, roughness=0.40, specular=0.6)
     mat_stand_tower = create_pbr_material("Stand_Tower_Clear", None, is_transparent=True)
-    mat_stand_sword = create_pbr_material("Stand_Sword_Steel", tex_steel_sword, metallic=0.85, roughness=0.35, specular=0.7)
+    mat_stand_sword = create_pbr_material("Stand_Sword_Steel", tex_steel_sword, metallic=0.80, roughness=0.42, specular=0.5)
 
     stand_mats = [
         mat_stand_body,     # 0 Body (Transparent - reveals wooden frame!)
@@ -478,36 +480,36 @@ def build_poster_scene():
     # ---------------------------------------------------------
     print("Setting up professional lighting rig...")
 
-    # Sun Light: Broad studio key illumination
+    # Sun Light: Soft ambient key illumination (subtle warm directional fill)
     light_sun_data = bpy.data.lights.new("Sun_Key", type="SUN")
-    light_sun_data.energy = 4.0
-    light_sun_data.color = (1.0, 0.98, 0.94)
-    light_sun_data.angle = math.radians(12.0)
+    light_sun_data.energy = 1.0
+    light_sun_data.color = (1.0, 0.98, 0.95)
+    light_sun_data.angle = math.radians(16.0)
     obj_sun = bpy.data.objects.new("Sun_Key", light_sun_data)
     coll_lights.objects.link(obj_sun)
     obj_sun.location = Vector((8.0, 24.0, 26.0))
     dir_sun = Vector((-0.25, -0.85, -0.55))
     obj_sun.rotation_euler = dir_sun.to_track_quat("-Z", "Y").to_euler()
 
-    # Key Area Light: Specular punch on Hero Diamond armor
+    # Key Area Light: Balanced soft illumination on Hero Diamond armor
     light_key_data = bpy.data.lights.new("Key_Hero", type="AREA")
-    light_key_data.energy = 18000.0
+    light_key_data.energy = 4500.0
     light_key_data.color = (1.0, 0.98, 0.95)
-    light_key_data.size = 10.0
+    light_key_data.size = 12.0
     light_key_data.shape = "RECTANGLE"
-    light_key_data.size_y = 10.0
+    light_key_data.size_y = 12.0
     obj_key = bpy.data.objects.new("Key_Hero", light_key_data)
     coll_lights.objects.link(obj_key)
     obj_key.location = Vector((16.0, 26.0, 20.0))
     dir_key = Vector((6.0, 1.2, 10.0)) - obj_key.location
     obj_key.rotation_euler = dir_key.to_track_quat("-Z", "Y").to_euler()
 
-    # Fill Area Light: Soft warm fill illuminating the Gold stand
+    # Fill Area Light: Soft gentle warm fill illuminating the Gold stand
     light_fill_data = bpy.data.lights.new("Fill_Stand", type="AREA")
-    light_fill_data.energy = 14000.0
-    light_fill_data.color = (1.0, 0.95, 0.90)
-    light_fill_data.size = 12.0
-    light_fill_data.size_y = 12.0
+    light_fill_data.energy = 3200.0
+    light_fill_data.color = (1.0, 0.96, 0.92)
+    light_fill_data.size = 14.0
+    light_fill_data.size_y = 14.0
     obj_fill = bpy.data.objects.new("Fill_Stand", light_fill_data)
     coll_lights.objects.link(obj_fill)
     obj_fill.location = Vector((-16.0, 24.0, 18.0))
@@ -516,10 +518,10 @@ def build_poster_scene():
 
     # Hero Rim Light: Crisp sparkling diamond rim from back-left
     light_rim1_data = bpy.data.lights.new("Hero_Rim", type="AREA")
-    light_rim1_data.energy = 20000.0
+    light_rim1_data.energy = 4800.0
     light_rim1_data.color = (0.88, 0.96, 1.0)
-    light_rim1_data.size = 6.0
-    light_rim1_data.size_y = 8.0
+    light_rim1_data.size = 8.0
+    light_rim1_data.size_y = 10.0
     obj_rim1 = bpy.data.objects.new("Hero_Rim", light_rim1_data)
     coll_lights.objects.link(obj_rim1)
     obj_rim1.location = Vector((14.0, -14.0, 16.0))
@@ -528,10 +530,10 @@ def build_poster_scene():
 
     # Stand Rim Light: Warm golden rim from back-right
     light_rim2_data = bpy.data.lights.new("Stand_Rim", type="AREA")
-    light_rim2_data.energy = 16000.0
-    light_rim2_data.color = (1.0, 0.88, 0.65)
-    light_rim2_data.size = 6.0
-    light_rim2_data.size_y = 8.0
+    light_rim2_data.energy = 3800.0
+    light_rim2_data.color = (1.0, 0.90, 0.70)
+    light_rim2_data.size = 8.0
+    light_rim2_data.size_y = 10.0
     obj_rim2 = bpy.data.objects.new("Stand_Rim", light_rim2_data)
     coll_lights.objects.link(obj_rim2)
     obj_rim2.location = Vector((-14.0, -14.0, 15.0))
@@ -540,18 +542,18 @@ def build_poster_scene():
 
     # Plinth Accent: Subtle ground bounce under the pedestal
     light_accent_data = bpy.data.lights.new("Plinth_Accent", type="POINT")
-    light_accent_data.energy = 2000.0
+    light_accent_data.energy = 500.0
     light_accent_data.color = (0.35, 0.75, 1.0)
     obj_accent = bpy.data.objects.new("Plinth_Accent", light_accent_data)
     coll_lights.objects.link(obj_accent)
     obj_accent.location = Vector((0.0, 2.0, 1.2))
 
-    # Overhead Soft Fill: gentle top illumination
+    # Overhead Soft Fill: Gentle, non-burning top illumination
     light_top_data = bpy.data.lights.new("Overhead_Fill", type="AREA")
-    light_top_data.energy = 8000.0
+    light_top_data.energy = 1000.0
     light_top_data.color = (0.92, 0.96, 1.0)
-    light_top_data.size = 24.0
-    light_top_data.size_y = 24.0
+    light_top_data.size = 28.0
+    light_top_data.size_y = 28.0
     obj_top = bpy.data.objects.new("Overhead_Fill", light_top_data)
     coll_lights.objects.link(obj_top)
     obj_top.location = Vector((0.0, 0.0, 26.0))

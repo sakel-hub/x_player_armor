@@ -1,45 +1,43 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the x_player_armor package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# Spanish translation for x_player_armor
+# Copyright (C) 2026 SaKeL
 #
-#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: x_player_armor\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-10-07 22:32-0400\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
+"PO-Revision-Date: 2026-10-06 12:00+0200\n"
+"Last-Translator: SaKeL\n"
+"Language-Team: Spanish\n"
+"Language: es\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: modules/combat.lua:105
 msgid "Warning: Your @1 is almost broken!"
-msgstr ""
+msgstr "¡Advertencia: Tu @1 está casi roto!"
 
 #: modules/constants.lua:29
 msgid "Helmet"
-msgstr ""
+msgstr "Casco"
 
 #: modules/constants.lua:30
 msgid "Chestplate"
-msgstr ""
+msgstr "Peto"
 
 #: modules/constants.lua:31
 msgid "Leggings"
-msgstr ""
+msgstr "Grebas"
 
 #: modules/constants.lua:32
 msgid "Boots"
-msgstr ""
+msgstr "Botas"
 
 #: modules/constants.lua:33
 msgid "Shield"
-msgstr ""
+msgstr "Escudo"
 
 #: modules/constants.lua:34
 msgid "Weapon"
@@ -47,245 +45,257 @@ msgstr ""
 
 #: modules/items.lua:8
 msgid "Wood"
-msgstr ""
+msgstr "Madera"
 
 #: modules/items.lua:14
 msgid "Cactus"
-msgstr ""
+msgstr "Cactus"
 
 #: modules/items.lua:20
 msgid "Steel"
-msgstr ""
+msgstr "Acero"
 
 #: modules/items.lua:26
 msgid "Bronze"
-msgstr ""
+msgstr "Bronce"
 
 #: modules/items.lua:32
 msgid "Diamond"
-msgstr ""
+msgstr "Diamante"
 
 #: modules/items.lua:38
 msgid "Gold"
-msgstr ""
+msgstr "Oro"
 
 #: modules/items.lua:44
 msgid "Mithril"
-msgstr ""
+msgstr "Mithril"
 
 #: modules/items.lua:51
 msgid "Crystal"
-msgstr ""
+msgstr "Cristal"
 
 #: modules/items.lua:59
 msgid "Nether"
-msgstr ""
+msgstr "Nether"
 
 #: modules/items.lua:66
 msgid "Admin"
-msgstr ""
+msgstr "Admin"
 
 #: modules/items.lua:186
 msgid "Enhanced Wood Shield"
-msgstr ""
+msgstr "Escudo de madera mejorado"
 
 #: modules/items.lua:194
 msgid "Enhanced Cactus Shield"
-msgstr ""
+msgstr "Escudo de cactus mejorado"
 
 #: modules/stand.lua:265
+#, fuzzy
 msgid ""
 "Locked Armor Stand (Owned by @1)\n"
 "Equipped: @2"
 msgstr ""
+"Soporte de armadura (Propietario: @1)\n"
+"Equipado: @2"
 
 #: modules/stand.lua:267
+#, fuzzy
 msgid "Locked Armor Stand (Owned by @1) [Empty]"
-msgstr ""
+msgstr "Soporte de armadura (Propietario: @1) [Vacío]"
 
 #: modules/stand.lua:271
+#, fuzzy
 msgid ""
 "Armor Stand (Placed by @1)\n"
 "Equipped: @2"
 msgstr ""
+"Soporte de armadura (Propietario: @1)\n"
+"Equipado: @2"
 
 #: modules/stand.lua:273
+#, fuzzy
 msgid "Armor Stand (Placed by @1) [Empty]"
-msgstr ""
+msgstr "Soporte de armadura (Propietario: @1) [Vacío]"
 
 #: modules/stand.lua:277
 msgid ""
 "Armor Stand\n"
 "Equipped: @1"
 msgstr ""
+"Soporte de armadura\n"
+"Equipado: @1"
 
 #: modules/stand.lua:279
 msgid "Armor Stand [Empty]"
-msgstr ""
+msgstr "Soporte de armadura [Vacío]"
 
 #: modules/stand.lua:469
+#, fuzzy
 msgid "LOCKED ARMOR STAND - @1"
-msgstr ""
+msgstr "SOPORTE DE ARMADURA - @1"
 
 #: modules/stand.lua:471
 msgid "ARMOR STAND - @1"
-msgstr ""
+msgstr "SOPORTE DE ARMADURA - @1"
 
 #: modules/stand.lua:473
 msgid "ARMOR STAND"
-msgstr ""
+msgstr "SOPORTE DE ARMADURA"
 
 #: modules/stand.lua:492 modules/ui.lua:498
 msgid "Close"
-msgstr ""
+msgstr "Cerrar"
 
 #: modules/stand.lua:496
 msgid "STAND ARMOR"
-msgstr ""
+msgstr "ARMADURA EN SOPORTE"
 
 #: modules/stand.lua:503
 msgid "Swap"
-msgstr ""
+msgstr "Cambiar"
 
 #: modules/stand.lua:504
 msgid "Swap all equipped armor between player and stand"
-msgstr ""
+msgstr "Intercambiar todo el equipo entre el jugador y el soporte"
 
 #: modules/stand.lua:508
 msgid "Take"
-msgstr ""
+msgstr "Tomar"
 
 #: modules/stand.lua:509
 msgid "Take all armor from stand into player inventory"
-msgstr ""
+msgstr "Llevar toda la armadura del soporte al inventario"
 
 #: modules/stand.lua:513
 msgid "YOUR ARMOR"
-msgstr ""
+msgstr "TU ARMADURA"
 
 #: modules/stand.lua:557 modules/stand.lua:929
 msgid "You do not have permission to access this armor stand."
-msgstr ""
+msgstr "No tienes permiso para acceder a este soporte de armadura."
 
 #: modules/stand.lua:575 modules/stand.lua:583
 msgid "Cannot swap armor: @1 is cursed!"
-msgstr ""
+msgstr "No se puede cambiar la armadura: ¡@1 está maldito!"
 
 #: modules/stand.lua:1029 modules/utils.lua:313
 msgid "Armor Stand"
-msgstr ""
+msgstr "Soporte de armadura"
 
 #: modules/stand.lua:1039 modules/utils.lua:313
+#, fuzzy
 msgid "Locked Armor Stand"
-msgstr ""
+msgstr "Soporte de armadura"
 
 #: modules/ui.lua:328
 msgid "ARMOR ATTRIBUTES"
-msgstr ""
+msgstr "ATRIBUTOS DE ARMADURA"
 
 #: modules/ui.lua:331 modules/utils.lua:163
 msgid "Damage Reduction"
-msgstr ""
+msgstr "Reducción de daño"
 
 #: modules/ui.lua:337
 msgid "Absorbs @1% incoming hit damage (+10% set bonus)"
-msgstr ""
+msgstr "Absorbe @1% del daño de impacto recibido (+10% bonus de conjunto)"
 
 #: modules/ui.lua:338
 msgid "Absorbs @1% incoming hit damage"
-msgstr ""
+msgstr "Absorbe @1% del daño de impacto recibido"
 
 #: modules/ui.lua:342
 msgid "Armor Healing"
-msgstr ""
+msgstr "Curación de armadura"
 
 #: modules/ui.lua:349
 msgid "@1% chance on hit to nullify damage & heal"
-msgstr ""
+msgstr "@1% de probabilidad al recibir golpe de anular daño y curar"
 
 #: modules/ui.lua:350
 msgid "0% - No regenerative healing ward"
-msgstr ""
+msgstr "0% - Sin guardia regenerativa activa"
 
 #: modules/ui.lua:369
 msgid "Mobility"
-msgstr ""
+msgstr "Movilidad"
 
 #: modules/ui.lua:378
 msgid "Shield Defense"
-msgstr ""
+msgstr "Defensa con escudo"
 
 #: modules/ui.lua:379
 msgid "Active"
-msgstr ""
+msgstr "Activa"
 
 #: modules/ui.lua:383
 msgid "Blocks up to 80% damage in frontal arc (Hold RMB)"
-msgstr ""
+msgstr "Bloquea hasta un 80% de daño en arco frontal (Mantener clic derecho)"
 
 #: modules/ui.lua:388
 msgid "ACTIVE PERKS"
-msgstr ""
+msgstr "VENTAJAS ACTIVAS"
 
 #: modules/ui.lua:394
 msgid "★ Set Bonus: +10% Defense"
-msgstr ""
+msgstr "★ Bonus de conjunto: +10% Defensa"
 
 #: modules/ui.lua:400
 msgid "Healing Ward: @1% Chance to Absorb & Heal"
-msgstr ""
+msgstr "Guardia sanadora: @1% de prob. de absorber y curar"
 
 #: modules/ui.lua:406
 msgid "Shield Guard: Frontal Block & Parry"
-msgstr ""
+msgstr "Guardia con escudo: Bloqueo frontal y parada"
 
 #: modules/ui.lua:412
 msgid "Thorns: Damages Attacker's Weapon"
-msgstr ""
+msgstr "Espinas: Daña el arma del atacante"
 
 #: modules/ui.lua:418
 msgid "Feather Fall: Dampened (-@1 HP)"
-msgstr ""
+msgstr "Caída de pluma: Amortiguada (-@1 PV)"
 
 #: modules/ui.lua:424
 msgid "Fire Ward: Protected (Heat Immune)"
-msgstr ""
+msgstr "Guardia de fuego: Protegido (Inmune al calor)"
 
 #: modules/ui.lua:430
 msgid "Water Ward: Breathing (Infinite)"
-msgstr ""
+msgstr "Guardia de agua: Respiración (Infinita)"
 
 #: modules/ui.lua:436
 msgid "Swiftness: +@1% Movement Speed"
-msgstr ""
+msgstr "Rapidez: +@1% Velocidad de movimiento"
 
 #: modules/ui.lua:441
 msgid "Heavy Load: @1% Movement Speed"
-msgstr ""
+msgstr "Carga pesada: @1% Velocidad de movimiento"
 
 #: modules/ui.lua:447
 msgid "High Jump: +@1% Jump Height"
-msgstr ""
+msgstr "Salto alto: +@1% Altura de salto"
 
 #: modules/ui.lua:454
 msgid "No active enchantments"
-msgstr ""
+msgstr "Sin encantamientos activos"
 
 #: modules/ui.lua:458
 msgid "Equip 4 matching pieces for set bonus"
-msgstr ""
+msgstr "Equipa 4 piezas iguales para el bonus de conjunto"
 
 #: modules/ui.lua:493
 msgid "ARMOR & EQUIPMENT"
-msgstr ""
+msgstr "ARMADURA Y EQUIPO"
 
 #: modules/ui.lua:507 modules/ui.lua:819 modules/ui.lua:908 modules/ui.lua:933
 msgid "Drag to rotate 3D view"
-msgstr ""
+msgstr "Arrastra para rotar la vista 3D"
 
 #: modules/ui.lua:511
 msgid "Equipped Armor Slots"
-msgstr ""
+msgstr "Ranuras de armadura equipada"
 
 #: modules/ui.lua:524
 msgid "PLAYER INVENTORY"
@@ -297,11 +307,11 @@ msgstr ""
 
 #: modules/ui.lua:669
 msgid "Open armor and equipment inventory"
-msgstr ""
+msgstr "Abrir inventario de armadura y equipo"
 
 #: modules/ui.lua:787
 msgid "Armor"
-msgstr ""
+msgstr "Armadura"
 
 #: modules/ui.lua:826 modules/ui.lua:915 modules/ui.lua:940
 msgid "EQUIPPED ARMOR"
@@ -309,221 +319,360 @@ msgstr ""
 
 #: modules/ui.lua:893 modules/ui.lua:998
 msgid "Armor & Equipment"
-msgstr ""
+msgstr "Armadura y equipo"
 
 #: modules/utils.lua:118
+#, fuzzy
 msgid "Armor Item"
-msgstr ""
+msgstr "Soporte de armadura"
 
 #: modules/utils.lua:143
 msgid "Type: Tower Shield (Reinforced Off-Hand)"
-msgstr ""
+msgstr "Tipo: Escudo torre (Mano secundaria reforzada)"
 
 #: modules/utils.lua:145
 msgid "Type: Helmet (Head Slot)"
-msgstr ""
+msgstr "Tipo: Casco (Cabeza)"
 
 #: modules/utils.lua:147
 msgid "Type: Chestplate (Torso Slot)"
-msgstr ""
+msgstr "Tipo: Peto (Torso)"
 
 #: modules/utils.lua:149
 msgid "Type: Leggings (Legs Slot)"
-msgstr ""
+msgstr "Tipo: Grebas (Piernas)"
 
 #: modules/utils.lua:151
 msgid "Type: Boots (Feet Slot)"
-msgstr ""
+msgstr "Tipo: Botas (Pies)"
 
 #: modules/utils.lua:153
 msgid "Type: Shield (Off-Hand Slot)"
-msgstr ""
+msgstr "Tipo: Escudo (Mano secundaria)"
 
 #: modules/utils.lua:155
 msgid "Type: Armor Equipment"
-msgstr ""
+msgstr "Tipo: Equipo de armadura"
 
 #: modules/utils.lua:161
 msgid "Passive Defense: "
-msgstr ""
+msgstr "Defensa pasiva: "
 
 #: modules/utils.lua:161
+#, fuzzy
 msgid "Defense: "
-msgstr ""
+msgstr "Defensa"
 
 #: modules/utils.lua:167 modules/utils.lua:170
 msgid "Durability: "
-msgstr ""
+msgstr "Durabilidad: "
 
 #: modules/utils.lua:168
 msgid "Unbreakable (Infinite)"
-msgstr ""
+msgstr "Irrompible (Infinita)"
 
 #: modules/utils.lua:171
 msgid "@1 Uses"
-msgstr ""
+msgstr "@1 Usos"
 
 #: modules/utils.lua:177
 msgid "✦ Healing Ward: +@1% Chance on hit to nullify damage & heal"
 msgstr ""
+"✦ Guardia sanadora: +@1% probabilidad al recibir golpe de anular daño y curar"
 
 #: modules/utils.lua:183
 msgid "✦ Fire Ward: +1 Heat Tier (Tier 5 Molten Immunity at 4+ pieces)"
 msgstr ""
+"✦ Guardia de fuego: +1 nivel de calor (Nivel 5 inmunidad a lava con 4+ "
+"piezas)"
 
 #: modules/utils.lua:186
 msgid "✦ Fire Ward: +1 Heat Tier (Protects against torches & hot flora)"
 msgstr ""
+"✦ Guardia de fuego: +1 nivel de calor (Protege contra antorchas y flora "
+"ardiente)"
 
 #: modules/utils.lua:192
 msgid "✦ Water Ward: Underwater Breathing (Infinite Drown Immunity)"
 msgstr ""
+"✦ Guardia de agua: Respiración bajo el agua (Inmunidad infinita al "
+"ahogamiento)"
 
 #: modules/utils.lua:197
 msgid "✦ Feather Fall: -@1 Fall Damage (@2 Hearts Absorbed)"
-msgstr ""
+msgstr "✦ Caída de pluma: -@1 daño por caída (@2 corazones absorbidos)"
 
 #: modules/utils.lua:209
 msgid "✦ Reinforced Tower Guard (Hold RMB):"
-msgstr ""
+msgstr "✦ Guardia con escudo torre reforzada (Mantener clic derecho):"
 
 #: modules/utils.lua:210
 msgid "  • Block Mitigation: @1% damage absorbed (reinforced)"
-msgstr ""
+msgstr "  • Mitigación de bloqueo: @1% daño absorbido (reforzado)"
 
 #: modules/utils.lua:211 modules/utils.lua:219
 msgid "  • Frontal Guard Arc: @1° cone (@2° off-hand bias)"
 msgstr ""
+"  • Arco frontal de guardia: cono de @1° (@2° desvío hacia la izquierda)"
 
 #: modules/utils.lua:212 modules/utils.lua:220
 msgid "  • Projectile Deflection: Bounces arrows & fireballs"
-msgstr ""
+msgstr "  • Desvío de proyectiles: Rebota flechas y bolas de fuego"
 
 #: modules/utils.lua:214 modules/utils.lua:222
 msgid "  • Thorns: Damages melee attacker's weapon"
-msgstr ""
+msgstr "  • Espinas: Daña el arma del atacante cuerpo a cuerpo"
 
 #: modules/utils.lua:217
 msgid "✦ Shield Guard (Hold RMB):"
-msgstr ""
+msgstr "✦ Guardia con escudo (Mantener clic derecho):"
 
 #: modules/utils.lua:218
 msgid "  • Block Mitigation: @1% damage absorbed"
-msgstr ""
+msgstr "  • Mitigación de bloqueo: @1% daño absorbido"
 
 #: modules/utils.lua:226
 msgid "✦ Thorns: Damages melee attacker's weapon"
-msgstr ""
+msgstr "✦ Espinas: Daña el arma del atacante cuerpo a cuerpo"
 
 #: modules/utils.lua:233
 msgid "✦ Swiftness: @1% Movement Speed"
-msgstr ""
+msgstr "✦ Rapidez: @1% Velocidad de movimiento"
 
 #: modules/utils.lua:238
 msgid "✦ High Jump: @1% Jump Height"
-msgstr ""
+msgstr "✦ Salto alto: @1% Altura de salto"
 
 #: modules/utils.lua:243
 msgid "✦ Gravity: @1%"
-msgstr ""
+msgstr "✦ Gravedad: @1%"
 
 #: modules/utils.lua:259 modules/utils.lua:263 modules/utils.lua:266
 #: modules/utils.lua:269 modules/utils.lua:272 modules/utils.lua:275
 #: modules/utils.lua:278 modules/utils.lua:281 modules/utils.lua:284
 #: modules/utils.lua:287
 msgid "★ Set Synergy (4+ Pieces): +10% Total Defense"
-msgstr ""
+msgstr "★ Sinergia de conjunto (4+ piezas): +10% Defensa total"
 
 #: modules/utils.lua:264
 msgid "  Combine 4 wood pieces for early-game defense bonus."
-msgstr ""
+msgstr "  Combina 4 piezas de madera para obtener un bonus defensivo inicial."
 
 #: modules/utils.lua:267
 msgid "  Combine 4 cactus pieces for early-game thorny protection."
-msgstr ""
+msgstr "  Combina 4 piezas de cactus para obtener protección espinosa inicial."
 
 #: modules/utils.lua:270
 msgid "  Combine 4 steel pieces for solid all-around mid-game defense."
-msgstr ""
+msgstr "  Combina 4 piezas de acero para una sólida defensa general."
 
 #: modules/utils.lua:273
 msgid "  Combine 4 bronze pieces for heavy durable defense exceeding steel."
 msgstr ""
+"  Combina 4 piezas de bronce para una defensa pesada y duradera superior al "
+"acero."
 
 #: modules/utils.lua:276
 msgid "  Combine 4 diamond pieces for elite end-game damage absorption."
-msgstr ""
+msgstr "  Combina 4 piezas de diamante para una absorción de daño de élite."
 
 #: modules/utils.lua:279
 msgid "  Full set yields +12% (+15% w/ shield) healing ward chance!"
 msgstr ""
+"  ¡El conjunto completo otorga +12% (+15% con escudo) probabilidad de "
+"guardia sanadora!"
 
 #: modules/utils.lua:282
 msgid "  Combine set for high durability, healing ward & feather falling!"
 msgstr ""
+"  ¡Combina el conjunto para alta durabilidad, guardia sanadora y caída de "
+"pluma!"
 
 #: modules/utils.lua:285
 msgid ""
 "  Hybrid Set: Water breathing (head), fire ward (chest) & healing (shield)!"
 msgstr ""
+"  ¡Conjunto híbrido: respiración acuática (cabeza), fuego (torso) y curación "
+"(escudo)!"
 
 #: modules/utils.lua:288
 msgid "  Full 4+ piece set grants Tier 5 Molten & Lava Immunity!"
 msgstr ""
+"  ¡El conjunto de 4+ piezas otorga inmunidad de Nivel 5 al calor y la lava!"
 
 #: modules/utils.lua:290
 msgid ""
 "★ Omnipotent Set: Total immunity, infinite durability & 100% healing ward."
 msgstr ""
+"★ Conjunto omnipotente: Inmunidad total, durabilidad infinita y 100% "
+"curación."
 
 #: modules/utils.lua:293
 msgid "★ Tower Shield: Counts toward matching 4-piece set bonus"
-msgstr ""
+msgstr "★ Escudo torre: Cuenta para el bonus de conjunto de 4 piezas"
 
 #: modules/utils.lua:300
 msgid "Tip: Equip in shield slot; hold RMB to raise guard"
 msgstr ""
+"Consejo: Equipa en el espacio de escudo; mantén clic derecho para bloquear"
 
 #: modules/utils.lua:302
 msgid "Tip: Right-click in hand to quick-equip or swap"
-msgstr ""
+msgstr "Consejo: Clic derecho en mano para equipar o cambiar rápidamente"
 
 #: modules/utils.lua:314
+#, fuzzy
 msgid "Type: Equipment Display / Storage (Owner-Locked)"
-msgstr ""
+msgstr "Tipo: Expositor de equipo / Almacén"
 
 #: modules/utils.lua:314
+#, fuzzy
 msgid "Type: Equipment Display / Storage (Public)"
-msgstr ""
+msgstr "Tipo: Expositor de equipo / Almacén"
 
 #: modules/utils.lua:318
 msgid "Capacity: "
-msgstr ""
+msgstr "Capacidad: "
 
 #: modules/utils.lua:318
 msgid "Full 5-Piece Armor Set"
-msgstr ""
+msgstr "Conjunto completo de 5 piezas de armadura"
 
 #: modules/utils.lua:319
 msgid "✦ Wardrobe Management & Quick Swap:"
-msgstr ""
+msgstr "✦ Gestión de vestuario y cambio rápido:"
 
 #: modules/utils.lua:320
+#, fuzzy
 msgid "  • Live 3D character display mannequin & shield"
-msgstr ""
+msgstr "  • Maniquí de exhibición 3D del personaje en vivo"
 
 #: modules/utils.lua:321
 msgid "  • Right-Click: Open Wardrobe UI"
 msgstr ""
 
 #: modules/utils.lua:322
+#, fuzzy
 msgid "  • Shift + Left-Click: Instant full outfit swap"
-msgstr ""
+msgstr "  • Agacharse + Clic derecho: Cambio rápido instantáneo del equipo"
 
 #: modules/utils.lua:323
 msgid "  • Preserves item wear, enchants, and custom metadata"
-msgstr ""
+msgstr "  • Conserva desgaste, encantamientos y metadatos personalizados"
 
 #: modules/utils.lua:324
 msgid "Tip: Point crosshair at stand to view equipped pieces"
-msgstr ""
+msgstr "Consejo: Apunta la mira al soporte para ver las piezas equipadas"
+
+#~ msgid "Armor Stand (Owned by @1)"
+#~ msgstr "Soporte de armadura (Propiedad de @1)"
+
+#~ msgid "Defense Level"
+#~ msgstr "Nivel de defensa"
+
+#~ msgid "Regenerative Ward"
+#~ msgstr "Protección regenerativa"
+
+#~ msgid "★ Full Set +10% Bonus"
+#~ msgstr "★ Conjunto completo +10% Bonif."
+
+#~ msgid "🔥 Fire Immunity"
+#~ msgstr "🔥 Inmunidad al fuego"
+
+#~ msgid "💧 Water Breathing"
+#~ msgstr "💧 Respiración acuática"
+
+#~ msgid "🪶 Feather Falling"
+#~ msgstr "🪶 Caída de pluma"
+
+#~ msgid "Ward"
+#~ msgstr "Protección"
+
+#~ msgid "@1 Helmet"
+#~ msgstr "Casco de @1"
+
+#~ msgid "Helmet forged from @1."
+#~ msgstr "Casco forjado de @1."
+
+#~ msgid "@1 Chestplate"
+#~ msgstr "Peto de @1"
+
+#~ msgid "Chestplate forged from @1."
+#~ msgstr "Peto forjado de @1."
+
+#~ msgid "@1 Leggings"
+#~ msgstr "Grebas de @1"
+
+#~ msgid "Leggings forged from @1."
+#~ msgstr "Grebas forjadas de @1."
+
+#~ msgid "@1 Boots"
+#~ msgstr "Botas de @1"
+
+#~ msgid "Boots forged from @1."
+#~ msgstr "Botas forjadas de @1."
+
+#~ msgid "@1 Shield"
+#~ msgstr "Escudo de @1"
+
+#~ msgid "Shield crafted with @1."
+#~ msgstr "Escudo fabricado con @1."
+
+#~ msgid "  • Right-click: Open Stand UI with one-click Swap button"
+#~ msgstr "  • Clic derecho: Abre el menú del soporte con botón de cambio"
+
+#~ msgid "Tip: Equip in shield slot; hold RMB to raise heavy guard"
+#~ msgstr ""
+#~ "Consejo: Equipa en el espacio de escudo; mantén clic derecho para guardia "
+#~ "pesada"
+
+#~ msgid "Helmet Slot"
+#~ msgstr "Espacio de casco"
+
+#~ msgid "Equip a helmet or headpiece here for defense."
+#~ msgstr "Equipa un casco o protector de cabeza aquí para defensa."
+
+#~ msgid "Chestplate Slot"
+#~ msgstr "Espacio de peto"
+
+#~ msgid "Equip a chestplate or body armor here for core protection."
+#~ msgstr "Equipa un peto o armadura corporal aquí para protección central."
+
+#~ msgid "Shield Slot"
+#~ msgstr "Espacio de escudo"
+
+#~ msgid "Equip a shield here for active frontal damage blocking."
+#~ msgstr "Equipa un escudo aquí para bloqueo activo frontal."
+
+#~ msgid "Leggings Slot"
+#~ msgstr "Espacio de grebas"
+
+#~ msgid "Equip leggings or greaves here for lower-body defense."
+#~ msgstr "Equipa grebas o pantalones aquí para defensa inferior."
+
+#~ msgid "Boots Slot"
+#~ msgstr "Espacio de botas"
+
+#~ msgid "Equip boots here for foot protection and mobility."
+#~ msgstr "Equipa botas aquí para protección de pies y movilidad."
+
+#~ msgid "Accessory Slot"
+#~ msgstr "Espacio de accesorio"
+
+#~ msgid "Equip extra armor or an accessory here."
+#~ msgstr "Equipa armadura adicional o un accesorio aquí."
+
+#~ msgid "Place a helmet or headpiece here."
+#~ msgstr "Coloca un casco o protector de cabeza aquí."
+
+#~ msgid "Place a chestplate or cuirass here."
+#~ msgstr "Coloca un peto o coraza aquí."
+
+#~ msgid "Place a shield here."
+#~ msgstr "Coloca un escudo aquí."
+
+#~ msgid "Place leggings or greaves here."
+#~ msgstr "Coloca grebas o pantalones aquí."
+
+#~ msgid "Place boots here."
+#~ msgstr "Coloca botas aquí."

@@ -577,10 +577,11 @@ def build_preview_model():
 
     # 3. Wielditem (Slot 7) on Arm_Right (Universal 16x16 Extruder)
     # Canonical Luanti wield orientation:
-    # Diagonal tool axis extends horizontally forward (+Y) from hand (base Y=-1.77 -> tip Y=+6.50 at Z=7.87)
-    # Sharp side of axe / cutting edge (uv 0,1) points DOWN towards Z=3.74
-    # Back/butt of tool (uv 1,0) points UP towards Z=12.00
-    wield_base = Vector((3.15, -1.77, 7.87))
+    # Diagonal tool axis extends horizontally forward (+Y) from hand (base Y=-0.15 -> tip Y=+7.60 at Z=7.35)
+    # Grip sits comfortably in palm/fingers (Y=+0.88..+1.92), crossguard emerges in front of hand (Y=+1.92..+3.80)
+    # Sharp side of axe / cutting edge (uv 0,1) points DOWN towards Z=3.22
+    # Back/butt of tool (uv 1,0) points UP towards Z=11.48
+    wield_base = Vector((3.15, -0.15, 7.35))
     wield_axis_u = Vector((0.0, 4.14, 4.13))
     wield_axis_v = Vector((0.0, 4.13, -4.13))
     wield_axis_n = Vector((1.0, 0.0, 0.0))   # +X normal (facing outward)

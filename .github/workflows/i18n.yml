@@ -1,0 +1,30 @@
+name: Translation Validation & Sync
+
+on:
+  push:
+    paths:
+      - 'locale/**'
+      - '*.lua'
+      - 'modules/**'
+  pull_request:
+    paths:
+      - 'locale/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install gettext
+        run: sudo apt-get update && sudo apt-get install -y gettext
+
+      - name: Validate PO & POT Files
+        run: |
+          msgfmt -c -v -o /dev/null locale/x_player_armor.pot
+          for f in locale/*.po; do
+            if [ -f "$f" ]; then
+              echo "Validating $f..."
+              msgfmt -c -v -o /dev/null "$f"
+            fi
+          done

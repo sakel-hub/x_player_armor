@@ -1,45 +1,43 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the x_player_armor package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# Slovak translation for x_player_armor
+# Copyright (C) 2026 SaKeL
 #
-#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: x_player_armor\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-10-07 22:32-0400\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
+"PO-Revision-Date: 2026-10-06 12:00+0200\n"
+"Last-Translator: SaKeL\n"
+"Language-Team: Slovak\n"
+"Language: sk\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 
 #: modules/combat.lua:105
 msgid "Warning: Your @1 is almost broken!"
-msgstr ""
+msgstr "Upozornenie: Vaša položka @1 je takmer rozbitá!"
 
 #: modules/constants.lua:29
 msgid "Helmet"
-msgstr ""
+msgstr "Prilba"
 
 #: modules/constants.lua:30
 msgid "Chestplate"
-msgstr ""
+msgstr "Brnenie"
 
 #: modules/constants.lua:31
 msgid "Leggings"
-msgstr ""
+msgstr "Nohavice"
 
 #: modules/constants.lua:32
 msgid "Boots"
-msgstr ""
+msgstr "Topánky"
 
 #: modules/constants.lua:33
 msgid "Shield"
-msgstr ""
+msgstr "Štít"
 
 #: modules/constants.lua:34
 msgid "Weapon"
@@ -47,245 +45,257 @@ msgstr ""
 
 #: modules/items.lua:8
 msgid "Wood"
-msgstr ""
+msgstr "Drevená"
 
 #: modules/items.lua:14
 msgid "Cactus"
-msgstr ""
+msgstr "Kaktusová"
 
 #: modules/items.lua:20
 msgid "Steel"
-msgstr ""
+msgstr "Oceľová"
 
 #: modules/items.lua:26
 msgid "Bronze"
-msgstr ""
+msgstr "Bronzová"
 
 #: modules/items.lua:32
 msgid "Diamond"
-msgstr ""
+msgstr "Diamantová"
 
 #: modules/items.lua:38
 msgid "Gold"
-msgstr ""
+msgstr "Zlatá"
 
 #: modules/items.lua:44
 msgid "Mithril"
-msgstr ""
+msgstr "Mitrilová"
 
 #: modules/items.lua:51
 msgid "Crystal"
-msgstr ""
+msgstr "Kryštálová"
 
 #: modules/items.lua:59
 msgid "Nether"
-msgstr ""
+msgstr "Netherová"
 
 #: modules/items.lua:66
 msgid "Admin"
-msgstr ""
+msgstr "Administrátorská"
 
 #: modules/items.lua:186
 msgid "Enhanced Wood Shield"
-msgstr ""
+msgstr "Vystužený drevený štít"
 
 #: modules/items.lua:194
 msgid "Enhanced Cactus Shield"
-msgstr ""
+msgstr "Vystužený kaktusový štít"
 
 #: modules/stand.lua:265
+#, fuzzy
 msgid ""
 "Locked Armor Stand (Owned by @1)\n"
 "Equipped: @2"
 msgstr ""
+"Stojan na brnenie (Vlastník: @1)\n"
+"Nasadené: @2"
 
 #: modules/stand.lua:267
+#, fuzzy
 msgid "Locked Armor Stand (Owned by @1) [Empty]"
-msgstr ""
+msgstr "Stojan na brnenie (Vlastník: @1) [Prázdny]"
 
 #: modules/stand.lua:271
+#, fuzzy
 msgid ""
 "Armor Stand (Placed by @1)\n"
 "Equipped: @2"
 msgstr ""
+"Stojan na brnenie (Vlastník: @1)\n"
+"Nasadené: @2"
 
 #: modules/stand.lua:273
+#, fuzzy
 msgid "Armor Stand (Placed by @1) [Empty]"
-msgstr ""
+msgstr "Stojan na brnenie (Vlastník: @1) [Prázdny]"
 
 #: modules/stand.lua:277
 msgid ""
 "Armor Stand\n"
 "Equipped: @1"
 msgstr ""
+"Stojan na brnenie\n"
+"Nasadené: @1"
 
 #: modules/stand.lua:279
 msgid "Armor Stand [Empty]"
-msgstr ""
+msgstr "Stojan na brnenie [Prázdny]"
 
 #: modules/stand.lua:469
+#, fuzzy
 msgid "LOCKED ARMOR STAND - @1"
-msgstr ""
+msgstr "STOJAN NA BRNENIE - @1"
 
 #: modules/stand.lua:471
 msgid "ARMOR STAND - @1"
-msgstr ""
+msgstr "STOJAN NA BRNENIE - @1"
 
 #: modules/stand.lua:473
 msgid "ARMOR STAND"
-msgstr ""
+msgstr "STOJAN NA BRNENIE"
 
 #: modules/stand.lua:492 modules/ui.lua:498
 msgid "Close"
-msgstr ""
+msgstr "Zavrieť"
 
 #: modules/stand.lua:496
 msgid "STAND ARMOR"
-msgstr ""
+msgstr "BRNENIE NA STOJANE"
 
 #: modules/stand.lua:503
 msgid "Swap"
-msgstr ""
+msgstr "Vymeniť"
 
 #: modules/stand.lua:504
 msgid "Swap all equipped armor between player and stand"
-msgstr ""
+msgstr "Vymeniť celé nasadené brnenie medzi hráčom a stojanom"
 
 #: modules/stand.lua:508
 msgid "Take"
-msgstr ""
+msgstr "Zobrať"
 
 #: modules/stand.lua:509
 msgid "Take all armor from stand into player inventory"
-msgstr ""
+msgstr "Zobrať všetko brnenie zo stojana do inventára hráča"
 
 #: modules/stand.lua:513
 msgid "YOUR ARMOR"
-msgstr ""
+msgstr "VAŠE BRNENIE"
 
 #: modules/stand.lua:557 modules/stand.lua:929
 msgid "You do not have permission to access this armor stand."
-msgstr ""
+msgstr "Nemáte povolenie na prístup k tomuto stojanu na brnenie."
 
 #: modules/stand.lua:575 modules/stand.lua:583
 msgid "Cannot swap armor: @1 is cursed!"
-msgstr ""
+msgstr "Nemožno vymeniť brnenie: @1 je prekliate!"
 
 #: modules/stand.lua:1029 modules/utils.lua:313
 msgid "Armor Stand"
-msgstr ""
+msgstr "Stojan na brnenie"
 
 #: modules/stand.lua:1039 modules/utils.lua:313
+#, fuzzy
 msgid "Locked Armor Stand"
-msgstr ""
+msgstr "Stojan na brnenie"
 
 #: modules/ui.lua:328
 msgid "ARMOR ATTRIBUTES"
-msgstr ""
+msgstr "ATRIBÚTY BRNENIA"
 
 #: modules/ui.lua:331 modules/utils.lua:163
 msgid "Damage Reduction"
-msgstr ""
+msgstr "Redukcia poškodenia"
 
 #: modules/ui.lua:337
 msgid "Absorbs @1% incoming hit damage (+10% set bonus)"
-msgstr ""
+msgstr "Pohlcuje @1% prichádzajúceho poškodenia útokom (+10% bonus setu)"
 
 #: modules/ui.lua:338
 msgid "Absorbs @1% incoming hit damage"
-msgstr ""
+msgstr "Pohlcuje @1% prichádzajúceho poškodenia útokom"
 
 #: modules/ui.lua:342
 msgid "Armor Healing"
-msgstr ""
+msgstr "Liečenie brnením"
 
 #: modules/ui.lua:349
 msgid "@1% chance on hit to nullify damage & heal"
-msgstr ""
+msgstr "@1% šanca pri zásahu anulovať poškodenie a vyliečiť"
 
 #: modules/ui.lua:350
 msgid "0% - No regenerative healing ward"
-msgstr ""
+msgstr "0% - Žiadny regeneračný štít nie je aktívny"
 
 #: modules/ui.lua:369
 msgid "Mobility"
-msgstr ""
+msgstr "Pohyblivosť"
 
 #: modules/ui.lua:378
 msgid "Shield Defense"
-msgstr ""
+msgstr "Obrana štítom"
 
 #: modules/ui.lua:379
 msgid "Active"
-msgstr ""
+msgstr "Aktívna"
 
 #: modules/ui.lua:383
 msgid "Blocks up to 80% damage in frontal arc (Hold RMB)"
-msgstr ""
+msgstr "Blokuje až 80% poškodenia v prednom oblúku (Drž RMB)"
 
 #: modules/ui.lua:388
 msgid "ACTIVE PERKS"
-msgstr ""
+msgstr "AKTÍVNE SCHOPNOSTI"
 
 #: modules/ui.lua:394
 msgid "★ Set Bonus: +10% Defense"
-msgstr ""
+msgstr "★ Bonus setu: +10% obrana"
 
 #: modules/ui.lua:400
 msgid "Healing Ward: @1% Chance to Absorb & Heal"
-msgstr ""
+msgstr "Liečivý štít: @1% šanca na absorpciu a liečenie"
 
 #: modules/ui.lua:406
 msgid "Shield Guard: Frontal Block & Parry"
-msgstr ""
+msgstr "Krytie štítom: Predný blok a odrazenie"
 
 #: modules/ui.lua:412
 msgid "Thorns: Damages Attacker's Weapon"
-msgstr ""
+msgstr "Tŕne: Poškodzuje zbraň útočníka"
 
 #: modules/ui.lua:418
 msgid "Feather Fall: Dampened (-@1 HP)"
-msgstr ""
+msgstr "Pierkový pád: Stlmený (-@1 HP)"
 
 #: modules/ui.lua:424
 msgid "Fire Ward: Protected (Heat Immune)"
-msgstr ""
+msgstr "Ohňový štít: Chránený (Imunita voči teplu)"
 
 #: modules/ui.lua:430
 msgid "Water Ward: Breathing (Infinite)"
-msgstr ""
+msgstr "Vodný štít: Dýchanie (Nekonečné)"
 
 #: modules/ui.lua:436
 msgid "Swiftness: +@1% Movement Speed"
-msgstr ""
+msgstr "Rýchlosť: +@1% rýchlosť pohybu"
 
 #: modules/ui.lua:441
 msgid "Heavy Load: @1% Movement Speed"
-msgstr ""
+msgstr "Ťažký náklad: @1% rýchlosť pohybu"
 
 #: modules/ui.lua:447
 msgid "High Jump: +@1% Jump Height"
-msgstr ""
+msgstr "Vysoký skok: +@1% výška skoku"
 
 #: modules/ui.lua:454
 msgid "No active enchantments"
-msgstr ""
+msgstr "Žiadne aktívne očarovania"
 
 #: modules/ui.lua:458
 msgid "Equip 4 matching pieces for set bonus"
-msgstr ""
+msgstr "Nasaďte 4 ladiace kusy pre bonus setu"
 
 #: modules/ui.lua:493
 msgid "ARMOR & EQUIPMENT"
-msgstr ""
+msgstr "BRNENIE A VÝSTROJ"
 
 #: modules/ui.lua:507 modules/ui.lua:819 modules/ui.lua:908 modules/ui.lua:933
 msgid "Drag to rotate 3D view"
-msgstr ""
+msgstr "Ťahaním otočte 3D náhľad"
 
 #: modules/ui.lua:511
 msgid "Equipped Armor Slots"
-msgstr ""
+msgstr "Vystrojené sloty brnenia"
 
 #: modules/ui.lua:524
 msgid "PLAYER INVENTORY"
@@ -297,11 +307,11 @@ msgstr ""
 
 #: modules/ui.lua:669
 msgid "Open armor and equipment inventory"
-msgstr ""
+msgstr "Otvoriť inventár brnenia a výstroja"
 
 #: modules/ui.lua:787
 msgid "Armor"
-msgstr ""
+msgstr "Brnenie"
 
 #: modules/ui.lua:826 modules/ui.lua:915 modules/ui.lua:940
 msgid "EQUIPPED ARMOR"
@@ -309,221 +319,342 @@ msgstr ""
 
 #: modules/ui.lua:893 modules/ui.lua:998
 msgid "Armor & Equipment"
-msgstr ""
+msgstr "Brnenie a výstroj"
 
 #: modules/utils.lua:118
+#, fuzzy
 msgid "Armor Item"
-msgstr ""
+msgstr "Stojan na brnenie"
 
 #: modules/utils.lua:143
 msgid "Type: Tower Shield (Reinforced Off-Hand)"
-msgstr ""
+msgstr "Typ: Vežový štít (Zosilnená druhá ruka)"
 
 #: modules/utils.lua:145
 msgid "Type: Helmet (Head Slot)"
-msgstr ""
+msgstr "Typ: Prilba (Hlava)"
 
 #: modules/utils.lua:147
 msgid "Type: Chestplate (Torso Slot)"
-msgstr ""
+msgstr "Typ: Náprsný pancier (Trup)"
 
 #: modules/utils.lua:149
 msgid "Type: Leggings (Legs Slot)"
-msgstr ""
+msgstr "Typ: Brnenie nôh (Nohy)"
 
 #: modules/utils.lua:151
 msgid "Type: Boots (Feet Slot)"
-msgstr ""
+msgstr "Typ: Topánky (Chodidlá)"
 
 #: modules/utils.lua:153
 msgid "Type: Shield (Off-Hand Slot)"
-msgstr ""
+msgstr "Typ: Štít (Druhá ruka)"
 
 #: modules/utils.lua:155
 msgid "Type: Armor Equipment"
-msgstr ""
+msgstr "Typ: Výstroj brnenia"
 
 #: modules/utils.lua:161
 msgid "Passive Defense: "
-msgstr ""
+msgstr "Pasívna obrana: "
 
 #: modules/utils.lua:161
+#, fuzzy
 msgid "Defense: "
-msgstr ""
+msgstr "Obrana"
 
 #: modules/utils.lua:167 modules/utils.lua:170
 msgid "Durability: "
-msgstr ""
+msgstr "Trvácnosť: "
 
 #: modules/utils.lua:168
 msgid "Unbreakable (Infinite)"
-msgstr ""
+msgstr "Nezničiteľné (Nekonečná)"
 
 #: modules/utils.lua:171
 msgid "@1 Uses"
-msgstr ""
+msgstr "@1 použití"
 
 #: modules/utils.lua:177
 msgid "✦ Healing Ward: +@1% Chance on hit to nullify damage & heal"
-msgstr ""
+msgstr "✦ Liečivý štít: +@1% šanca pri zásahu na zrušenie zranenia a liečenie"
 
 #: modules/utils.lua:183
 msgid "✦ Fire Ward: +1 Heat Tier (Tier 5 Molten Immunity at 4+ pieces)"
 msgstr ""
+"✦ Ohňový štít: +1 úroveň tepla (Úroveň 5 - imunita na lávu pri 4+ kusoch)"
 
 #: modules/utils.lua:186
 msgid "✦ Fire Ward: +1 Heat Tier (Protects against torches & hot flora)"
-msgstr ""
+msgstr "✦ Ohňový štít: +1 úroveň tepla (Chráni pred fakľami a horúcou flórou)"
 
 #: modules/utils.lua:192
 msgid "✦ Water Ward: Underwater Breathing (Infinite Drown Immunity)"
-msgstr ""
+msgstr "✦ Vodný štít: Dýchanie pod vodou (Nekonečná imunita voči utopeniu)"
 
 #: modules/utils.lua:197
 msgid "✦ Feather Fall: -@1 Fall Damage (@2 Hearts Absorbed)"
-msgstr ""
+msgstr "✦ Pierkový pád: -@1 poškodenie z pádu (@2 srdiečka pohltené)"
 
 #: modules/utils.lua:209
 msgid "✦ Reinforced Tower Guard (Hold RMB):"
-msgstr ""
+msgstr "✦ Zosilnené krytie vežovým štítom (Držte pravé tlačidlo):"
 
 #: modules/utils.lua:210
 msgid "  • Block Mitigation: @1% damage absorbed (reinforced)"
-msgstr ""
+msgstr "  • Zníženie blokovaním: @1% poškodenia pohltené (zosilnené)"
 
 #: modules/utils.lua:211 modules/utils.lua:219
 msgid "  • Frontal Guard Arc: @1° cone (@2° off-hand bias)"
-msgstr ""
+msgstr "  • Predný uhol krytia: @1° kužeľ (@2° vychýlenie doľava)"
 
 #: modules/utils.lua:212 modules/utils.lua:220
 msgid "  • Projectile Deflection: Bounces arrows & fireballs"
-msgstr ""
+msgstr "  • Odrazenie projektilov: Odrazí šípy a ohnivé gule"
 
 #: modules/utils.lua:214 modules/utils.lua:222
 msgid "  • Thorns: Damages melee attacker's weapon"
-msgstr ""
+msgstr "  • Tŕne: Poškodzuje zbraň útočníka"
 
 #: modules/utils.lua:217
 msgid "✦ Shield Guard (Hold RMB):"
-msgstr ""
+msgstr "✦ Krytie štítom (Držte pravé tlačidlo):"
 
 #: modules/utils.lua:218
 msgid "  • Block Mitigation: @1% damage absorbed"
-msgstr ""
+msgstr "  • Zníženie blokovaním: @1% poškodenia pohltené"
 
 #: modules/utils.lua:226
 msgid "✦ Thorns: Damages melee attacker's weapon"
-msgstr ""
+msgstr "✦ Tŕne: Poškodzuje zbraň útočníka"
 
 #: modules/utils.lua:233
 msgid "✦ Swiftness: @1% Movement Speed"
-msgstr ""
+msgstr "✦ Rýchlosť: @1% rýchlosť pohybu"
 
 #: modules/utils.lua:238
 msgid "✦ High Jump: @1% Jump Height"
-msgstr ""
+msgstr "✦ Vysoký skok: @1% výška skoku"
 
 #: modules/utils.lua:243
 msgid "✦ Gravity: @1%"
-msgstr ""
+msgstr "✦ Gravitácia: @1%"
 
 #: modules/utils.lua:259 modules/utils.lua:263 modules/utils.lua:266
 #: modules/utils.lua:269 modules/utils.lua:272 modules/utils.lua:275
 #: modules/utils.lua:278 modules/utils.lua:281 modules/utils.lua:284
 #: modules/utils.lua:287
 msgid "★ Set Synergy (4+ Pieces): +10% Total Defense"
-msgstr ""
+msgstr "★ Synergia setu (4+ kusy): +10% celková obrana"
 
 #: modules/utils.lua:264
 msgid "  Combine 4 wood pieces for early-game defense bonus."
-msgstr ""
+msgstr "  Kombinujte 4 drevené kusy pre počiatočný bonus obrany."
 
 #: modules/utils.lua:267
 msgid "  Combine 4 cactus pieces for early-game thorny protection."
-msgstr ""
+msgstr "  Kombinujte 4 kaktusové kusy pre počiatočnú tŕnistú ochranu."
 
 #: modules/utils.lua:270
 msgid "  Combine 4 steel pieces for solid all-around mid-game defense."
-msgstr ""
+msgstr "  Kombinujte 4 oceľové kusy pre spoľahlivú celkovú obranu."
 
 #: modules/utils.lua:273
 msgid "  Combine 4 bronze pieces for heavy durable defense exceeding steel."
-msgstr ""
+msgstr "  Kombinujte 4 bronzové kusy pre ťažkú odolnú obranu prevyšujúcu oceľ."
 
 #: modules/utils.lua:276
 msgid "  Combine 4 diamond pieces for elite end-game damage absorption."
-msgstr ""
+msgstr "  Kombinujte 4 diamantové kusy pre elitné pohlcovanie poškodenia."
 
 #: modules/utils.lua:279
 msgid "  Full set yields +12% (+15% w/ shield) healing ward chance!"
-msgstr ""
+msgstr "  Celý set dáva +12% (+15% so štítom) šancu na liečivý štít!"
 
 #: modules/utils.lua:282
 msgid "  Combine set for high durability, healing ward & feather falling!"
-msgstr ""
+msgstr "  Kombinujte set pre vysokú trvácnosť, liečivý štít a pierkový pád!"
 
 #: modules/utils.lua:285
 msgid ""
 "  Hybrid Set: Water breathing (head), fire ward (chest) & healing (shield)!"
 msgstr ""
+"  Hybridný set: Dýchanie pod vodou (hlava), ohňový štít (hruď) a liečenie "
+"(štít)!"
 
 #: modules/utils.lua:288
 msgid "  Full 4+ piece set grants Tier 5 Molten & Lava Immunity!"
-msgstr ""
+msgstr "  Plný set 4+ kusov dáva 5. úroveň imunity voči láve a ohňu!"
 
 #: modules/utils.lua:290
 msgid ""
 "★ Omnipotent Set: Total immunity, infinite durability & 100% healing ward."
 msgstr ""
+"★ Všemocný set: Úplná imunita, nekonečná trvácnosť a 100% liečivý štít."
 
 #: modules/utils.lua:293
 msgid "★ Tower Shield: Counts toward matching 4-piece set bonus"
-msgstr ""
+msgstr "★ Vežový štít: Počíta sa do bonusu 4-dielneho setu"
 
 #: modules/utils.lua:300
 msgid "Tip: Equip in shield slot; hold RMB to raise guard"
-msgstr ""
+msgstr "Tip: Vložte do slotu štítu; držte pravé tlačidlo pre krytie"
 
 #: modules/utils.lua:302
 msgid "Tip: Right-click in hand to quick-equip or swap"
-msgstr ""
+msgstr "Tip: Kliknite pravým tlačidlom v ruke pre rýchle nasadenie/výmenu"
 
 #: modules/utils.lua:314
+#, fuzzy
 msgid "Type: Equipment Display / Storage (Owner-Locked)"
-msgstr ""
+msgstr "Typ: Zobrazenie výstroja / Úložisko"
 
 #: modules/utils.lua:314
+#, fuzzy
 msgid "Type: Equipment Display / Storage (Public)"
-msgstr ""
+msgstr "Typ: Zobrazenie výstroja / Úložisko"
 
 #: modules/utils.lua:318
 msgid "Capacity: "
-msgstr ""
+msgstr "Kapacita: "
 
 #: modules/utils.lua:318
 msgid "Full 5-Piece Armor Set"
-msgstr ""
+msgstr "Kompletný 5-dielny set brnenia"
 
 #: modules/utils.lua:319
 msgid "✦ Wardrobe Management & Quick Swap:"
-msgstr ""
+msgstr "✦ Správa šatníka & rýchla výmena:"
 
 #: modules/utils.lua:320
+#, fuzzy
 msgid "  • Live 3D character display mannequin & shield"
-msgstr ""
+msgstr "  • Živá 3D figurína postavy"
 
 #: modules/utils.lua:321
 msgid "  • Right-Click: Open Wardrobe UI"
 msgstr ""
 
 #: modules/utils.lua:322
+#, fuzzy
 msgid "  • Shift + Left-Click: Instant full outfit swap"
-msgstr ""
+msgstr "  • Prikrčenie + pravé kliknutie: Okamžitá rýchla výmena výbavy"
 
 #: modules/utils.lua:323
 msgid "  • Preserves item wear, enchants, and custom metadata"
-msgstr ""
+msgstr "  • Zachováva opotrebenie, očarovania a vlastné metadáta"
 
 #: modules/utils.lua:324
 msgid "Tip: Point crosshair at stand to view equipped pieces"
-msgstr ""
+msgstr "Tip: Namierte zameriavač na stojan pre zobrazenie nasadených kusov"
+
+#~ msgid "Armor Stand (Owned by @1)"
+#~ msgstr "Stojan na brnenie (Vlastník: @1)"
+
+#~ msgid "Defense Level"
+#~ msgstr "Úroveň obrany"
+
+#~ msgid "Regenerative Ward"
+#~ msgstr "Regeneračný štít"
+
+#~ msgid "★ Full Set +10% Bonus"
+#~ msgstr "★ Kompletný set +10% bonus"
+
+#~ msgid "🔥 Fire Immunity"
+#~ msgstr "🔥 Imunita voči ohňu"
+
+#~ msgid "💧 Water Breathing"
+#~ msgstr "💧 Dýchanie pod vodou"
+
+#~ msgid "🪶 Feather Falling"
+#~ msgstr "🪶 Pomalý pád"
+
+#~ msgid "Ward"
+#~ msgstr "Štít"
+
+#~ msgid "@1 Helmet"
+#~ msgstr "@1 prilba"
+
+#~ msgid "Helmet forged from @1."
+#~ msgstr "Prilba vykovaná z materiálu @1."
+
+#~ msgid "@1 Chestplate"
+#~ msgstr "@1 brnenie"
+
+#~ msgid "Chestplate forged from @1."
+#~ msgstr "Brnenie vykované z materiálu @1."
+
+#~ msgid "@1 Leggings"
+#~ msgstr "@1 nohavice"
+
+#~ msgid "Leggings forged from @1."
+#~ msgstr "Nohavice vykované z materiálu @1."
+
+#~ msgid "@1 Boots"
+#~ msgstr "@1 topánky"
+
+#~ msgid "Boots forged from @1."
+#~ msgstr "Topánky vykované z materiálu @1."
+
+#~ msgid "@1 Shield"
+#~ msgstr "@1 štít"
+
+#~ msgid "Shield crafted with @1."
+#~ msgstr "Štít vyrobený z materiálu @1."
+
+#~ msgid "  • Right-click: Open Stand UI with one-click Swap button"
+#~ msgstr "  • Pravé kliknutie: Otvorenie rozhrania stojana s tlačidlom Výmena"
+
+#~ msgid "Tip: Equip in shield slot; hold RMB to raise heavy guard"
+#~ msgstr "Tip: Vložte do slotu štítu; držte pravé tlačidlo pre ťažké krytie"
+
+#~ msgid "Helmet Slot"
+#~ msgstr "Slot pre prilbu"
+
+#~ msgid "Equip a helmet or headpiece here for defense."
+#~ msgstr "Sem umiestnite prilbu pre ochranu hlavy."
+
+#~ msgid "Chestplate Slot"
+#~ msgstr "Slot pre brnenie"
+
+#~ msgid "Equip a chestplate or body armor here for core protection."
+#~ msgstr "Sem umiestnite náprsný pancier pre ochranu tela."
+
+#~ msgid "Shield Slot"
+#~ msgstr "Slot pre štít"
+
+#~ msgid "Equip a shield here for active frontal damage blocking."
+#~ msgstr "Sem umiestnite štít pre aktívne blokovanie poškodenia spredu."
+
+#~ msgid "Leggings Slot"
+#~ msgstr "Slot pre nohavice"
+
+#~ msgid "Equip leggings or greaves here for lower-body defense."
+#~ msgstr "Sem umiestnite nohavice pre ochranu dolnej časti tela."
+
+#~ msgid "Boots Slot"
+#~ msgstr "Slot pre topánky"
+
+#~ msgid "Equip boots here for foot protection and mobility."
+#~ msgstr "Sem umiestnite topánky pre ochranu nôh a pohyblivosť."
+
+#~ msgid "Accessory Slot"
+#~ msgstr "Slot pre doplnok"
+
+#~ msgid "Equip extra armor or an accessory here."
+#~ msgstr "Sem umiestnite dodatočné brnenie alebo doplnok."
+
+#~ msgid "Place a helmet or headpiece here."
+#~ msgstr "Sem umiestnite prilbu alebo pokrývku hlavy."
+
+#~ msgid "Place a chestplate or cuirass here."
+#~ msgstr "Sem umiestnite náprsný pancier."
+
+#~ msgid "Place a shield here."
+#~ msgstr "Sem umiestnite štít."
+
+#~ msgid "Place leggings or greaves here."
+#~ msgstr "Sem umiestnite nohavice."
+
+#~ msgid "Place boots here."
+#~ msgstr "Sem umiestnite topánky."
