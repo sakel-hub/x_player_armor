@@ -17,15 +17,42 @@ A modern, high-performance player armor and shield mod for Luanti. Built to give
 
 ## Gameplay & Features
 
-- **Modular 3D Armor & Shields**: Helmets, chestplates, leggings, boots, and shields fit naturally over your character without replacing or hiding your skin. Works seamlessly with custom player skins and `x_player_api` biomechanical animations.
+- **Modular Bone-Attached 3D Armor & Shields**: Helmets, chestplates, leggings, boots, and shields attach directly to your character's skeletal bones as lightweight, optimized visual entities. Unlike legacy mods that replace your entire character with a baked armor model, your base player mesh and custom skin remain completely untouched.
 - **Active Shield Combat & Parrying**: Hold right-click with a shield equipped to brace for impact. Block frontal melee attacks, deflect flying arrows, and knock aggressive monsters backward with a physical counter-impulse.
 - **Dynamic Combat HUD**: During battle, a sleek on-screen armor HUD appears automatically to show your gear's real-time durability so you always know when an item needs repair without opening your inventory.
 - **Sound Effects & Particle Sparks**: Enjoy distinct audio effects and particle sparks when equipping gear, absorbing strikes, deflecting arrows, or shattering broken armor.
-- **Interactive Armor Stands**: Display your favorite armor sets in your base. Right-click to open a visual wardrobe manager, or simply Shift+Left Click with an empty hand to swap your equipped armor with the stand in one click.
+- **Interactive Armor Stands**: Display your favorite armor sets in your base. Right-click to open a visual wardrobe manager, or simply Shift + Left Click with any item in hand to swap your equipped armor and held weapon with the stand in one click.
 - **3D Inventory Preview**: Rotate and inspect your character in real-time 3D right inside your inventory screen (`sfinv`, `unified_inventory`, or `i3`). Features full dual-format support for classic 64x32 skins and 64x64 Format 1.8 skins with 3D outer layers (hat, jacket, sleeves, pants) from `skinsdb`, `clothing`, and other skin mods.
 - **Matching Set Bonus**: Wearing a full 4-piece or 5-piece matching armor suit grants an automatic **+10% defense bonus**.
-- **Lag-Free Multiplayer**: Engineered for busy multiplayer servers. Equipping dozens of players and placing armor stands causes zero server tick overhead.
+- **Lag-Free Multiplayer Performance**: Uses static, optimized visual entities with zero Lua tick overhead (`on_step = nil`). Bone tracking is offloaded directly to the Luanti engine's C++ scene graph, keeping multiplayer servers running at a solid 20 TPS with zero entity lag.
 - **Full Drop-in Compatibility**: Works out-of-the-box with mods that expect classic `3d_armor`, `shields`, or `3d_armor_stand` APIs, and automatically migrates older saved inventories.
+
+---
+
+## Why Choose `x_player_armor` Over Classic `3d_armor`?
+
+`x_player_armor` is a modern upgrade designed to give you better visuals, active combat, and smooth multiplayer performance while working seamlessly with all your existing mods and gear.
+
+| Feature | Classic `3d_armor` | `x_player_armor` |
+| :--- | :--- | :--- |
+| **Visual Architecture** | Overrides your entire player model with a baked mesh (`3d_armor_character.b3d`) and flattened composite textures; blurs skins and strips away 3D clothing. | **Optimized Bone Attachments**: Attaches lightweight, static visual entities directly to your skeletal bones. Your base player model is never replaced, keeping skins and 3D outfit layers 100% intact. |
+| **Multiplayer Performance** | Constantly polls world blocks and recalculates composite textures, causing tick lag, packet bloat, and server stutter. | **Zero-Tick Engine Attachments**: Visual entities run with zero Lua tick overhead (`on_step = nil`), tracked natively in C++ by the Luanti scene graph for lag-free multiplayer. |
+| **Shield Combat** | Shields are passive stat-sticks—you can't raise a guard or block incoming strikes. | Active shield defense: hold right-click to brace, block melee hits, deflect flying arrows, and knock enemies back. |
+| **First-Person Shield View** | No visual indication of raising a shield in first-person view. | A sleek 3D shield appears in your first-person view whenever you raise your guard. |
+| **Combat Awareness HUD** | You must open your inventory mid-fight to check if your armor is about to break. | A handy mini-HUD appears during battle with clear color bars (green to red) and chime warnings before gear breaks. |
+| **Interactive Armor Stands** | Multiple attached pieces can glitch, duplicate, or leave floating ghost items. | Rock-solid armor stands: Shift + Punch with any item in hand (or empty hand) to swap your equipped suit and held weapon in one click, with zero glitching. |
+| **Smooth Movement** | Can clash with sprint and potion mods, causing stuttery movement or speed resets. | Plays nicely with sprint, hunger, and potion mods without interrupting your movement speed. |
+| **Drop-In Upgrade** | — | Works instantly as a replacement—keeps all existing crafting recipes, mods, and saved player inventories. |
+
+### Highlights at a Glance
+
+- **Optimized Bone Attachments**: Attaches lightweight 3D entities directly to skeletal bones rather than overriding the player model with baked armor meshes.
+- **Zero-Tick Multiplayer Performance**: Bone tracking is handled natively by the engine's C++ scene graph (`on_step = nil`), eliminating server tick overhead and lag spikes.
+- **Keeps Your Look Intact**: Wear helmets, chestplates, leggings, and boots without turning your character skin into a flattened texture. All modern 3D skin layers (hats, jackets, sleeves) stay crisp and visible.
+- **Active Combat & Deflection**: Combat feels punchy and responsive. Raise your shield to deflect arrows, absorb heavy monster attacks, and stagger attackers with a defensive counter-shove.
+- **Real-Time Battle HUD**: Never get surprised by broken gear in the middle of a dungeon. Color-coded health bars and audio warnings keep you informed at a glance.
+- **One-Click Wardrobe Stands**: Shift-click an armor stand with any item in hand to instantly swap your armor suit and held weapon, or right-click to open a friendly visual wardrobe.
+- **Effortless Switch**: Safe and simple to install on existing worlds—your armor items and crafting recipes carry over automatically.
 
 ---
 
