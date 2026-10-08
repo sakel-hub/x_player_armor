@@ -31,17 +31,55 @@ Individual Blender source files in assets/ and glTF 2.0 Binary (.glb) exports in
 - `assets/x_player_armor_shield.blend` -> `models/x_player_armor_shield.glb`
 - `assets/x_player_armor_preview.blend` -> `models/x_player_armor_preview.glb`
 - `assets/x_player_armor_stand.blend` -> `models/x_player_armor_stand.glb`
+- `assets/x_player_armor_poster.blend` (Promotional poster 3D staging scene)
 Rigged, UV-mapped, and exported for Luanti by SaKeL under CC-BY 4.0.
 Base geometric references derived from Stuart Jones, MirceaKitsune, and Jordach (LGPL-2.1 / CC-BY 3.0).
 
-### Textures
+### Textures & Visual Assets
 All armor and shield texture sheets, inventory sprites, UI textures, and VFX particle sheets (CC-BY 4.0):
-- Unified 64x32 character armor sheets: `textures/x_player_armor_<material>.png` (admin, bronze, cactus, crystal, diamond, gold, mithril, nether, steel, wood)
-- Dedicated 2D pixel-art inventory sprites: `textures/x_player_armor_inv_*.png`
-- Enhanced shields: `textures/x_player_armor_shield_enhanced_cactus.png`, `textures/x_player_armor_shield_enhanced_wood.png`
-- Stand, UI, and character skin textures: `textures/x_player_armor_stand_*.png`, `textures/x_player_armor_icon.png`, `textures/x_player_armor_inventory_plus.png`, `textures/x_player_armor_character.png`
-- Combat VFX particle sheet: `textures/x_player_armor_particles.png` (8 frames: healing sparkles, wards, shield deflection, and armor shatter shards) designed by SaKeL under CC-BY 4.0 / CC0 1.0.
-Authored, redesigned, and packaged for Luanti by SaKeL under CC-BY 4.0.
+
+#### 1. In-World 3D Character Armor Texture Sheets (64x32 UV Mapped)
+Authored, colored, and optimized by SaKeL (CC-BY 4.0):
+- `textures/x_player_armor_admin.png`
+- `textures/x_player_armor_bronze.png`
+- `textures/x_player_armor_cactus.png`
+- `textures/x_player_armor_crystal.png`
+- `textures/x_player_armor_diamond.png`
+- `textures/x_player_armor_gold.png`
+- `textures/x_player_armor_mithril.png`
+- `textures/x_player_armor_mithril_alt.png`
+- `textures/x_player_armor_nether.png`
+- `textures/x_player_armor_steel.png`
+- `textures/x_player_armor_wood.png`
+- Alternative texture sheets archive: `assets/textures_alt/x_player_armor_*.png`
+
+#### 2. Dedicated 2D Pixel-Art Inventory Sprites (16x16 Pixel Art)
+Hand-drawn pixel art sprites by SaKeL (CC-BY 4.0):
+- Helmets: `textures/x_player_armor_inv_helmet_<material>.png` (admin, bronze, cactus, crystal, diamond, gold, mithril, nether, steel, wood)
+- Chestplates: `textures/x_player_armor_inv_chestplate_<material>.png` (admin, bronze, cactus, crystal, diamond, gold, mithril, nether, steel, wood)
+- Leggings: `textures/x_player_armor_inv_leggings_<material>.png` (admin, bronze, cactus, crystal, diamond, gold, mithril, nether, steel, wood)
+- Boots: `textures/x_player_armor_inv_boots_<material>.png` (admin, bronze, cactus, crystal, diamond, gold, mithril, nether, steel, wood)
+- Shields: `textures/x_player_armor_inv_shield_<material>.png` (admin, bronze, cactus, crystal, diamond, gold, mithril, nether, steel, wood)
+- Enhanced Shields: `textures/x_player_armor_inv_shield_enhanced_cactus.png`, `textures/x_player_armor_inv_shield_enhanced_wood.png`
+
+#### 3. In-World Enhanced Shield Textures
+Authored by SaKeL (CC-BY 4.0):
+- `textures/x_player_armor_shield_enhanced_cactus.png`
+- `textures/x_player_armor_shield_enhanced_wood.png`
+
+#### 4. Armor Stand & UI Textures
+Authored and arranged by SaKeL (CC-BY 4.0):
+- Stand Node Textures: `textures/x_player_armor_stand_shared.png`, `textures/x_player_armor_stand_locked.png`
+- Stand Inventory Icons: `textures/x_player_armor_stand_inv.png`, `textures/x_player_armor_stand_locked_inv.png`
+- Stand Wardrobe Slot Outlines: `textures/x_player_armor_stand_head.png`, `textures/x_player_armor_stand_torso.png`, `textures/x_player_armor_stand_legs.png`, `textures/x_player_armor_stand_feet.png`, `textures/x_player_armor_stand_shield.png`
+- Navigation & Hotbar Icons: `textures/x_player_armor_icon.png`, `textures/x_player_armor_inventory_plus.png`
+- Baseline Preview Character Skin: `textures/x_player_armor_character.png`
+
+#### 5. Combat VFX Particle Sheet & Media
+Authored by SaKeL (CC-BY 4.0 / CC0 1.0):
+- Combat Particle Sheet: `textures/x_player_armor_particles.png` (8 animation frames: healing sparkles, protective wards, shield impact deflect, and shatter shards)
+- Showcase Media: `screenshot.png` (In-game promotional showcase screenshot)
+- Preview Weapon Sprites: `assets/default_tool_steelsword.png`, `assets/default_tool_diamondsword.png` (Derived from Luanti Minetest Game `default` mod, CC-BY-SA 3.0 / CC0 1.0).
 
 ### Audio & Sound Effects
 
