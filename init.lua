@@ -12,13 +12,13 @@ if not core.features or not core.register_detached_inventory_raw and not core.cr
 	return
 end
 
--- 1. Early Modpath Virtualization (Allow 3rd-party mods to detect 3d_armor/shields immediately)
+-- Early modpath virtualization (allows 3rd-party mods to detect 3d_armor/shields immediately)
 dofile(modpath .. "/modules/compat/engine.lua")
 
--- 2. Initialize Public API Table
+-- Initialize public API table
 dofile(modpath .. "/api.lua")
 
--- 2. Load Modular Subsystems in Dependency Order
+-- Load modular subsystems in dependency order
 local modules = {
 	"utils",
 	"constants",
@@ -29,6 +29,7 @@ local modules = {
 	"combat",
 	"items",
 	"crafting",
+	"skins",
 	"ui",
 	"stand",
 	"shield_hud",

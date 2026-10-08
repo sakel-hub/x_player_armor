@@ -110,5 +110,24 @@ core.register_craft({
 	},
 })
 
+-- Fuel recipes for flammable shields
+core.register_craft({
+	type = "fuel",
+	recipe = "x_player_armor:shield_wood",
+	burntime = 8,
+})
+
+core.register_craft({
+	type = "fuel",
+	recipe = "x_player_armor:shield_cactus",
+	burntime = 16,
+})
+
+---Returns the registered crafting recipe ingredients mapping by material key.
+---@return table<string, string> ingredients Table mapping material keys to crafting ingredient strings
+function crafting.get_recipe_ingredients()
+	return RECIPE_INGREDIENTS
+end
+
 x_player_armor.crafting = crafting
 return crafting

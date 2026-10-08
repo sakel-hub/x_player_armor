@@ -33,6 +33,20 @@ read_globals = {
     "pova",
     "playerphysics",
     "bones",
+    table = {
+        fields = {
+            "copy",
+            "indexof",
+            "insert_all",
+            "key_value_swap",
+        },
+    },
+    string = {
+        fields = {
+            "split",
+            "trim",
+        },
+    },
 }
 exclude_files = {
     "tests/**",

@@ -175,8 +175,9 @@ for mat_key, mat_data in pairs(MATERIALS) do
 			},
 		})
 
-		-- Backward compatibility alias
-		core.register_alias(legacy_name, item_name)
+		-- Backward compatibility alias & forced override
+		x_player_armor.legacy_replacements[legacy_name] = item_name
+		utils.force_alias(legacy_name, item_name)
 	end
 end
 
@@ -235,7 +236,25 @@ for mat_key, es in pairs(enhanced_shields) do
 		reciprocate_damage = true,
 	})
 
-	core.register_alias(legacy_name, item_name)
+	x_player_armor.legacy_replacements[legacy_name] = item_name
+	utils.force_alias(legacy_name, item_name)
+end
+
+-- Admin shield alias backward compatibility
+local admin_legacy = "adminshield"
+x_player_armor.legacy_replacements[admin_legacy] = "x_player_armor:shield_admin"
+utils.force_alias(admin_legacy, "x_player_armor:shield_admin")
+
+---Returns the defined armor material configurations table.
+---@return table<string, table> materials
+function items.get_materials()
+	return MATERIALS
+end
+
+---Returns the defined armor equipment pieces configuration table.
+---@return table<string, table> pieces
+function items.get_pieces()
+	return PIECES
 end
 
 x_player_armor.items = items

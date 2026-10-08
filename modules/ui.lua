@@ -12,19 +12,10 @@ local S = core.get_translator("x_player_armor")
 ---@param player ObjectRef
 ---@return string skin_texture
 local function get_player_skin(player)
-	local p_api = x_player_armor.get_mod_api("player_api")
-	if p_api then
-		local textures = p_api.get_textures(player)
-		if textures and textures[1] and textures[1] ~= "" then
-			return textures[1]
-		end
-	end
-	local props = player:get_properties()
-	if props and props.textures and props.textures[1] and props.textures[1] ~= "" then
-		return props.textures[1]
-	end
-	return "x_player_armor_character.png"
+	local skin_info = x_player_armor.skins.resolve_player_skin(player)
+	return skin_info.composite_texture
 end
+ui.get_player_skin = get_player_skin
 
 ---Builds the composite overlay texture for all worn armor pieces (64x32 UV layout).
 ---@param player ObjectRef
@@ -79,19 +70,19 @@ function ui.get_item_wield_texture(stack)
 	end
 
 	local tex = ""
-	-- 1. Explicit wield image
+	-- Explicit wield image
 	if def.wield_image and def.wield_image ~= "" then
 		tex = def.wield_image
 		if def.wield_overlay and def.wield_overlay ~= "" then
 			tex = tex .. "^" .. def.wield_overlay
 		end
-	-- 2. Standard 2D inventory image
+	-- Standard 2D inventory image
 	elseif def.inventory_image and def.inventory_image ~= "" then
 		tex = def.inventory_image
 		if def.inventory_overlay and def.inventory_overlay ~= "" then
 			tex = tex .. "^" .. def.inventory_overlay
 		end
-	-- 3. Solid cubic node tile fallback
+	-- Solid cubic node tile fallback
 	elseif def.type == "node" and def.tiles then
 		local tiles = def.tiles
 		if type(tiles) == "string" then
@@ -130,12 +121,12 @@ function ui.get_wield_texture(player)
 end
 
 ---Builds the composite preview texture for the 3D formspec model.
----For 8-material meshes (e.g. x_player_armor_preview.glb): returns "skin,head,torso,legs,feet,shield_std,shield_tower,wield"
+---For 9-material meshes (e.g. x_player_armor_preview.glb): returns "body10,body18,head,torso,legs,feet,shield_std,shield_tower,wield"
 ---@param player ObjectRef
 ---@param _preview_model? string Optional preview model override (unused, maintained for compatibility)
 ---@return string composite_texture
 function ui.get_preview_texture(player, _preview_model)
-	local skin = get_player_skin(player)
+	local skin_info = x_player_armor.skins.resolve_player_skin(player)
 
 	local name, inv = x_player_armor.get_valid_player(player)
 	local head_tex = "blank.png"
@@ -201,7 +192,18 @@ function ui.get_preview_texture(player, _preview_model)
 		end
 	end
 
-	return string.format("%s,%s,%s,%s,%s,%s,%s,%s", skin, head_tex, torso_tex, legs_tex, feet_tex, shield_std_tex, shield_tower_tex, wield_tex)
+	return string.format(
+		"%s,%s,%s,%s,%s,%s,%s,%s,%s",
+		skin_info.body10,
+		skin_info.body18,
+		head_tex,
+		torso_tex,
+		legs_tex,
+		feet_tex,
+		shield_std_tex,
+		shield_tower_tex,
+		wield_tex
+	)
 end
 
 ui.registered_preview_models = {
@@ -591,18 +593,18 @@ function ui.refresh_player_formspec(player)
 	-- Keep tracked wield state in sync without re-triggering recursive refresh
 	ui.check_wield_change(player, true)
 
-	-- 1. If custom standalone formspec is open
+	-- Custom standalone formspec refresh
 	if ui.open_players[name] then
 		core.show_formspec(name, "x_player_armor:armor", ui.get_formspec(player))
 	end
 
-	-- 2. i3 refresh
+	-- i3 inventory refresh
 	local i3_api = x_player_armor.get_mod_api("i3")
 	if i3_api then
 		i3_api.set_fs(player)
 	end
 
-	-- 3. sfinv refresh
+	-- sfinv inventory refresh
 	local sfinv_api = x_player_armor.get_mod_api("sfinv")
 	if sfinv_api and sfinv_api.enabled ~= false then
 		if sfinv_api.get_page(player) == "x_player_armor:armor" then
@@ -610,7 +612,7 @@ function ui.refresh_player_formspec(player)
 		end
 	end
 
-	-- 4. Unified Inventory refresh
+	-- Unified Inventory refresh
 	local ui_api = x_player_armor.get_mod_api("unified_inventory")
 	if ui_api and ui_api.current_page and ui_api.current_page[name] == "armor" then
 		ui_api.set_inventory_formspec(player, "armor")

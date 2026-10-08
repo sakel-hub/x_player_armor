@@ -16,10 +16,7 @@ local pending_restores = {}
 local restore_scheduled = false
 
 local function hash_pos(pos)
-	if core.hash_node_position then
-		return core.hash_node_position(pos)
-	end
-	return pos.x .. ":" .. pos.y .. ":" .. pos.z
+	return core.hash_node_position(pos)
 end
 
 ---Registers a stand position for deferred rehydration.
@@ -52,6 +49,7 @@ core.register_entity("x_player_armor:stand_entity", {
 		visual = "mesh",
 		mesh = constants.MODELS.stand_entity,
 		textures = {
+			"blank.png",
 			"blank.png",
 			"blank.png",
 			"blank.png",
@@ -144,17 +142,16 @@ local function update_stand_entity(pos)
 	local dir = core.facedir_to_dir(node.param2 or 0)
 	local yaw = (core.dir_to_yaw(dir) + math.pi) % (2 * math.pi)
 
-	-- Material array for x_player_armor_preview.glb (8 slots):
-	-- 1: Body (blank.png; stand 3D node already has wooden arms built in)
-	-- 2: Head (list[1])
-	-- 3: Torso (list[2])
-	-- 4: Legs (list[3])
-	-- 5: Feet (list[4])
-	-- 6: Shield_Standard (list[5] if standard shield)
-	-- 7: Shield_Tower (list[5] if tower shield)
-	-- 8: Wielditem (list[6])
-
-	local body_tex = "blank.png"
+	-- Material array for x_player_armor_preview.glb (9 slots):
+	-- Slot 0: Body10 (blank.png; stand 3D node already has wooden arms built in)
+	-- Slot 1: Body18 (blank.png)
+	-- Slot 2: Head (list[1])
+	-- Slot 3: Torso (list[2])
+	-- Slot 4: Legs (list[3])
+	-- Slot 5: Feet (list[4])
+	-- Slot 6: Shield_Standard (list[5] if standard shield)
+	-- Slot 7: Shield_Tower (list[5] if tower shield)
+	-- Slot 8: Wielditem (list[6])
 
 	local head_tex = "blank.png"
 	if list[1] and not list[1]:is_empty() then
@@ -205,14 +202,15 @@ local function update_stand_entity(pos)
 	end
 
 	local textures = {
-		body_tex,
-		head_tex,
-		torso_tex,
-		legs_tex,
-		feet_tex,
-		shield_std_tex,
-		shield_tower_tex,
-		wield_tex,
+		"blank.png", -- Slot 0: Body10
+		"blank.png", -- Slot 1: Body18
+		head_tex,    -- Slot 2: Head
+		torso_tex,   -- Slot 3: Torso
+		legs_tex,    -- Slot 4: Legs
+		feet_tex,    -- Slot 5: Feet
+		shield_std_tex,   -- Slot 6: Shield Standard
+		shield_tower_tex, -- Slot 7: Shield Tower
+		wield_tex,   -- Slot 8: Wielditem
 	}
 
 	local ent_pos = vector.add(pos, STAND_ENTITY_OFFSET)
@@ -705,7 +703,7 @@ local function resolve_stand_intersection(pos, player, pointed_thing)
 		return nil
 	end
 
-	-- 1. Try engine Raycast if available
+	-- Try engine Raycast first
 	local ray_end = vector.add(eye_pos, vector.multiply(look_dir, 6))
 	local ray = Raycast(eye_pos, ray_end, false, false)
 	if ray then
@@ -716,7 +714,7 @@ local function resolve_stand_intersection(pos, player, pointed_thing)
 		end
 	end
 
-	-- 2. Analytical ray-AABB fallback against stand node selection box [-0.35, -0.5, -0.35] to [0.35, 1.4, 0.35]
+	-- Analytical ray-AABB fallback against stand node selection box [-0.35, -0.5, -0.35] to [0.35, 1.4, 0.35]
 	return ray_aabb_intersection(
 		eye_pos,
 		look_dir,
@@ -756,6 +754,7 @@ function stand.take_all_armor(pos, player, is_locked)
 	for idx = 1, 6 do
 		local s_stack = sinv:get_stack("armor", idx)
 		if s_stack and not s_stack:is_empty() then
+			local item_taken = ItemStack(s_stack)
 			if minv:room_for_item("main", s_stack) then
 				minv:add_item("main", s_stack)
 			else
@@ -763,6 +762,7 @@ function stand.take_all_armor(pos, player, is_locked)
 			end
 			sinv:set_stack("armor", idx, ItemStack(""))
 			changed = true
+			stand.run_callbacks("on_take", pos, idx, item_taken, player)
 		end
 	end
 
@@ -996,16 +996,41 @@ local function register_stand_node(subname, def)
 			return 0
 		end,
 
-		on_metadata_inventory_put = function(pos, _listname, _index, _stack, _player)
+		on_metadata_inventory_put = function(pos, _listname, index, stack, player)
 			update_stand_entity(pos)
+			stand.run_callbacks("on_equip", pos, index, stack, player)
 		end,
 
-		on_metadata_inventory_take = function(pos, _listname, _index, _stack, _player)
+		on_metadata_inventory_take = function(pos, _listname, index, stack, player)
 			update_stand_entity(pos)
+			stand.run_callbacks("on_take", pos, index, stack, player)
 		end,
 
-		on_metadata_inventory_move = function(pos, _from_list, _from_index, _to_list, _to_index, _count, _player)
+		on_metadata_inventory_move = function(pos, _from_list, from_index, _to_list, to_index, count, player)
 			update_stand_entity(pos)
+			local meta = core.get_meta(pos)
+			local inv = meta:get_inventory()
+			local stack = inv:get_stack("armor", to_index)
+			stand.run_callbacks("on_take", pos, from_index, ItemStack({name = stack:get_name(), count = count}), player)
+			stand.run_callbacks("on_equip", pos, to_index, stack, player)
+		end,
+
+		on_blast = function(pos, _intensity)
+			local drops = {}
+			local meta = core.get_meta(pos)
+			local inv = meta:get_inventory()
+			local list = inv:get_list("armor")
+			if list then
+				for i = 1, #list do
+					local stack = list[i]
+					if stack and not stack:is_empty() then
+						table.insert(drops, stack)
+					end
+				end
+			end
+			table.insert(drops, ItemStack("x_player_armor:" .. subname))
+			core.remove_node(pos)
+			return drops
 		end,
 
 		on_receive_fields = function(pos, _formname, fields, sender)
@@ -1023,7 +1048,7 @@ local function register_stand_node(subname, def)
 	})
 end
 
--- 1. Unlocked Public Armor Stand
+-- Unlocked public armor stand
 register_stand_node("stand", {
 	description = utils.format_armor_stand_tooltip(false),
 	short_description = S("Armor Stand"),
@@ -1033,7 +1058,7 @@ register_stand_node("stand", {
 	is_locked = false,
 })
 
--- 2. Owner-Locked Armor Stand
+-- Owner-locked armor stand
 register_stand_node("locked_stand", {
 	description = utils.format_armor_stand_tooltip(true),
 	short_description = S("Locked Armor Stand"),
@@ -1046,10 +1071,11 @@ register_stand_node("locked_stand", {
 -- Dispatch player button interactions for armor stand formspecs
 core.register_on_player_receive_fields(function(player, formname, fields)
 	if not player or not player:is_player() then return end
-	if fields.quit or fields.btn_close then return true end
 
 	local x, y, z = formname:match("^x_player_armor:stand_([%-0-9]+)_([%-0-9]+)_([%-0-9]+)$")
 	if not x or not y or not z then return end
+	if fields.quit or fields.btn_close then return true end
+
 	local pos = {x = tonumber(x), y = tonumber(y), z = tonumber(z)}
 	local node = core.get_node(pos)
 	local is_locked = (node.name == "x_player_armor:locked_stand")
@@ -1057,8 +1083,10 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	if fields.btn_swap_armor then
 		stand.swap_armor(pos, player, is_locked)
 		core.show_formspec(player:get_player_name(), formname, stand.get_stand_formspec(pos, player))
+		return true
 	elseif fields.btn_take_all then
 		stand.take_all_armor(pos, player, is_locked)
+		return true
 	end
 end)
 
@@ -1072,11 +1100,20 @@ core.register_lbm({
 	end,
 })
 
--- Backward compatibility aliases
-core.register_alias("3d_armor_stand:armor_stand", "x_player_armor:stand")
-core.register_alias("3d_armor_stand:armor_stand_top", "x_player_armor:stand")
-core.register_alias("3d_armor_stand:locked_armor_stand", "x_player_armor:locked_stand")
-core.register_alias("3d_armor_stand:armor_stand_locked", "x_player_armor:locked_stand")
+-- Backward compatibility aliases & forced takeover
+local stand_aliases = {
+	["3d_armor_stand:armor_stand"] = "x_player_armor:stand",
+	["3d_armor_stand:armor_stand_top"] = "x_player_armor:stand",
+	["3d_armor_stand:top"] = "x_player_armor:stand",
+	["3d_armor_stand:locked_armor_stand"] = "x_player_armor:locked_stand",
+	["3d_armor_stand:armor_stand_locked"] = "x_player_armor:locked_stand",
+	["3d_armor_stand:shared_armor_stand"] = "x_player_armor:locked_stand",
+}
+
+for old_name, new_name in pairs(stand_aliases) do
+	x_player_armor.legacy_replacements[old_name] = new_name
+	utils.force_alias(old_name, new_name)
+end
 
 stand.update_stand_entity = update_stand_entity
 stand.get_stand_entity = get_stand_entity

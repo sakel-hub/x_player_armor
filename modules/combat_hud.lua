@@ -113,7 +113,11 @@ for s = 1, #SLOTS do
 end
 local STATIC_FRAME_PREFIX = table.concat(STATIC_FRAME_PARTS, ":")
 
+---Memoized cache mapping item technical names to their resolved 2D HUD icon texture string
+combat_hud.icon_cache = {}
+
 ---Resolves the 2D inventory texture for an armor or tool ItemStack.
+---Uses memoized cache to avoid repeated definition table lookups during high-frequency combat ticks.
 ---@param stack ItemStack
 ---@return string texture
 local function get_item_icon(stack)
@@ -124,8 +128,14 @@ local function get_item_icon(stack)
 	if not item_name or item_name == "" then
 		return "x_player_armor_icon.png"
 	end
+	local cached = combat_hud.icon_cache[item_name]
+	if cached then
+		return cached
+	end
+
 	local def = stack:get_definition() or core.registered_items[item_name]
 	if not def then
+		combat_hud.icon_cache[item_name] = "x_player_armor_icon.png"
 		return "x_player_armor_icon.png"
 	end
 
@@ -144,6 +154,7 @@ local function get_item_icon(stack)
 	if not tex or tex == "" then
 		tex = "x_player_armor_icon.png"
 	end
+	combat_hud.icon_cache[item_name] = tex
 	return tex
 end
 
@@ -225,10 +236,10 @@ function combat_hud.build_overlay_texture(player)
 				or (def and def.groups and (def.groups.armor_uses ~= nil or def.groups.uses ~= nil))
 
 			if has_durability then
-				-- 1. Dark charcoal background track (#161b22)
+				-- Dark charcoal background track (#161b22)
 				parts[#parts + 1] = combine_fill(sx + 2, sy + 19, 20, 3, "#161b22ff")
 
-				-- 2. 5-Tier colored fill bar
+				-- Five-tier colored fill bar
 				local fill_ratio = math.max(0.0, math.min(1.0, 1.0 - (wear / 65535.0)))
 				local fill_w = math.max(1, math.floor(20 * fill_ratio + 0.5))
 				local color = combat_hud.get_durability_color(wear)

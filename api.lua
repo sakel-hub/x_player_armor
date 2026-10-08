@@ -15,6 +15,7 @@
 ---@field combat XPlayerArmorCombat Combat mechanics, durability, shield blocking and deflection
 ---@field items XPlayerArmorItems Armor items registration
 ---@field crafting XPlayerArmorCrafting Crafting recipes
+---@field skins XPlayerArmorSkins Skin resolution subsystem
 ---@field ui XPlayerArmorUI Formspec UI and multi-inventory integrations (sfinv, unified_inventory, i3)
 ---@field stand XPlayerArmorStand Armor stand node and entity
 ---@field shield_hud XPlayerArmorShieldHUD 1st-person shield blocking HUD indicator
@@ -50,8 +51,10 @@ local api = {
 	version = "2.0.0",
 	def = {},
 	vfx = {},
+	skins = {},
 	utils = {},
 	registered_armors = {},
+	legacy_replacements = {},
 	registered_elements = {},
 	registered_materials = {},
 	registered_groups = {fleshy = 100},
@@ -61,6 +64,7 @@ local api = {
 		on_damage = {},
 		on_destroy = {},
 		on_update = {},
+		on_block = {},
 	},
 	compat = {
 		x_player_api = default_x_player_api,
@@ -77,8 +81,12 @@ _G.x_player_armor = api
 ---@param modname string The name of the optional mod
 ---@return table|nil mod_api The global table or nil if absent
 function api.get_mod_api(modname)
-	if core.get_modpath(modname) then
-		local mod = rawget(_G, modname)
+	local mod = rawget(_G, modname)
+	if type(mod) == "table" then
+		return mod
+	end
+	if core.get_modpath and core.get_modpath(modname) then
+		mod = rawget(_G, modname)
 		if type(mod) == "table" then
 			return mod
 		end
@@ -153,6 +161,12 @@ function api.register_on_update(func)
 	table.insert(api.callbacks.on_update, func)
 end
 
+---Registers a callback when a player successfully blocks an incoming attack or deflects a projectile with a shield.
+---@param func fun(player: ObjectRef, hitter_or_proj: ObjectRef|table, damage: number, shield_stack: ItemStack)
+function api.register_on_block(func)
+	table.insert(api.callbacks.on_block, func)
+end
+
 ---Dispatches a registered callback event across listeners.
 ---@param event_name string
 ---@param ... any
@@ -163,10 +177,21 @@ function api.run_callbacks(event_name, ...)
 			list[i](...)
 		end
 	end
-	-- Dispatch to item-level callback if an ItemStack was passed
-	local _, _, stack = ...
-	if stack and not stack:is_empty() then
-		local def = stack:get_definition() or api.registered_armors[stack:get_name()]
+	-- Dispatch to item-level callback if an ItemStack was passed in arguments
+	local arg1, arg2, arg3, arg4 = ...
+	local item_stack = nil
+	if (type(arg3) == "userdata" or type(arg3) == "table") and arg3.is_empty then
+		item_stack = arg3
+	elseif (type(arg4) == "userdata" or type(arg4) == "table") and arg4.is_empty then
+		item_stack = arg4
+	elseif (type(arg2) == "userdata" or type(arg2) == "table") and arg2.is_empty then
+		item_stack = arg2
+	elseif (type(arg1) == "userdata" or type(arg1) == "table") and arg1.is_empty then
+		item_stack = arg1
+	end
+
+	if item_stack and not item_stack:is_empty() and item_stack.get_name then
+		local def = (item_stack.get_definition and item_stack:get_definition()) or api.registered_armors[item_stack:get_name()]
 		if def and def[event_name] then
 			def[event_name](...)
 		end
@@ -266,14 +291,80 @@ end
 ---@field on_punched XPlayerArmorPunchCallback? Legacy callback alias
 ---@field on_block fun(player: ObjectRef, hitter: ObjectRef?, damage: number, shield_stack: ItemStack)? Callback on shield block
 
+---Resolves the modern x_player_armor item technical name if the given name is a legacy item.
+---@param name string Technical item name (e.g. "3d_armor:helmet_diamond" or ":3d_armor:helmet_diamond")
+---@return string|nil modern_name Replacement modern technical name, or nil if not superseded
+function api.get_legacy_replacement(name)
+	if not name or type(name) ~= "string" then return nil end
+	local clean_name = name:gsub("^:", "")
+	if api.legacy_replacements and api.legacy_replacements[clean_name] then
+		return api.legacy_replacements[clean_name]
+	end
+	-- Pattern fallback for standard 3d_armor pieces: 3d_armor:<piece>_<material>
+	local piece, mat = clean_name:match("^3d_armor:(%w+)_(%w+)$")
+	if piece and mat then
+		local candidate = "x_player_armor:" .. piece .. "_" .. mat
+		if api.registered_armors and api.registered_armors[candidate] then
+			return candidate
+		end
+	end
+	-- Pattern fallback for standard shields: shields:shield_<material>
+	local s_mat = clean_name:match("^shields:shield_(%w+)$")
+	if s_mat then
+		local candidate = "x_player_armor:shield_" .. s_mat
+		if api.registered_armors and api.registered_armors[candidate] then
+			return candidate
+		end
+	end
+	-- Pattern fallback for enhanced shields: shields:shield_enhanced_<material>
+	local es_mat = clean_name:match("^shields:shield_enhanced_(%w+)$")
+	if es_mat then
+		local candidate = "x_player_armor:shield_enhanced_" .. es_mat
+		if api.registered_armors and api.registered_armors[candidate] then
+			return candidate
+		end
+	end
+	return nil
+end
+
+---Retrieves the armor definition table for a registered armor item.
+---Checks internal registered_armors first, falling back to core.registered_tools or core.registered_items.
+---@param item_name string Technical item name
+---@return table? def Registered armor item definition or nil
+function api.get_armor_def(item_name)
+	if not item_name or item_name == "" then return nil end
+	local resolved = core.registered_aliases[item_name] or item_name
+	return api.registered_armors[resolved]
+		or core.registered_tools[resolved]
+		or core.registered_items[resolved]
+end
+
 ---Registers an armor item definition with full support for custom 3D models,
 ---skeletal bone attachments, sound effects, environmental perks, physics, and legacy 3d_armor compatibility.
 ---@param name string Technical item name (e.g. "mymod:helmet_crystal")
 ---@param def XPlayerArmorItemDef Configuration definition table
 function api.register_armor(name, def)
-	def = def or {}
+	def = table.copy(def or {})
+	setmetatable(def, nil)
 	if name:sub(1, 1) == ":" then
 		name = name:sub(2)
+	end
+
+	-- Intercept registration of superseded legacy armor and cleanup duplicate
+	local replacement = api.get_legacy_replacement(name)
+	if replacement then
+		local ov = rawget(api, "override") or (api.compat and api.compat.override)
+		if ov and ov.cleanup_legacy_item then
+			ov.cleanup_legacy_item(name, replacement)
+		else
+			local force_alias = x_player_armor.force_alias or (api.utils and api.utils.force_alias)
+			if force_alias then
+				force_alias(name, replacement)
+			else
+				core.register_alias_force(name, replacement)
+			end
+		end
+		return
 	end
 
 	def.groups = def.groups or {}
@@ -405,6 +496,9 @@ function api.register_armor(name, def)
 	if def.texture and type(def.texture) == "string" and def.texture ~= "" and not def.texture:match("%.%w+$") then
 		def.texture = def.texture .. ".png"
 	end
+	if not def.texture or def.texture == "" then
+		def.texture = name:gsub(":", "_") .. ".png"
+	end
 	if def.preview and type(def.preview) == "string" and def.preview ~= "" and not def.preview:match("%.%w+$") then
 		def.preview = def.preview .. ".png"
 	end
@@ -423,7 +517,9 @@ function api.register_armor(name, def)
 	def.shield_transform = def.shield_transform or def.shield_offset
 
 	-- Normalize sound effects
-	def.sounds = def.sounds or {}
+	if type(def.sounds) ~= "table" then
+		def.sounds = {}
+	end
 	def.sounds.equip = def.sounds.equip or def.sound_equip
 	def.sounds.unequip = def.sounds.unequip or def.sound_unequip
 	def.sounds.hit = def.sounds.hit or def.sound_hit
@@ -462,7 +558,7 @@ function api.register_armor(name, def)
 	end
 
 	-- Auto-enrich single-line description with modern structured tooltip if not already formatted
-	if def.description and not def.description:find("\n") and api.utils.format_armor_tooltip_from_def then
+	if def.description and not def.description:find("\n") then
 		local enriched = api.utils.format_armor_tooltip_from_def(name, def)
 		if enriched then
 			def.description = enriched
@@ -470,7 +566,14 @@ function api.register_armor(name, def)
 	end
 
 	api.registered_armors[name] = def
-	core.register_tool(name, def)
+	if core.registered_items[name] then
+		local redef = table.copy(def)
+		redef.name = nil
+		redef.type = nil
+		core.override_item(name, redef)
+	else
+		core.register_tool(":" .. name, def)
+	end
 end
 
 ---Returns a map of armor elements currently worn by the player.
@@ -843,6 +946,22 @@ end
 ---@return number count Number of cleaned up entities
 function api.cleanup_orphaned_visuals()
 	return api.visuals.cleanup_orphaned_visuals()
+end
+
+---Resolves the player's active skin and produces the canonical dual-slot texture pair.
+---@nodiscard
+---@param player ObjectRef Target player
+---@return SkinResolution resolution
+function api.resolve_player_skin(player)
+	return api.skins.resolve_player_skin(player)
+end
+
+---Retrieves skin information for a player.
+---@nodiscard
+---@param player ObjectRef Target player
+---@return SkinResolution resolution
+function api.get_skin_info(player)
+	return api.skins.get_skin_info(player)
 end
 
 return api

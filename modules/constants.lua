@@ -51,13 +51,15 @@ constants.MODELS = {
 
 constants.PREVIEW_SLOTS = {
 	body = 0,
-	head = 1,
-	torso = 2,
-	legs = 3,
-	feet = 4,
-	shield = 5,
-	shield_tower = 6,
-	wield = 7,
+	body10 = 0,
+	body18 = 1,
+	head = 2,
+	torso = 3,
+	legs = 4,
+	feet = 5,
+	shield = 6,
+	shield_tower = 7,
+	wield = 8,
 }
 
 constants.BONES = {
@@ -157,7 +159,8 @@ constants.COMBAT_HUD_ENABLE = settings:get_bool("x_player_armor_combat_hud", tru
 constants.COMBAT_HUD_TIMEOUT = tonumber(settings:get("x_player_armor_combat_hud_timeout")) or 5.0
 constants.COMBAT_HUD_POSITION = settings:get("x_player_armor_combat_hud_position") or "bottom_right"
 constants.COMBAT_HUD_SCALE = tonumber(settings:get("x_player_armor_combat_hud_scale")) or 1.0
-constants.SHIELD_HUD_DELAY = tonumber(settings:get("x_player_armor_shield_hud_delay")) or 0.18
+constants.SHIELD_HUD_ENABLE = settings:get_bool("x_player_armor_enable_shield_hud", true)
+constants.SHIELD_HUD_DELAY = tonumber(settings:get("x_player_armor_shield_hud_delay")) or 0.35
 
 -- Shield blocking & projectile deflection baseline constants
 constants.BLOCK_CONE_ANGLE = 52

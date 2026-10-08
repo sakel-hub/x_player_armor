@@ -42,6 +42,9 @@ x_player_armor_combat_hud_position (Combat HUD Position) enum bottom_right botto
 # Scale factor for the combat armor HUD overlay (default 1.0)
 x_player_armor_combat_hud_scale (Combat HUD Scale) float 1.0 0.5 2.0
 
-# Delay in seconds before displaying 1st-person shield HUD overlay when holding right-click (default 0.18)
+# Enable 2D on-screen shield blocking HUD indicator overlay when guarding (default true)
+x_player_armor_enable_shield_hud (Enable Shield HUD Overlay) bool true
+
+# Delay in seconds before displaying 1st-person shield HUD overlay when holding right-click (default 0.35)
 # Debounces short right-click taps for block placement and node interaction to prevent flashing overlay. Set to 0 to disable debounce.
-x_player_armor_shield_hud_delay (1st-Person Shield HUD Delay) float 0.18 0.0 1.0
+x_player_armor_shield_hud_delay (1st-Person Shield HUD Delay) float 0.35 0.0 1.0

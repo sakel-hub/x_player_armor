@@ -87,7 +87,7 @@ utils.MATERIAL_COLORS = {
 	diamond = "#58d5ff",   -- Brilliant celestial blue
 	gold = "#ffd700",      -- Radiant regal gold
 	mithril = "#99e6ff",   -- Ethereal cyan silver
-	crystal = "#c084fc",   -- Mystic arcane amethyst
+	crystal = "#56c7c2",   -- Luminous cyan crystal
 	nether = "#ff6b6b",    -- Infernal crimson flame
 	admin = "#ff79c6",     -- Divine omnipotent pink
 }
@@ -109,6 +109,25 @@ utils.UI_COLORS = {
 	tooltip_bg = "#10141cf0",-- Sleek dark theme tooltip background
 	tooltip_font = "#c9d1d9",-- High-contrast tooltip text color
 }
+
+---Registers a forced alias for backwards compatibility, overriding any existing legacy definition.
+---@param legacy_name string Old or legacy item name
+---@param modern_name string Replacement modern item name
+function utils.force_alias(legacy_name, modern_name)
+	if not legacy_name or not modern_name or legacy_name == modern_name then return end
+	if core.registered_items and (core.registered_items[legacy_name] or (core.registered_nodes and core.registered_nodes[legacy_name])) then
+		if core.register_alias_force then
+			core.register_alias_force(legacy_name, modern_name)
+		else
+			if core.unregister_item then
+				core.unregister_item(legacy_name)
+			end
+			core.register_alias(legacy_name, modern_name)
+		end
+	else
+		core.register_alias(legacy_name, modern_name)
+	end
+end
 
 ---Builds a modern, rich, colorized tooltip for armor and shield items.
 ---@param params table Configuration options table
@@ -133,11 +152,11 @@ function utils.format_armor_tooltip(params)
 
 	local lines = {}
 
-	-- 1. Colored Title Header with Theme Tooltip Background
+	-- Colored title header with theme tooltip background
 	local bg_esc = core.get_background_escape_sequence(utils.UI_COLORS.tooltip_bg)
 	table.insert(lines, bg_esc .. core.colorize(mat_color, title))
 
-	-- 2. Slot & Classification
+	-- Slot and equipment classification
 	local slot_name
 	if is_tower then
 		slot_name = S("Type: Tower Shield (Reinforced Off-Hand)")
@@ -156,7 +175,7 @@ function utils.format_armor_tooltip(params)
 	end
 	table.insert(lines, core.colorize(utils.UI_COLORS.label, slot_name))
 
-	-- 3. Core Combat Defense & Durability
+	-- Core combat defense and durability
 	if lvl > 0 then
 		local def_label = is_shield and S("Passive Defense: ") or S("Defense: ")
 		table.insert(lines, core.colorize(utils.UI_COLORS.label, def_label)
@@ -171,7 +190,7 @@ function utils.format_armor_tooltip(params)
 			.. core.colorize(utils.UI_COLORS.durability, S("@1 Uses", uses)))
 	end
 
-	-- 4. Special Wards & Active Perks
+	-- Special wards and active perks
 	if heal > 0 then
 		table.insert(lines, core.colorize(utils.UI_COLORS.heal,
 			S("✦ Healing Ward: +@1% Chance on hit to nullify damage & heal", heal)))
@@ -197,7 +216,7 @@ function utils.format_armor_tooltip(params)
 			S("✦ Feather Fall: -@1 Fall Damage (@2 Hearts Absorbed)", feather * 4, feather * 2)))
 	end
 
-	-- 5. Shield Guard & Blocking Mechanics
+	-- Shield guard and blocking mechanics
 	if is_shield then
 		local consts = x_player_armor.constants
 		local shield_props = (consts and consts.SHIELD_TIER_PROPERTIES and mat_key and consts.SHIELD_TIER_PROPERTIES[mat_key]) or {}
@@ -254,7 +273,7 @@ function utils.format_armor_tooltip(params)
 		end
 	end
 
-	-- 6. Set Synergy & Combination Guidance
+	-- Set synergy and combination guidance
 	if params.synergy_text then
 		table.insert(lines, core.colorize(utils.UI_COLORS.synergy, S("★ Set Synergy (4+ Pieces): +10% Total Defense")))
 		table.insert(lines, core.colorize(utils.UI_COLORS.label, "  " .. params.synergy_text))
@@ -293,7 +312,7 @@ function utils.format_armor_tooltip(params)
 		table.insert(lines, core.colorize(utils.UI_COLORS.synergy, S("★ Tower Shield: Counts toward matching 4-piece set bonus")))
 	end
 
-	-- 7. Contextual Interaction Hint
+	-- Contextual interaction hint
 	if params.hint then
 		table.insert(lines, core.colorize(utils.UI_COLORS.hint, params.hint))
 	elseif is_shield then
@@ -388,4 +407,5 @@ x_player_armor.copy_table = utils.copy_table
 x_player_armor.format_armor_tooltip = utils.format_armor_tooltip
 x_player_armor.format_armor_stand_tooltip = utils.format_armor_stand_tooltip
 x_player_armor.format_armor_tooltip_from_def = utils.format_armor_tooltip_from_def
+x_player_armor.force_alias = utils.force_alias
 return utils

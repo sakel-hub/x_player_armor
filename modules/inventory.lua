@@ -297,6 +297,13 @@ function inventory.equip_item(player, itemstack)
 	end
 
 	local old_stack = inv:get_stack("armor", target_idx)
+	if not old_stack:is_empty() then
+		local odef = old_stack:get_definition()
+		if odef and odef.groups and (odef.groups.cursed == 1 or odef.groups.armor_cursed == 1) then
+			return nil
+		end
+	end
+
 	local to_put = itemstack:take_item(1)
 	inv:set_stack("armor", target_idx, to_put)
 	save_inventory(player, inv)
@@ -348,6 +355,11 @@ function inventory.unequip_element(player, element)
 
 	local stack = inv:get_stack("armor", target_idx)
 	if stack:is_empty() then
+		return ItemStack("")
+	end
+
+	local sdef = stack:get_definition()
+	if sdef and sdef.groups and (sdef.groups.cursed == 1 or sdef.groups.armor_cursed == 1) then
 		return ItemStack("")
 	end
 

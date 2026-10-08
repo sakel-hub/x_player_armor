@@ -80,10 +80,10 @@ function x_api_compat.init()
 	-- Register wield change listener for event-driven slot syncing (zero globalstep polling)
 	if x_api.register_on_wield_change then
 		x_api.register_on_wield_change(function(player, _wield_name, _prev_wield_name, _wielded, _current_wield_idx, _prev_wield_idx)
-			-- 1. Sync tracked wield state, open formspecs, and combat HUD paperdoll slot 6
+			-- Sync tracked wield state, open formspecs, and combat HUD paperdoll slot 6
 			x_player_armor.ui.check_wield_change(player)
 
-			-- 2. Immediately re-evaluate armor group modifiers, weapon enchantments, and physics
+			-- Immediately re-evaluate armor group modifiers, weapon enchantments, and physics
 			x_player_armor.effects.update_player_armor(player)
 		end)
 	end

@@ -94,14 +94,14 @@ local function build_extruded_texture(base_img)
 
 	local parts = {}
 
-	-- 1. Render 24 depth layers from back (ambient shadow) to front (rim bevel)
+	-- Render 24 depth layers from back (ambient shadow) to front (rim bevel)
 	for i = 1, #DEPTH_LAYERS do
 		local layer = DEPTH_LAYERS[i]
 		local layer_tex = "(" .. base_scaled .. "^[multiply:" .. layer.shade .. ")"
 		parts[#parts + 1] = string.format("%d,%d=%s", layer.x, layer.y, escape_texture(layer_tex))
 	end
 
-	-- 2. Render unshaded front face at (FRONT_X, FRONT_Y) wrapped in parentheses
+	-- Render unshaded front face at (FRONT_X, FRONT_Y) wrapped in parentheses
 	local front_tex = "(" .. base_scaled .. ")"
 	parts[#parts + 1] = string.format("%d,%d=%s", FRONT_X, FRONT_Y, escape_texture(front_tex))
 
@@ -163,7 +163,7 @@ function shield_hud.get_shield_texture(player)
 
 	local shield_stack = nil
 
-	-- 1. Detached armor inventory (primary slot 5, then auxiliary slot 6, then scan all slots)
+	-- Detached armor inventory (primary slot 5, then auxiliary slot 6, then scan all slots)
 	local _, inv = x_player_armor.get_valid_player(player)
 	if not inv then
 		local pname = player:get_player_name()
@@ -197,7 +197,7 @@ function shield_hud.get_shield_texture(player)
 		end
 	end
 
-	-- 2. Fallback: check main inventory for unit tests or legacy inventory mods
+	-- Fallback: check main inventory for unit tests or legacy inventory mods
 	if not shield_stack or shield_stack:is_empty() then
 		local pinv = player:get_inventory()
 		if pinv and pinv:get_list("armor") then
@@ -213,7 +213,7 @@ function shield_hud.get_shield_texture(player)
 		end
 	end
 
-	-- 3. Fallback: check left-hand wield item via x_player_api
+	-- Fallback: check left-hand wield item via x_player_api
 	if not shield_stack or shield_stack:is_empty() then
 		local x_api = x_player_armor.get_mod_api("x_player_api")
 		if x_api then
@@ -268,7 +268,7 @@ function shield_hud.get_shield_texture(player)
 end
 
 ---Displays or updates the 2D shield block HUD indicator on the target player.
----When the HUD is not yet visible, debounces presentation by SHIELD_HUD_DELAY (default 0.18s)
+---When the HUD is not yet visible, debounces presentation by SHIELD_HUD_DELAY (default 0.35s)
 ---to prevent flashing the overlay on right-click taps for block placement or node interaction.
 ---@param player ObjectRef Target player
 ---@param immediate? boolean|number If true or 0, renders immediately without debounce delay
@@ -278,9 +278,14 @@ function shield_hud.show(player, immediate)
 		return nil
 	end
 
+	local enabled = not x_player_armor.constants or (x_player_armor.constants.SHIELD_HUD_ENABLE ~= false)
+	if not enabled then
+		return nil
+	end
+
 	local pname = player:get_player_name()
 
-	-- 1. If HUD is already displayed on screen, update immediately in-place
+	-- If HUD is already displayed on screen, update immediately in-place
 	local existing_id = shield_hud.active_huds[pname]
 	if existing_id then
 		local tex = shield_hud.get_shield_texture(player)
@@ -296,8 +301,8 @@ function shield_hud.show(player, immediate)
 		return existing_id
 	end
 
-	-- 2. Resolve configured debounce delay
-	local delay = (x_player_armor.constants and x_player_armor.constants.SHIELD_HUD_DELAY) or 0.18
+	-- Resolve configured debounce delay
+	local delay = (x_player_armor.constants and x_player_armor.constants.SHIELD_HUD_DELAY) or 0.35
 	local is_immediate = (immediate == true) or (immediate == 0) or (delay <= 0)
 
 	if not is_immediate then
@@ -330,7 +335,7 @@ function shield_hud.show(player, immediate)
 		return shield_hud.active_huds[pname]
 	end
 
-	-- 3. Immediate render: cancel any lingering timer
+	-- Immediate render: cancel any lingering timer
 	local pending_job = shield_hud.pending_timers[pname]
 	if pending_job then
 		if (type(pending_job) == "table" or type(pending_job) == "userdata") and pending_job.cancel then

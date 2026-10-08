@@ -234,7 +234,7 @@ function x_player_armor.is_blocking(player)
 		return false, nil, nil, nil
 	end
 
-	-- 1. Query x_player_api high-level semantic state if available
+	-- Query x_player_api high-level semantic state if available
 	if x_player_armor.compat_x_player_api.is_present() then
 		local x_api = x_player_armor.compat_x_player_api.get_api()
 		if x_api and x_api.get_player_state then
@@ -246,7 +246,7 @@ function x_player_armor.is_blocking(player)
 		end
 	end
 
-	-- 2. Standalone fallback: evaluate player controls (RMB / place)
+	-- Standalone fallback: evaluate player controls (RMB / place)
 	local ctrl = player:get_player_control()
 	local rmb = ctrl and (ctrl.RMB or ctrl.place) or false
 	if rmb then
@@ -274,7 +274,7 @@ function combat.get_shield_contact_pos(player)
 	local eye_z = ppos.z
 
 	local look_dir = player:get_look_dir() or {x = 0, y = 0, z = 1}
-	local f_len = math.sqrt(look_dir.x^2 + look_dir.y^2 + look_dir.z^2)
+	local f_len = math.sqrt(look_dir.x * look_dir.x + look_dir.y * look_dir.y + look_dir.z * look_dir.z)
 	local fx, fy, fz
 	if f_len > 0.0001 then
 		fx, fy, fz = look_dir.x / f_len, look_dir.y / f_len, look_dir.z / f_len
@@ -283,7 +283,7 @@ function combat.get_shield_contact_pos(player)
 	end
 
 	-- Horizontal perpendicular right vector
-	local h_len = math.sqrt(fx^2 + fz^2)
+	local h_len = math.sqrt(fx * fx + fz * fz)
 	local rx, ry, rz
 	if h_len > 0.0001 then
 		rx, ry, rz = fz / h_len, 0, -fx / h_len
@@ -324,7 +324,7 @@ function combat.is_facing_attack(player, attack_dir, max_arc_deg, bias_deg)
 	if not look_dir then return false end
 
 	-- Horizontal look vector normalized
-	local h_look_len = math.sqrt(look_dir.x^2 + look_dir.z^2)
+	local h_look_len = math.sqrt(look_dir.x * look_dir.x + look_dir.z * look_dir.z)
 	local h_look_x, h_look_z
 	if h_look_len > 0.0001 then
 		h_look_x = look_dir.x / h_look_len
@@ -350,7 +350,7 @@ function combat.is_facing_attack(player, attack_dir, max_arc_deg, bias_deg)
 	-- Vector pointing from player towards the threat (-attack_dir)
 	local threat_x = -attack_dir.x
 	local threat_z = -attack_dir.z
-	local t_len = math.sqrt(threat_x^2 + threat_z^2)
+	local t_len = math.sqrt(threat_x * threat_x + threat_z * threat_z)
 	if t_len <= 0.0001 then
 		return false
 	end
@@ -409,13 +409,13 @@ function x_player_armor.try_deflect_projectile(player, proj_obj, hit_pos, flight
 		return false
 	end
 
-	-- 1. Spatial hit position check: if impact point is known, verify projectile physically
+	-- Spatial hit position check: if impact point is known, verify projectile physically
 	-- struck the front-left shield zone (cannot deflect rear hits or exposed right-side hits)
 	if hit_pos and type(hit_pos) == "table" and hit_pos.x and hit_pos.z then
 		local ppos = player:get_pos()
 		local look_dir = player:get_look_dir()
 		if ppos and look_dir then
-			local h_len = math.sqrt(look_dir.x^2 + look_dir.z^2)
+			local h_len = math.sqrt(look_dir.x * look_dir.x + look_dir.z * look_dir.z)
 			if h_len > 0.0001 then
 				local lx = look_dir.x / h_len
 				local lz = look_dir.z / h_len
@@ -435,7 +435,7 @@ function x_player_armor.try_deflect_projectile(player, proj_obj, hit_pos, flight
 		end
 	end
 
-	-- 2. Incoming flight direction verification
+	-- Incoming flight direction verification
 	if not flight_dir or (flight_dir.x == 0 and flight_dir.y == 0 and flight_dir.z == 0) then
 		if proj_obj and proj_obj:is_valid() then
 			local vel = proj_obj.get_velocity and proj_obj:get_velocity()
@@ -456,7 +456,7 @@ function x_player_armor.try_deflect_projectile(player, proj_obj, hit_pos, flight
 		return false
 	end
 
-	-- 3. Tier 2 Asymmetric Guard Cone Bias check
+	-- Tier 2 Asymmetric Guard Cone Bias check
 	local shield_props = constants.SHIELD_TIER_PROPERTIES[mat_key] or {}
 	local arc = shield_props.arc or constants.BLOCK_CONE_ANGLE or 52
 	local bias = shield_props.bias or constants.BLOCK_ASYMMETRIC_BIAS or 22
@@ -501,7 +501,7 @@ function x_player_armor.try_deflect_projectile(player, proj_obj, hit_pos, flight
 		end
 		proj_obj:set_velocity(bounce_vel)
 		proj_obj:set_acceleration({x = 0, y = -9.81, z = 0})
-		local horiz_len = math.sqrt(bounce_vel.x^2 + bounce_vel.z^2)
+		local horiz_len = math.sqrt(bounce_vel.x * bounce_vel.x + bounce_vel.z * bounce_vel.z)
 		local atan2 = math.atan2 or math.atan
 		local pitch = atan2(bounce_vel.y, horiz_len)
 		local yaw = core.dir_to_yaw(bounce_vel)
@@ -514,7 +514,7 @@ function x_player_armor.try_deflect_projectile(player, proj_obj, hit_pos, flight
 	local speed_factor = math.min(1.4, math.max(0.7, in_speed / 16.0))
 	local recoil_speed = recoil_base * recoil_mult * speed_factor
 	local vert_lift = recoil_mult > 0 and math.min(2.5, math.max(1.6, 1.8 * math.sqrt(recoil_mult))) or 0
-	local h_len = math.sqrt(flight_dir.x^2 + flight_dir.z^2)
+	local h_len = math.sqrt(flight_dir.x * flight_dir.x + flight_dir.z * flight_dir.z)
 	local h_x, h_z
 	if h_len > 0.001 then
 		h_x, h_z = flight_dir.x / h_len, flight_dir.z / h_len
@@ -533,6 +533,10 @@ function x_player_armor.try_deflect_projectile(player, proj_obj, hit_pos, flight
 	local block_snd = (shield_def and (shield_def.sound_block or (shield_def.sounds and shield_def.sounds.block))) or constants.SOUNDS.shield_block
 	play_sound(shield_pos, block_snd, 0.9)
 	combat.spawn_shield_block_particles(shield_pos, player)
+	if shield_def and shield_def.on_block then
+		shield_def.on_block(player, proj_obj, 0, shield_stack)
+	end
+	x_player_armor.run_callbacks("on_block", player, proj_obj, 0, shield_stack)
 
 	-- Shield durability wear
 	if shield_stack and slot_idx and slot_idx > 0 then
@@ -648,8 +652,11 @@ function combat.handle_punch(player, hitter, time_from_last_punch, tool_capabili
 			if not stack:is_empty() then
 				local def = stack:get_definition()
 				if def and def.groups then
-					local uses = def.groups.armor_uses or 200
-					combat.damage_item(player, idx, stack, uses)
+					-- Slot 6 is auxiliary; only damage items designated as armor or possessing armor_uses
+					if idx <= 5 or def.groups.armor_uses or def.groups.armor_element or def.armor_groups or (def.groups.armor_use or 0) > 0 then
+						local uses = def.groups.armor_uses or 200
+						combat.damage_item(player, idx, stack, uses)
+					end
 				end
 			end
 		end
@@ -665,6 +672,7 @@ function combat.handle_punch(player, hitter, time_from_last_punch, tool_capabili
 			if shield_def and shield_def.on_block then
 				shield_def.on_block(player, hitter, damage or 0, shield_stack)
 			end
+			x_player_armor.run_callbacks("on_block", player, hitter, damage or 0, shield_stack)
 		else
 			play_impact_sound(pos, has_shield, dominant_material, custom_hit_sound)
 			if has_shield then
@@ -731,7 +739,7 @@ core.register_on_player_hpchange(function(player, hp_change, reason)
 						local recoil_mult = shield_props.recoil_mult or 1.0
 						local recoil_speed = recoil_base * recoil_mult
 						local vert_lift = recoil_mult > 0 and math.min(2.5, math.max(1.6, 1.8 * math.sqrt(recoil_mult))) or 0
-						local h_len = math.sqrt(attack_dir.x^2 + attack_dir.z^2)
+						local h_len = math.sqrt(attack_dir.x * attack_dir.x + attack_dir.z * attack_dir.z)
 						local h_x, h_z
 						if h_len > 0.001 then
 							h_x, h_z = attack_dir.x / h_len, attack_dir.z / h_len
