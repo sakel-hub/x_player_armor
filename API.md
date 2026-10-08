@@ -920,21 +920,41 @@ x_player_armor.get_combat_hud_id(player: ObjectRef) -> number?
 
 ---
 
-### `x_player_armor.attach_shield(player, item_or_stack, custom_opts)`
+### `x_player_armor.attach_shield(player_or_parent, item_or_stack, format_or_opts, custom_opts)`
 
-Attaches an off-hand shield entity to a player's left forearm via x_player_api.
+Attaches an off-hand shield entity to a player's left forearm or target entity (such as a corpse or mob) with proper forearm transforms.
 
 ```lua
-x_player_armor.attach_shield(player: ObjectRef, item_or_stack: (string|ItemStack), custom_opts: table?) -> ObjectRef?
+x_player_armor.attach_shield(player_or_parent: ObjectRef, item_or_stack: (string|ItemStack), format_or_opts: (string|table)?, custom_opts: table?) -> ObjectRef?
 ```
 
 **Parameters:**
-- `player` (`ObjectRef`) — Target player
+- `player_or_parent` (`ObjectRef`) — Target player or parent entity
 - `item_or_stack` (`(string|ItemStack)`) — Shield item name or stack
+- `format_or_opts` (`(string|table)?`) — Optional model format ("glb"|"b3d") or custom options table
 - `custom_opts` (`table?`) — Optional transform and visual overrides
 
 **Returns:**
 - `entity` (`ObjectRef?`) — Attached entity reference or nil
+
+---
+
+### `x_player_armor.attach_shield_to_entity(parent, item_or_stack, format, custom_opts)`
+
+Attaches a shield visual entity to an external parent entity (such as a corpse or mob) with proper forearm transforms.
+
+```lua
+x_player_armor.attach_shield_to_entity(parent: ObjectRef, item_or_stack: (string|ItemStack), format: string?, custom_opts: table?) -> ObjectRef?
+```
+
+**Parameters:**
+- `parent` (`ObjectRef`) — Target parent entity
+- `item_or_stack` (`(string|ItemStack)`) — Shield item name or stack
+- `format` (`string?`) — Optional model format ("glb" or "b3d")
+- `custom_opts` (`table?`) — Optional transform and visual overrides
+
+**Returns:**
+- `entity` (`ObjectRef?`) — Attached shield entity reference or nil
 
 ---
 

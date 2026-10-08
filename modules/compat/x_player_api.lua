@@ -222,6 +222,16 @@ function x_api_compat.remove_shield(player)
 	x_api.remove_left_wield_item(player)
 end
 
+---Attaches a shield visual entity to an external parent entity (such as a corpse or mob)
+---@param parent ObjectRef Target parent entity
+---@param item_or_stack string|ItemStack Shield item name or stack
+---@param format? string Model format ("glb" or "b3d")
+---@param custom_opts? table Optional transform and visual overrides
+---@return ObjectRef|nil entity Attached entity reference or nil
+function x_api_compat.attach_shield_to_entity(parent, item_or_stack, format, custom_opts)
+	return x_player_armor.visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_opts)
+end
+
 ---Sets whether the left-hand shield should be rendered in 1st person view
 ---@param player ObjectRef Target player
 ---@param enable boolean Whether 1st person view is enabled

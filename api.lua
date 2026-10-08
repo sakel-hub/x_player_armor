@@ -33,6 +33,7 @@ local default_x_player_api = {
 	is_present = function() return false end,
 	get_api = function() return nil end,
 	attach_shield = function() return nil end,
+	attach_shield_to_entity = function() return nil end,
 	update_shield = function() return nil end,
 	remove_shield = function() end,
 	set_shield_first_person = function() end,
@@ -765,6 +766,15 @@ function api.schedule_player_visual_restore(player_name)
 	api.visuals.schedule_player_restore(player_name)
 end
 
+---Attaches modular armor visual entities to an arbitrary parent entity (such as a deathstats corpse).
+---@param parent ObjectRef The entity to attach armor to
+---@param player_or_name ObjectRef|string|table Player object, player name, or explicit armor item list
+---@param format string? Model format ("glb" or "b3d")
+---@return ObjectRef[] entities List of spawned armor visual entities
+function api.attach_armor_to_entity(parent, player_or_name, format)
+	return api.visuals.attach_armor_to_entity(parent, player_or_name, format)
+end
+
 ---Returns the composite preview texture string for 3D model formspecs.
 ---@param player ObjectRef
 ---@return string preview_texture
@@ -866,13 +876,35 @@ function api.get_combat_hud_id(player)
 	return state and state.hud_id or nil
 end
 
----Attaches an off-hand shield entity to a player's left forearm via x_player_api.
----@param player ObjectRef Target player
+---Attaches an off-hand shield entity to a player's left forearm or a target entity (such as a corpse).
+---@param player_or_parent ObjectRef Target player or parent entity
 ---@param item_or_stack string|ItemStack Shield item name or stack
+---@param format_or_opts? string|table Optional model format ("glb"|"b3d") or options table
 ---@param custom_opts? table Optional transform and visual overrides
 ---@return ObjectRef|nil entity Attached entity reference or nil
-function api.attach_shield(player, item_or_stack, custom_opts)
-	return api.compat_x_player_api.attach_shield(player, item_or_stack, custom_opts)
+function api.attach_shield(player_or_parent, item_or_stack, format_or_opts, custom_opts)
+	if not player_or_parent or (player_or_parent.is_valid and not player_or_parent:is_valid()) then
+		return nil
+	end
+	if player_or_parent.is_player and player_or_parent:is_player() then
+		local opts = (type(format_or_opts) == "table" and format_or_opts) or custom_opts
+		return api.compat_x_player_api.attach_shield(player_or_parent, item_or_stack, opts)
+	end
+	local fmt = (type(format_or_opts) == "string" and format_or_opts)
+		or (type(format_or_opts) == "table" and format_or_opts.format)
+		or (custom_opts and custom_opts.format)
+	local opts = (type(format_or_opts) == "table" and format_or_opts) or custom_opts
+	return api.visuals.attach_shield_to_entity(player_or_parent, item_or_stack, fmt, opts)
+end
+
+---Attaches a shield visual entity to a target parent entity (such as a corpse or mob) with proper forearm transforms.
+---@param parent ObjectRef The entity to attach the shield to
+---@param item_or_stack string|ItemStack Shield item name or stack
+---@param format string? Model format ("glb" or "b3d")
+---@param custom_opts table? Optional custom overrides
+---@return ObjectRef? entity The attached shield entity or nil
+function api.attach_shield_to_entity(parent, item_or_stack, format, custom_opts)
+	return api.visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_opts)
 end
 
 ---Updates or modifies an attached off-hand shield entity via x_player_api.

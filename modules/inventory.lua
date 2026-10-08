@@ -377,11 +377,24 @@ end
 ---Handles armor drops upon player death.
 ---@param player ObjectRef
 function inventory.handle_player_death(player)
-	local _, inv = x_player_armor.get_valid_player(player)
+	local name, inv = x_player_armor.get_valid_player(player)
 	if not inv then return end
 
 	local list = inv:get_list("armor")
 	if not list then return end
+
+	-- Snapshot worn armor before dropping/clearing for downstream corpse visual attachments
+	if name and x_player_armor.visuals then
+		local snapshot = {}
+		for i = 1, #list do
+			local stack = list[i]
+			if stack and not stack:is_empty() then
+				table.insert(snapshot, ItemStack(stack))
+			end
+		end
+		x_player_armor.visuals.last_death_armor = x_player_armor.visuals.last_death_armor or {}
+		x_player_armor.visuals.last_death_armor[name] = snapshot
+	end
 
 	local pos = player:get_pos()
 	local bones_installed = core.get_modpath("bones") ~= nil

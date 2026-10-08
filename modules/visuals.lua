@@ -428,6 +428,239 @@ core.register_on_respawnplayer(function(player)
 	end)
 end)
 
+---Attaches modular 3D armor visuals to a target parent entity (such as a corpse).
+---@param parent ObjectRef The entity to attach armor to
+---@param player_or_name ObjectRef|string|table Player object, name, or explicit armor item list
+---@param format string? Model format ("glb" or "b3d")
+---@return ObjectRef[] entities List of spawned armor visual entities
+function visuals.attach_armor_to_entity(parent, player_or_name, format)
+	if not parent or (parent.is_valid and not parent:is_valid()) then
+		return {}
+	end
+
+	local fmt = format
+	if not fmt or fmt == "" then
+		local p_mesh = (parent.get_properties and parent:get_properties().mesh) or ""
+		fmt = (p_mesh:find("%.glb$") or p_mesh:find("%.gltf$")) and "glb" or "b3d"
+	end
+
+	local armor_stacks = {}
+	if type(player_or_name) == "table" and not (player_or_name.is_player and player_or_name:is_player()) then
+		-- Explicit list of items (ItemStacks, item name strings, or serialized table definitions)
+		for _, item in ipairs(player_or_name) do
+			if type(item) == "string" and item ~= "" then
+				table.insert(armor_stacks, ItemStack(item))
+			elseif type(item) == "userdata" and not item:is_empty() then
+				table.insert(armor_stacks, item)
+			elseif type(item) == "table" and (item.name or item.item) then
+				table.insert(armor_stacks, ItemStack(item.name or item.item))
+			end
+		end
+	elseif player_or_name then
+		local pname = nil
+		local player_obj = nil
+		if type(player_or_name) == "string" then
+			pname = player_or_name
+			player_obj = core.get_player_by_name(pname)
+		elseif type(player_or_name) == "userdata" or (type(player_or_name) == "table" and player_or_name.is_player and player_or_name:is_player()) then
+			player_obj = player_or_name
+			pname = player_obj.get_player_name and player_obj:get_player_name()
+		end
+
+		if player_obj and player_obj.is_player and player_obj:is_player() then
+			local _, inv = x_player_armor.get_valid_player(player_obj)
+			if inv then
+				local list = inv:get_list("armor")
+				if list then
+					for _, st in ipairs(list) do
+						if st and not st:is_empty() then
+							table.insert(armor_stacks, st)
+						end
+					end
+				end
+			end
+		end
+
+		-- If inventory was already cleared on death, consult last_death_armor snapshot
+		if #armor_stacks == 0 and pname and visuals.last_death_armor and visuals.last_death_armor[pname] then
+			for _, st in ipairs(visuals.last_death_armor[pname]) do
+				if st and not st:is_empty() then
+					table.insert(armor_stacks, st)
+				end
+			end
+		end
+	end
+
+	if #armor_stacks == 0 then
+		return {}
+	end
+
+	local target = { parent = parent, format = fmt }
+	local created = {}
+
+	for _, stack in ipairs(armor_stacks) do
+		local iname = stack:get_name()
+		if iname and iname ~= "" then
+			local tex = visuals.get_item_texture(iname)
+			if tex then
+				local idef = stack:get_definition() or (x_player_armor.registered_armors and x_player_armor.registered_armors[iname])
+				local element = idef and idef.element
+				if not element then
+					for _, el in ipairs({"head", "torso", "legs", "feet"}) do
+						if core.get_item_group(iname, "armor_" .. el) > 0 then
+							element = el
+							break
+						end
+					end
+				end
+
+				if element and element ~= "shield" then
+					local piece_ids = (idef and idef.pieces) or constants.ELEMENT_PIECES[element]
+					if piece_ids then
+						for _, piece_id in ipairs(piece_ids) do
+							local obj = spawn_piece(target, piece_id, tex, idef and idef.glow, nil, idef)
+							if obj then
+								local ent = obj:get_luaentity()
+								if ent then
+									ent._is_corpse = true
+									ent._intentional_removal = true
+								end
+								table.insert(created, obj)
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+
+	return created
+end
+
+---Attaches a shield visual entity to a target parent entity (such as a corpse or mob) with proper forearm transforms.
+---@param parent ObjectRef The entity to attach the shield to
+---@param item_or_stack string|ItemStack Shield item name or stack
+---@param format string? Model format ("glb" or "b3d")
+---@param custom_opts table? Optional custom overrides
+---@return ObjectRef? entity The attached shield entity or nil
+function visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_opts)
+	if not parent or (parent.is_valid and not parent:is_valid()) then
+		return nil
+	end
+
+	local item_name = (type(item_or_stack) == "userdata" and item_or_stack:get_name())
+		or (type(item_or_stack) == "string" and item_or_stack:match("%S+"))
+		or ""
+	if item_name == "" then
+		return nil
+	end
+
+	local fmt = format
+	if not fmt or fmt == "" then
+		local p_mesh = (parent.get_properties and parent:get_properties().mesh) or ""
+		fmt = (p_mesh:find("%.glb$") or p_mesh:find("%.gltf$")) and "glb" or "b3d"
+	end
+
+	local item_def = core.registered_items[item_name]
+		or (x_player_armor.registered_armors and x_player_armor.registered_armors[item_name])
+	local shield_trans = constants.SHIELD_OFFSET or {}
+	local glb_trans = shield_trans.glb or {}
+	local b3d_trans = shield_trans.b3d or {}
+	local item_offset = item_def and (item_def.shield_offset or item_def.shield_transform)
+
+	local pos_glb = (custom_opts and custom_opts.pos_glb)
+		or (item_offset and item_offset.glb and item_offset.glb.pos)
+		or (item_offset and item_offset.pos)
+		or (custom_opts and custom_opts.pos)
+		or glb_trans.pos or {x = -0.8, y = 5.0, z = -2.8}
+	local rot_glb = (custom_opts and custom_opts.rot_glb)
+		or (item_offset and item_offset.glb and item_offset.glb.rot)
+		or (item_offset and item_offset.rot)
+		or (custom_opts and custom_opts.rot)
+		or glb_trans.rot or {x = 180, y = 45, z = 0}
+
+	local pos_b3d = (custom_opts and custom_opts.pos_b3d)
+		or (item_offset and item_offset.b3d and item_offset.b3d.pos)
+		or (item_offset and item_offset.pos)
+		or (custom_opts and custom_opts.pos)
+		or b3d_trans.pos or {x = -0.8, y = 5.0, z = 2.8}
+	local rot_b3d = (custom_opts and custom_opts.rot_b3d)
+		or (item_offset and item_offset.b3d and item_offset.b3d.rot)
+		or (item_offset and item_offset.rot)
+		or (custom_opts and custom_opts.rot)
+		or b3d_trans.rot or {x = 180, y = -45, z = 0}
+
+	local custom_mesh = (custom_opts and custom_opts.mesh) or (item_def and (item_def.mesh or item_def.model))
+	local custom_textures = (custom_opts and custom_opts.textures)
+		or (item_def and (item_def.textures or (item_def.texture and {item_def.texture})))
+	local visual_type = (custom_opts and custom_opts.visual) or (custom_mesh and "mesh") or "wielditem"
+
+	local opts = {
+		visual = visual_type,
+		mesh = custom_mesh,
+		textures = custom_textures,
+		override_transform = true,
+		pos_glb = pos_glb,
+		rot_glb = rot_glb,
+		pos_b3d = pos_b3d,
+		rot_b3d = rot_b3d,
+	}
+
+	if custom_opts then
+		for k, v in pairs(custom_opts) do
+			if opts[k] == nil then
+				opts[k] = v
+			end
+		end
+	end
+
+	local bone = (custom_opts and custom_opts.bone) or "Arm_Left"
+	local ent_name = (custom_opts and custom_opts.entity_name)
+		or (core.registered_entities["deathstats:corpse_wielditem"] and "deathstats:corpse_wielditem")
+		or "x_player_armor:visual"
+
+	local x_api = x_player_armor.get_mod_api("x_player_api")
+	local ent = nil
+
+	if x_api and type(x_api.attach_wield_item_to_entity) == "function" and (x_api.enable_wield_item ~= false) then
+		ent = x_api.attach_wield_item_to_entity(parent, item_or_stack, fmt, bone, ent_name, true, opts)
+	end
+
+	if not ent then
+		local pos = parent:get_pos()
+		if not pos then return nil end
+		local obj = core.add_entity(pos, ent_name)
+		if obj and obj:is_valid() then
+			local v_size = (visual_type == "wielditem") and {x = 0.25, y = 0.25, z = 0.25}
+				or (custom_opts and custom_opts.visual_size) or (item_def and item_def.visual_size) or {x = 1, y = 1, z = 1}
+			local glow = (custom_opts and custom_opts.glow) or (item_def and item_def.glow) or 0
+			obj:set_properties({
+				visual = visual_type,
+				mesh = custom_mesh,
+				textures = custom_textures or {item_name},
+				wield_item = item_name,
+				visual_size = v_size,
+				pointable = false,
+				glow = glow,
+			})
+			local att_pos = (fmt == "glb") and pos_glb or pos_b3d
+			local att_rot = (fmt == "glb") and rot_glb or rot_b3d
+			obj:set_attach(parent, bone, att_pos, att_rot, true)
+			ent = obj
+		end
+	end
+
+	if ent then
+		local luaent = ent:get_luaentity()
+		if luaent then
+			luaent._is_corpse = true
+			luaent._intentional_removal = true
+		end
+	end
+
+	return ent
+end
+
 core.register_chatcommand("clean_armor_visuals", {
 	params = "",
 	description = "Clean up orphaned or disconnected armor visual entities",

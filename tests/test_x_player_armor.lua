@@ -5030,6 +5030,84 @@ test("Armor Stand Blast Protection and Drop Consistency (on_blast)", function()
 	assert(core.get_node(pos).name == "air", "Armor stand node must be removed from map after blast")
 end)
 
+test("Modular Visual Attachment to External Entities (attach_armor_to_entity)", function()
+	local mock_parent = {
+		pos = { x = 10, y = 5, z = 10 },
+		props = { mesh = "character.glb" },
+		get_pos = function(self) return self.pos end,
+		get_properties = function(self) return self.props end,
+		is_valid = function(self) return true end,
+	}
+
+	local armor_list = {
+		"x_player_armor:helmet_diamond",
+		"x_player_armor:chestplate_diamond",
+		"x_player_armor:leggings_diamond",
+		"x_player_armor:boots_diamond",
+	}
+
+	local attached = x_player_armor.attach_armor_to_entity(mock_parent, armor_list, "glb")
+	assert(type(attached) == "table", "attach_armor_to_entity must return a table of entities")
+	assert(#attached > 0, "attach_armor_to_entity must spawn visual pieces for equipped armor items")
+
+	-- Verify modular entities are tagged as corpse attachments
+	for _, ent in ipairs(attached) do
+		local luaent = ent:get_luaentity()
+		assert(luaent ~= nil, "Spawned armor entity must have luaentity table")
+		assert(luaent._is_corpse == true, "Corpse armor entity must be flagged _is_corpse")
+		assert(luaent._intentional_removal == true, "Corpse armor entity must have _intentional_removal flag")
+		ent:remove()
+	end
+end)
+
+test("Shield Visual Attachment to External Entities (attach_shield_to_entity)", function()
+	local mock_glb_parent = {
+		pos = { x = 15, y = 5, z = 15 },
+		props = { mesh = "character.glb" },
+		get_pos = function(self) return self.pos end,
+		get_properties = function(self) return self.props end,
+		is_valid = function(self) return true end,
+	}
+
+	-- 1. GLB shield attachment
+	local glb_shield = x_player_armor.attach_shield_to_entity(mock_glb_parent, "x_player_armor:shield_steel", "glb")
+	assert(glb_shield ~= nil and glb_shield:is_valid(), "attach_shield_to_entity must return valid shield entity")
+	local _, bone_glb, pos_glb, rot_glb = glb_shield:get_attach()
+	assert(bone_glb == "Arm_Left", "Shield must be attached to Arm_Left")
+	assert(math.abs(pos_glb.x - (-0.8)) < 0.01 and math.abs(pos_glb.y - 5.0) < 0.01 and math.abs(pos_glb.z - (-2.8)) < 0.01,
+		"GLB shield position must match x_player_armor forearm offset")
+	assert(math.abs(rot_glb.x - 180) < 0.01 and math.abs(rot_glb.y - 45) < 0.01,
+		"GLB shield rotation must match x_player_armor forearm rotation")
+	local glb_lua = glb_shield:get_luaentity()
+	assert(glb_lua ~= nil and glb_lua._is_corpse == true, "Shield entity must have _is_corpse flag")
+	glb_shield:remove()
+
+	-- 2. B3D shield attachment
+	local mock_b3d_parent = {
+		pos = { x = 20, y = 5, z = 20 },
+		props = { mesh = "character.b3d" },
+		get_pos = function(self) return self.pos end,
+		get_properties = function(self) return self.props end,
+		is_valid = function(self) return true end,
+	}
+	local b3d_shield = x_player_armor.attach_shield_to_entity(mock_b3d_parent, "x_player_armor:shield_steel", "b3d")
+	assert(b3d_shield ~= nil and b3d_shield:is_valid(), "B3D attach_shield_to_entity must return valid shield entity")
+	local _, bone_b3d, pos_b3d, rot_b3d = b3d_shield:get_attach()
+	assert(bone_b3d == "Arm_Left", "B3D shield must be attached to Arm_Left")
+	assert(math.abs(pos_b3d.x - (-0.8)) < 0.01 and math.abs(pos_b3d.y - 5.0) < 0.01 and math.abs(pos_b3d.z - 2.8) < 0.01,
+		"B3D shield position must match x_player_armor forearm offset")
+	assert(math.abs(rot_b3d.x - 180) < 0.01 and math.abs(rot_b3d.y - (-45)) < 0.01,
+		"B3D shield rotation must match x_player_armor forearm rotation")
+	b3d_shield:remove()
+
+	-- 3. Top-level x_player_armor.attach_shield delegates to attach_shield_to_entity when passed an entity
+	local top_shield = x_player_armor.attach_shield(mock_glb_parent, "x_player_armor:shield_diamond", "glb")
+	assert(top_shield ~= nil and top_shield:is_valid(), "attach_shield must handle external parent entity")
+	local _, top_bone = top_shield:get_attach()
+	assert(top_bone == "Arm_Left", "Top-level attach_shield must attach to Arm_Left")
+	top_shield:remove()
+end)
+
 print(string.format("\n=========================================="))
 print(string.format("  ALL %d UNIT TESTS PASSED SUCCESSFULLY!  ", passed))
 print(string.format("=========================================="))
