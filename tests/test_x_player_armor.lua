@@ -778,7 +778,8 @@ local function create_mock_player(name)
 		self.hud_counter = self.hud_counter + 1
 		local id = self.hud_counter
 		self.hud_elements[id] = {
-			hud_elem_type = def.hud_elem_type or def.type,
+			type = def.type or def.hud_elem_type,
+			hud_elem_type = def.type or def.hud_elem_type,
 			position = def.position,
 			alignment = def.alignment,
 			offset = def.offset,
@@ -2279,7 +2280,7 @@ test("1st-Person Shield Blocking HUD Indicator Lifecycle, Sizing & Z-Index", fun
 
 	local elem = player:hud_get(hud_id)
 	assert(elem ~= nil, "HUD element must exist in player HUD table")
-	assert(elem.hud_elem_type == "image", "HUD element type must be 'image'")
+	assert(elem.type == "image", "HUD element type must be 'image'")
 	assert(elem.z_index == -1, "HUD element z_index must be -1 (over vignettes, behind UI)")
 	assert(elem.text:find("%[combine:524x524"), "Texture must be 2.5D extruded composite texture")
 	assert(elem.text:find("0,12=%(x_player_armor_inv_shield_wood%.png"), "Front face must be wrapped in parentheses and properly resized")
@@ -2963,7 +2964,7 @@ test("Combat Armor HUD: Single Composite Element & Blueprint Paperdoll Layout", 
 
 	local hud_elem = defender:hud_get(hud_id)
 	assert(hud_elem, "HUD element must exist on player")
-	assert(hud_elem.hud_elem_type == "image", "HUD element type must be image")
+	assert(hud_elem.type == "image", "HUD element type must be image")
 	assert(hud_elem.position.x == 1 and hud_elem.position.y == 1, "Default position must be bottom-right (1, 1)")
 	assert(hud_elem.alignment.x == -1 and hud_elem.alignment.y == -1, "Default alignment must be bottom-right (-1, -1)")
 	assert(hud_elem.z_index == 5, "Z-index must be 5")

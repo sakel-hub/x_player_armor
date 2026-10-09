@@ -313,7 +313,6 @@ function combat_hud.trigger(player)
 	-- Create single composite HUD element with responsive geometry
 	local hud_id = player:hud_add({
 		type = "image",
-		hud_elem_type = "image",
 		position = pos,
 		alignment = align,
 		offset = offset,

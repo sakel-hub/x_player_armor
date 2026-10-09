@@ -353,7 +353,6 @@ function shield_hud.show(player, immediate)
 	local scale, offset = get_proportional_geometry(player)
 	local hud_id = player:hud_add({
 		type = "image",
-		hud_elem_type = "image",
 		position = {x = 0, y = 1},
 		alignment = {x = 1, y = -1},
 		offset = offset,
