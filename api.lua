@@ -1,3 +1,5 @@
+---Core public API namespace for x_player_armor.
+---High-performance modular player armor, shield defense, durability, and damage mitigation system.
 ---@class XPlayerArmorAPI
 ---@field version string Semantic version of the mod
 ---@field def table<string, table<string, any>> Player armor state cache
@@ -7,25 +9,6 @@
 ---@field registered_groups table<string, number> Base armor groups map
 ---@field callbacks table<string, function[]> Event callback listener tables
 ---@field constants XPlayerArmorConstants Constants and configuration settings
----@field utils XPlayerArmorUtils Utility functions
----@field visuals XPlayerArmorVisuals Visual attachment entity subsystem
----@field vfx XPlayerArmorVFX Visual particle effects subsystem
----@field inventory XPlayerArmorInventory Detached inventory and serialization subsystem
----@field effects XPlayerArmorEffects Armor stats, environmental protection and physics
----@field combat XPlayerArmorCombat Combat mechanics, durability, shield blocking and deflection
----@field items XPlayerArmorItems Armor items registration
----@field crafting XPlayerArmorCrafting Crafting recipes
----@field skins XPlayerArmorSkins Skin resolution subsystem
----@field ui XPlayerArmorUI Formspec UI and multi-inventory integrations (sfinv, unified_inventory, i3)
----@field stand XPlayerArmorStand Armor stand node and entity
----@field shield_hud XPlayerArmorShieldHUD 1st-person shield blocking HUD indicator
----@field combat_hud XPlayerArmorCombatHUD Combat armor HUD overlay
----@field compat XPlayerArmorCompat Compatibility orchestrator namespace
----@field compat_x_player_api XPlayerArmorCompatXPlayerAPI Direct reference to x_player_api compatibility adapter
----@field compat_hud XPlayerArmorCompatHUD Direct reference to HUD statbar compatibility adapter
----@field compat_armor ArmorCompat? Direct reference to 3d_armor compatibility shim
----@field compat_shields ShieldsCompat? Direct reference to shields compatibility shim
----@field compat_stand ArmorStandCompat? Direct reference to 3d_armor_stand compatibility shim
 local DEFAULT_ELEMENTS = {"head", "torso", "legs", "feet", "shield"}
 local DEFAULT_ATTRIBUTES = {"heal", "fire", "water", "feather"}
 
@@ -95,8 +78,9 @@ function api.get_mod_api(modname)
 	return nil
 end
 
----Returns the canonical list of armor elements.
----@return string[] elements
+---Returns the canonical list of registered armor slot elements.
+---@nodiscard
+---@return string[] elements Array of element identifiers (e.g. {"head", "torso", "legs", "feet", "shield"})
 function api.get_elements()
 	local global_armor = rawget(_G, "armor")
 	if global_armor and global_armor.elements then
@@ -105,8 +89,9 @@ function api.get_elements()
 	return DEFAULT_ELEMENTS
 end
 
----Returns the list of registered armor attributes.
----@return string[] attributes
+---Returns the canonical list of registered armor attributes and environmental perks.
+---@nodiscard
+---@return string[] attributes Array of attribute keys (e.g. {"heal", "fire", "water", "feather"})
 function api.get_attributes()
 	local global_armor = rawget(_G, "armor")
 	if global_armor and global_armor.attributes then
@@ -115,8 +100,9 @@ function api.get_attributes()
 	return DEFAULT_ATTRIBUTES
 end
 
----Returns the registered fire damage nodes.
----@return table<string, boolean> fire_nodes
+---Returns the registered fire, lava, and thermal hazard node protection thresholds.
+---@nodiscard
+---@return table<string, number> fire_nodes Map of node names to minimum required fire protection tiers (1 to 5)
 function api.get_fire_nodes()
 	local global_armor = rawget(_G, "armor")
 	if global_armor and global_armor.fire_nodes then
@@ -126,51 +112,52 @@ function api.get_fire_nodes()
 end
 
 ---Checks whether damage reciprocation (thorns) is globally configured or active.
----@return boolean enabled
+---@nodiscard
+---@return boolean enabled True if reciprocate damage is active
 function api.is_reciprocate_damage_enabled()
 	local global_armor = rawget(_G, "armor")
 	return (global_armor and global_armor.config and global_armor.config.reciprocate_damage) == true
 end
 
----Registers a callback when armor is equipped.
----@param func fun(player: ObjectRef, index: number, stack: ItemStack)
+---Registers a global callback listener invoked when an armor piece is equipped into an inventory slot.
+---@param func fun(player: ObjectRef, index: number, stack: ItemStack) Callback receiving player, slot index, and equipped stack
 function api.register_on_equip(func)
 	table.insert(api.callbacks.on_equip, func)
 end
 
----Registers a callback when armor is unequipped.
----@param func fun(player: ObjectRef, index: number, stack: ItemStack)
+---Registers a global callback listener invoked when an armor piece is removed from an inventory slot.
+---@param func fun(player: ObjectRef, index: number, stack: ItemStack) Callback receiving player, slot index, and unequipped stack
 function api.register_on_unequip(func)
 	table.insert(api.callbacks.on_unequip, func)
 end
 
----Registers a callback when armor absorbs damage.
----@param func fun(player: ObjectRef, index: number, stack: ItemStack, uses: number)
+---Registers a global callback listener invoked when a worn armor piece absorbs combat damage.
+---@param func fun(player: ObjectRef, index: number, stack: ItemStack, uses: number) Callback receiving player, slot, stack, and wear
 function api.register_on_damage(func)
 	table.insert(api.callbacks.on_damage, func)
 end
 
----Registers a callback when an armor item breaks.
----@param func fun(player: ObjectRef, index: number, stack: ItemStack)
+---Registers a global callback listener invoked when an armor item breaks due to wear exhaustion.
+---@param func fun(player: ObjectRef, index: number, stack: ItemStack) Callback receiving player, slot index, and destroyed stack
 function api.register_on_destroy(func)
 	table.insert(api.callbacks.on_destroy, func)
 end
 
----Registers a callback when player armor state updates.
----@param func fun(player: ObjectRef)
+---Registers a global callback listener invoked whenever player armor state, defense, or visuals update.
+---@param func fun(player: ObjectRef) Callback receiving updated player reference
 function api.register_on_update(func)
 	table.insert(api.callbacks.on_update, func)
 end
 
----Registers a callback when a player successfully blocks an incoming attack or deflects a projectile with a shield.
----@param func fun(player: ObjectRef, hitter_or_proj: ObjectRef|table, damage: number, shield_stack: ItemStack)
+---Registers a global callback listener invoked when a player blocks an attack or deflects a projectile.
+---@param func fun(player: ObjectRef, hitter: ObjectRef|table, damage: number, shield: ItemStack) Callback receiving player, hitter, damage, shield
 function api.register_on_block(func)
 	table.insert(api.callbacks.on_block, func)
 end
 
----Dispatches a registered callback event across listeners.
----@param event_name string
----@param ... any
+---Dispatches a registered callback event across global listeners and item-level definitions.
+---@param event_name string Event name ("on_equip", "on_unequip", "on_damage", "on_destroy", "on_update", "on_block")
+---@param ... any Arguments forwarded to the callback listeners
 function api.run_callbacks(event_name, ...)
 	local list = api.callbacks[event_name]
 	if list then
@@ -199,98 +186,86 @@ function api.run_callbacks(event_name, ...)
 	end
 end
 
----Registers an armor slot element (e.g. "head", "torso", "legs", "feet", "shield").
----@param element string
----@param def table
+---Registers an armor slot element specification (e.g. "head", "torso", "legs", "feet", "shield").
+---@param element string Unique element identifier string
+---@param def table Element configuration table defining slot mapping and model piece associations
 function api.register_element(element, def)
 	api.registered_elements[element] = def
 end
 
----Registers an armor material specification.
----@param material string
----@param def table
+---Registers an armor material specification for tiered defense and craft generation.
+---@param material string Unique material key string (e.g. "wood", "steel", "diamond")
+---@param def table Material attributes table (crafting ingredients, tiers, and default stats)
 function api.register_material(material, def)
 	api.registered_materials[material] = def
 end
 
+---Callback invoked when a player wearing armor or holding a shield is punched.
+---@alias XPlayerArmorPunchCallback fun(player: ObjectRef, hitter?: ObjectRef, time?: number, tool_caps?: table, dir?: vector, damage?: number)
+
+---Bone attachment configuration for custom 3D models.
 ---@class XPlayerArmorTransform
----Bone attachment configuration for custom models.
----@field bone string Target parent skeleton bone (e.g. "Head", "Body", "Arm_Left", "Arm_Right", "Leg_Left", "Leg_Right")
----@field model string? Optional custom 3D model file (.glb or .b3d)
----@field pos Vector3|table<string, number> Position offset relative to bone origin
----@field rot Vector3|table<string, number> Euler rotation angles in degrees
----@field scale Vector3|table<string, number>? Scale vector override (default: {x=1, y=1, z=1})
+---@field bone string Target parent skeleton bone name (e.g. "Head", "Body", "Arm_Left", "Arm_Right", "Leg_Left", "Leg_Right")
+---@field model string? Optional custom 3D model asset filename (.glb or .b3d) attached to this specific bone
+---@field pos Vector3|table<string, number> 3D position offset vector relative to bone origin {x, y, z}
+---@field rot Vector3|table<string, number> Euler rotation angles in degrees {x, y, z}
+---@field scale Vector3|table<string, number>? Scale vector override {x, y, z} (default: {x=1, y=1, z=1})
 
----@class XPlayerArmorSounds
 ---Sound effects triggered during armor lifecycle and combat events.
----@field equip string? Sound played when the item is equipped
----@field unequip string? Sound played when the item is unequipped
----@field hit string? Sound played when armor absorbs a combat strike
----@field break_sound string? Sound played when the item breaks from wear exhaustion
----@field block string? Sound played when an incoming attack or projectile is deflected by shield
+---@class XPlayerArmorSounds
+---@field equip string? Sound effect played when the item is equipped into an armor slot
+---@field unequip string? Sound effect played when the item is unequipped from an armor slot
+---@field hit string? Sound effect played when armor absorbs a combat strike
+---@field break_sound string? Sound effect played when the item breaks from wear exhaustion
+---@field block string? Sound effect played when an incoming attack or projectile is deflected by a shield
 
+---Complete configuration table for armor and shield item registration.
+---Supports custom 3D models, bone transforms, audio, environmental perks, physics, and combat mechanics.
 ---@class XPlayerArmorItemDef
----Complete configuration table for armor registration.
----Supports custom 3D models, bone transforms, audio, perks, physics, and legacy 3d_armor compatibility.
----@field description string Full descriptive tooltip text (auto-enriched with stats table if single-line)
----@field short_description string? Compact item name displayed in HUD notifications, logs, and armor stand UI
+---@field description string Full descriptive tooltip text. Single-line descriptions are auto-enriched with a formatted stats card.
+---@field short_description string? Compact item name displayed in HUD notifications, logs, and armor stand UI (defaults to description or item name)
 ---@field inventory_image string? Standard 2D inventory icon displayed in slot grids and hotbar
----@field preview string? 2D paperdoll layer image or fallback icon
----@field texture string? Primary 3D UV texture file (mapped to 3D meshes in-world, 3D preview, and stand mannequin)
----@field textures string[]? Ordered array of textures for multi-material custom 3D models
----@field element ("head"|"torso"|"legs"|"feet"|"shield")? Target equipment slot element
----@field level number? Primary defense rating (auto-populates armor groups and fleshy damage mitigation)
----@field armor_use number? Total durability uses before breaking (default: 200)
----@field armor_uses number? Durability uses alias
----@field uses number? Durability uses alias
----@field mesh string? Custom 3D mesh file (.glb or .b3d) for the primary armor piece
----@field model string? Alias for mesh
----@field meshes table<string, string>? Map of piece IDs to custom 3D models (e.g. {torso = "...", sleeve_l = "...", sleeve_r = "..."})
----@field models table<string, string>? Alias for meshes
----@field pieces string[]? Array of piece IDs to attach (e.g. {"head"} or {"torso"} for a sleeveless tunic)
----@field transforms table<string, XPlayerArmorTransform|table<string, XPlayerArmorTransform>>? Custom bone attachment transforms
----@field attach_transforms table? Alias for transforms
----@field glow number? Light emission level from 0 to 14 (ideal for enchanted, crystalline, or nether gear)
----@field visual_size Vector3|table<string, number>? Visual scale factor override
----@field backface_culling boolean? Whether backface culling is enabled (default: true)
----@field shaded boolean? Whether diffuse shading is enabled on the model (default: true)
----@field sounds XPlayerArmorSounds? Custom sound effects table
----@field sound_equip string? Sound played when equipped
----@field sound_unequip string? Sound played when unequipped
----@field sound_hit string? Sound played when absorbing a hit
----@field sound_break string? Sound played when destroyed
----@field sound_block string? Sound played when blocking with a shield
+---@field preview string? 2D paperdoll layer image or fallback icon displayed in legacy inventories (defaults to inventory_image)
+---@field texture string? Primary 3D UV texture (e.g. "mymod_helmet.png"). Mutually exclusive with textures (overridden if textures is set).
+---@field textures string[]? Ordered array of texture filenames for multi-material custom 3D models. Overrides texture.
+---@field element ("head"|"torso"|"legs"|"feet"|"shield")? Target equipment slot element. Slot exclusivity: exactly one element per item.
+---@field level number? Primary defense rating. Auto-populates armor groups and fleshy damage mitigation.
+---@field armor_uses number? Total durability uses before breaking (default: 200). Durability wear is applied via core.add_wear_by_uses.
+---@field mesh string? Custom 3D mesh filename (.glb or .b3d). Mutually exclusive with meshes (overridden if meshes is set).
+---@field meshes table<string, string>? Map of piece IDs to custom 3D model files (e.g. {torso = "tunic.glb"}). Overrides mesh.
+---@field pieces string[]? Array of piece IDs to attach from element definition (e.g. {"torso"}). Ignored if custom meshes is used.
+---@field transforms table<string, XPlayerArmorTransform|table<string, XPlayerArmorTransform>>? Skeletal bone attachment transforms.
+---@field glow number? Light emission level from 0 to 14 (ideal for enchanted, crystalline, or glowing gear). Ignored if custom 3D mesh is not used.
+---@field visual_size Vector3|table<string, number>? Visual scale factor override for custom 3D models. Ignored if custom 3D mesh is not used.
+---@field backface_culling boolean? Whether backface culling is enabled on the model entity (default: true). Ignored if custom 3D mesh is not used.
+---@field shaded boolean? Whether diffuse shading and lighting is enabled on the model entity (default: true). Ignored if custom 3D mesh is not used.
+---@field sounds XPlayerArmorSounds? Custom sound effects table for equip, unequip, hit, break, and block events
 ---@field heal number? Passive health regeneration boost level (sets groups.armor_heal)
----@field fire number? Fire and lava protection threshold level (sets groups.armor_fire)
+---@field fire number? Fire, heat, and lava damage protection tier threshold from 1 to 5 (sets groups.armor_fire)
 ---@field water number? Underwater breathing and drowning immunity level (sets groups.armor_water)
 ---@field feather number? Fall damage mitigation level (sets groups.armor_feather)
----@field speed number? Locomotion movement speed modifier (sets groups.physics_speed)
----@field jump number? Jump height modifier (sets groups.physics_jump)
----@field gravity number? Gravity modifier (sets groups.physics_gravity)
----@field material string? Material category key (sets groups.armor_material_<material>)
----@field reciprocate_damage boolean|number? Whether damage is reflected back to the attacker (thorns)
----@field thorns boolean|number? Alias for reciprocate_damage
----@field reciprocate_percent number? Percentage of incoming damage reflected to attacker
----@field wear_color table? Durability bar color gradient configuration
----@field shield_offset table? Custom shield forearm attachment transforms for glb and b3d skeletons
----@field shield_transform table? Alias for shield_offset
----@field tower_shield boolean? Whether shield renders with tower shield model variant in preview and stand
----@field tower boolean? Alias for tower_shield
----@field block_reduction number? Shield frontal damage reduction fraction (default: 0.20 or material-tiered)
----@field block_arc number? Custom frontal blocking arc angle in degrees
----@field deflect_projectiles boolean? Whether shield can deflect physical arrows and projectiles
----@field particles boolean|table? Custom hit/break particle effects configuration
----@field groups table<string, number>? Item groups map
----@field armor_groups table<string, number>? Damage mitigation groups (e.g. {fleshy = 15})
----@field damage_groups table<string, number>? Tool durability wear rates against damage groups
----@field on_equip fun(player: ObjectRef, index: number, stack: ItemStack)? Callback invoked when equipped
----@field on_unequip fun(player: ObjectRef, index: number, stack: ItemStack)? Callback invoked when unequipped
----@field on_damage fun(player: ObjectRef, index: number, stack: ItemStack, uses: number)? Callback when damaged
----@field on_destroy fun(player: ObjectRef, index: number, stack: ItemStack)? Callback when broken
----@alias XPlayerArmorPunchCallback fun(player: ObjectRef, hitter: ObjectRef?, time: number?, caps: table?, dir: vector?, damage: number?)
----@field on_punch XPlayerArmorPunchCallback? Callback when player is punched
----@field on_punched XPlayerArmorPunchCallback? Legacy callback alias
----@field on_block fun(player: ObjectRef, hitter: ObjectRef?, damage: number, shield_stack: ItemStack)? Callback on shield block
+---@field speed number? Locomotion movement speed multiplier modifier applied via player physics monoid (sets groups.physics_speed)
+---@field jump number? Jump height multiplier modifier applied via player physics monoid (sets groups.physics_jump)
+---@field gravity number? Gravity multiplier modifier applied via player physics monoid (sets groups.physics_gravity)
+---@field material string? Material category key (e.g. "wood", "steel", "diamond", "nether"). Sets groups.armor_material_<material>.
+---@field reciprocate_damage boolean|number? Whether damage is reflected back to attacker (thorns). Defaults true for shields, false for armor.
+---@field reciprocate_percent number? Percentage of incoming damage reflected to attacker. Ignored if reciprocate_damage is false or nil.
+---@field wear_color table? Durability bar color gradient configuration table
+---@field shield_offset table? Custom shield forearm attachment transforms for glb and b3d skeletons. Ignored if element is not "shield".
+---@field tower_shield boolean? Whether shield renders with tower shield model variant in preview and stand. Ignored if element is not "shield".
+---@field block_reduction number? Frontal damage reduction fraction 0.0 to 1.0 (default: 0.20 or tiered). Ignored if element is not "shield".
+---@field block_arc number? Custom frontal blocking arc angle in degrees (default: 44-64 deg tiered). Ignored if element is not "shield".
+---@field deflect_projectiles boolean? Whether shield can physically deflect incoming arrows and projectiles. Ignored if element is not "shield".
+---@field particles boolean|table? Custom hit and break particle effects configuration, or false to disable
+---@field groups table<string, number>? Item groups map. Automatically augmented with armor, perk, and material groups.
+---@field armor_groups table<string, number>? Damage mitigation group ratings (e.g. {fleshy = 15})
+---@field damage_groups table<string, number>? Tool durability degradation wear ratings against damage groups
+---@field on_equip fun(player: ObjectRef, index: number, stack: ItemStack)? Callback invoked when equipped into armor inventory
+---@field on_unequip fun(player: ObjectRef, index: number, stack: ItemStack)? Callback invoked when unequipped from armor inventory
+---@field on_damage fun(player: ObjectRef, index: number, stack: ItemStack, uses: number)? Callback invoked when absorbing combat damage
+---@field on_destroy fun(player: ObjectRef, index: number, stack: ItemStack)? Callback invoked when this item breaks due to wear exhaustion
+---@field on_punch XPlayerArmorPunchCallback? Callback invoked when a player wearing this armor piece is punched
+---@field on_block fun(player: ObjectRef, hitter: ObjectRef?, damage: number, shield_stack: ItemStack)? Block callback. Shield-only.
 
 ---Resolves the modern x_player_armor item technical name if the given name is a legacy item.
 ---@param name string Technical item name (e.g. "3d_armor:helmet_diamond" or ":3d_armor:helmet_diamond")
@@ -578,14 +553,15 @@ function api.register_armor(name, def)
 end
 
 ---Returns a map of armor elements currently worn by the player.
----@param player ObjectRef
----@return table<string, boolean>
-function api.get_weared_armor_elements(player)
+---@nodiscard
+---@param player ObjectRef Target player
+---@return table<string, boolean> worn_elements Map of worn element names to true (e.g. {head = true, torso = true})
+function api.get_worn_elements(player)
 	local name, inv = api.get_valid_player(player)
 	if not name or not inv then return {} end
-	local weared = {}
+	local worn = {}
 	local list = inv:get_list("armor")
-	if not list then return weared end
+	if not list then return worn end
 	local elements = api.get_elements()
 	for i = 1, #list do
 		local stack = list[i]
@@ -594,17 +570,19 @@ function api.get_weared_armor_elements(player)
 			for _, el in ipairs(elements) do
 				if core.get_item_group(iname, "armor_" .. el) > 0
 						or (el == "shield" and core.get_item_group(iname, "shield") > 0) then
-					weared[el] = true
+					worn[el] = true
 					break
 				end
 			end
 		end
 	end
-	return weared
+	return worn
 end
 
+api.get_weared_armor_elements = api.get_worn_elements
+
 ---Unequips all armor items from the player's equipped inventory.
----@param player ObjectRef
+---@param player ObjectRef Target player to remove all equipped armor from
 function api.remove_all(player)
 	local name, inv = api.get_valid_player(player)
 	if not name or not inv then return end
@@ -619,15 +597,16 @@ function api.remove_all(player)
 end
 
 ---Registers an armor group baseline.
----@param group string
----@param base number
+---@param group string Armor group name (e.g. "fleshy")
+---@param base number Baseline value (default: 100)
 function api.register_armor_group(group, base)
 	api.registered_groups[group] = base
 end
 
----Gets the shield attachment transform for a given model format ("glb" or "b3d")
----@param format? string "glb" or "b3d" (defaults to "glb")
----@return table {pos = Vector3, rot = Vector3}
+---Gets the shield attachment transform for a given model format ("glb" or "b3d").
+---@nodiscard
+---@param format? string Model format ("glb" or "b3d", defaults to "glb")
+---@return table offset Offset table containing pos and rot vectors for forearm shield attachment
 function api.get_shield_offset(format)
 	local fmt = format or "glb"
 	local consts = x_player_armor.constants
@@ -638,10 +617,10 @@ function api.get_shield_offset(format)
 	return tbl or {pos = {x = -0.8, y = 5.0, z = -2.8}, rot = {x = 180, y = 45, z = 0}}
 end
 
----Sets or overrides the shield attachment transform for a model format
----@param format string "glb" or "b3d"
----@param pos Vector3 Offset position
----@param rot Vector3 Euler rotation in degrees
+---Sets or overrides the shield attachment transform for a model format.
+---@param format string Model format ("glb" or "b3d")
+---@param pos Vector3 Offset position vector
+---@param rot Vector3 Euler rotation angles in degrees
 function api.set_shield_offset(format, pos, rot)
 	local consts = x_player_armor.constants
 	if not consts.SHIELD_OFFSET then
@@ -659,8 +638,9 @@ function api.set_shield_offset(format, pos, rot)
 end
 
 ---Returns the active armor definition cache for a player.
----@param player ObjectRef
----@return table
+---@nodiscard
+---@param player ObjectRef Target player
+---@return table state Active player armor runtime state table (stats, groups, levels)
 function api.get_player_def(player)
 	local name = player:get_player_name()
 	local pdef = rawget(api.def, name)
@@ -688,8 +668,9 @@ function api.get_player_def(player)
 end
 
 ---Returns the detached armor inventory and player name if valid.
----@param player ObjectRef
----@return string? name, InvRef? inv
+---@nodiscard
+---@param player ObjectRef Target player
+---@return string? name, InvRef? inv Validated player name and detached armor inventory reference, or nil, nil
 function api.get_valid_player(player)
 	if not player or not player:is_player() then
 		return nil, nil
@@ -700,57 +681,57 @@ function api.get_valid_player(player)
 end
 
 ---Equips an armor item into the appropriate slot.
----@param player ObjectRef
----@param itemstack ItemStack
----@return boolean success
+---@param player ObjectRef Target player
+---@param itemstack ItemStack Armor item to equip
+---@return boolean success True if the item was equipped into a valid slot
 function api.equip(player, itemstack)
 	return api.inventory.equip_item(player, itemstack)
 end
 
 ---Unequips an armor item by slot element.
----@param player ObjectRef
----@param element string
----@return ItemStack unequipped_stack
+---@param player ObjectRef Target player
+---@param element string Slot element to unequip ("head", "torso", "legs", "feet", "shield")
+---@return ItemStack unequipped_stack The removed item stack
 function api.unequip(player, element)
 	return api.inventory.unequip_element(player, element)
 end
 
 ---Applies durability damage to a worn armor item.
----@param player ObjectRef
----@param index number
----@param stack ItemStack
----@param uses number
----@return boolean destroyed
+---@param player ObjectRef Target player
+---@param index number Slot index in armor inventory (1-6)
+---@param stack ItemStack Current armor item stack
+---@param uses number Durability wear amount to apply
+---@return boolean destroyed True if the armor item broke from wear exhaustion
 function api.damage(player, index, stack, uses)
 	return api.combat.damage_item(player, index, stack, uses)
 end
 
 ---Calculates armor mitigation and wear on punch.
----@param player ObjectRef
----@param hitter ObjectRef?
----@param time_from_last_punch number?
----@param tool_capabilities table?
----@param dir vector?
----@param damage number?
+---@param player ObjectRef Defending player taking the punch
+---@param hitter ObjectRef? Attacking entity or player
+---@param time_from_last_punch number? Seconds elapsed since previous punch
+---@param tool_capabilities table? Tool capabilities table of the punch
+---@param dir vector? Direction vector of the incoming attack
+---@param damage number? Raw damage points before armor mitigation
 function api.punch(player, hitter, time_from_last_punch, tool_capabilities, dir, damage)
 	api.combat.handle_punch(player, hitter, time_from_last_punch, tool_capabilities, dir, damage)
 end
 
 
 ---Re-evaluates armor stats, groups, and physics for a player.
----@param player ObjectRef
+---@param player ObjectRef Target player to recalculate armor groups, physics, and stats for
 function api.set_player_armor(player)
 	api.effects.update_player_armor(player)
 end
 
 ---Updates modular bone attachments and visual entity state for a player.
----@param player ObjectRef
+---@param player ObjectRef Target player to update modular 3D armor visual attachments on
 function api.update_player_visuals(player)
 	api.visuals.update_player_visuals(player)
 end
 
 ---Clears all modular visual entities for a player.
----@param player ObjectRef|string
+---@param player ObjectRef|string Player object or player name whose attached visuals should be cleared
 function api.clear_player_visuals(player)
 	api.visuals.clear_all(player)
 end
@@ -761,7 +742,7 @@ function api.restore_all_player_visuals()
 end
 
 ---Schedules debounced restoration for a specific player's visual armor pieces.
----@param player_name string
+---@param player_name string Name of the player to schedule visual restoration for
 function api.schedule_player_visual_restore(player_name)
 	api.visuals.schedule_player_restore(player_name)
 end
@@ -776,20 +757,21 @@ function api.attach_armor_to_entity(parent, player_or_name, format)
 end
 
 ---Returns the composite preview texture string for 3D model formspecs.
----@param player ObjectRef
----@return string preview_texture
+---@nodiscard
+---@param player ObjectRef Target player
+---@return string preview_texture Composite preview texture string for 3D model formspecs
 function api.get_player_preview_texture(player)
 	return api.ui.get_preview_texture(player)
 end
 
 ---Opens the armor and equipment inventory formspec for a player.
----@param player ObjectRef
+---@param player ObjectRef Target player to open the armor formspec for
 function api.show_armor_formspec(player)
 	api.ui.show_armor_formspec(player)
 end
 
 ---Refreshes open armor formspecs for a player across active inventory engines.
----@param player ObjectRef
+---@param player ObjectRef Target player whose open armor formspec should be refreshed
 function api.refresh_player_formspec(player)
 	api.ui.refresh_player_formspec(player)
 end
@@ -832,12 +814,14 @@ function api.is_blocking(player)
 end
 
 ---Validates whether an incoming attack or projectile vector falls within the player's frontal blocking cone.
+---@nodiscard
 ---@param player ObjectRef Target player
 ---@param attack_dir vector Direction pointing from the attacker/projectile towards the player
----@param max_arc_deg number? Maximum blocking arc in degrees (default 130)
----@return boolean is_facing
-function api.is_facing_attack(player, attack_dir, max_arc_deg)
-	return api.combat.is_facing_attack(player, attack_dir, max_arc_deg)
+---@param max_arc_deg number? Maximum blocking arc in degrees (default: 52 + tier bonus)
+---@param bias_deg number? Custom lateral bias angle in degrees (default: 22 deg off-hand bias)
+---@return boolean is_facing True if the attack angle falls within the player's frontal shield arc
+function api.is_facing_attack(player, attack_dir, max_arc_deg, bias_deg)
+	return api.combat.is_facing_attack(player, attack_dir, max_arc_deg, bias_deg)
 end
 
 ---Attempts to deflect an incoming projectile with the player's active shield.
@@ -847,29 +831,31 @@ end
 ---@param hit_pos vector Impact position
 ---@param flight_dir vector? Incoming normalized flight direction
 ---@param proj_data table? Optional projectile state data
----@return boolean deflected, vector? bounce_velocity
+---@return boolean deflected True if the projectile was successfully deflected
+---@return vector? bounce_velocity Deflected projectile velocity vector
 function api.try_deflect_projectile(player, proj_obj, hit_pos, flight_dir, proj_data)
 	return api.combat.try_deflect_projectile(player, proj_obj, hit_pos, flight_dir, proj_data)
 end
 
 ---Displays or updates the combat armor HUD overlay on the target player.
----@param player ObjectRef
----@return number? hud_id
+---@param player ObjectRef Target player to display the combat HUD on
+---@return number? hud_id Active combat HUD element ID, or nil
 function api.trigger_combat_hud(player)
 	if not api.combat_hud then return nil end
 	return api.combat_hud.trigger(player)
 end
 
 ---Hides the combat armor HUD overlay from the target player.
----@param player ObjectRef|string
+---@param player ObjectRef|string Target player or player name
 function api.hide_combat_hud(player)
 	if not api.combat_hud then return end
 	api.combat_hud.hide(player)
 end
 
 ---Retrieves the active combat armor HUD element ID for a player if one exists.
----@param player ObjectRef
----@return number? hud_id
+---@nodiscard
+---@param player ObjectRef Target player
+---@return number? hud_id Active combat HUD element ID, or nil if not active
 function api.get_combat_hud_id(player)
 	if not player or not player:is_player() or not api.combat_hud then return nil end
 	local state = api.combat_hud.active_players[player:get_player_name()]
@@ -881,7 +867,7 @@ end
 ---@param item_or_stack string|ItemStack Shield item name or stack
 ---@param format_or_opts? string|table Optional model format ("glb"|"b3d") or options table
 ---@param custom_opts? table Optional transform and visual overrides
----@return ObjectRef|nil entity Attached entity reference or nil
+---@return ObjectRef? entity Attached entity reference or nil on failure
 function api.attach_shield(player_or_parent, item_or_stack, format_or_opts, custom_opts)
 	if not player_or_parent or (player_or_parent.is_valid and not player_or_parent:is_valid()) then
 		return nil
@@ -911,13 +897,13 @@ end
 ---@param player ObjectRef Target player
 ---@param item_or_stack? string|ItemStack Shield item name or stack
 ---@param custom_opts? table Optional transform and visual overrides
----@return ObjectRef|nil entity Attached entity reference or nil
+---@return ObjectRef? entity Updated shield entity reference or nil
 function api.update_shield(player, item_or_stack, custom_opts)
 	return api.compat_x_player_api.update_shield(player, item_or_stack, custom_opts)
 end
 
 ---Removes an attached off-hand shield entity from a player via x_player_api.
----@param player ObjectRef Target player
+---@param player ObjectRef Target player to remove shield from
 function api.remove_shield(player)
 	api.compat_x_player_api.remove_shield(player)
 end

@@ -1,4 +1,40 @@
+---Core game constants, configuration defaults, and calibration properties for armor and shields.
 ---@class XPlayerArmorConstants
+---@field SLOT_ELEMENTS table<number, string> Numeric slot index (1-5) to element name mapping
+---@field ELEMENT_GROUPS table<string, string> Element name to armor group name mapping (e.g. head -> armor_head)
+---@field GROUP_ELEMENTS table<string, string> Armor group name to element name inverted mapping
+---@field SLOT_LABELS table<string, string> Human-readable localized slot display names
+---@field MODELS table<string, string> Default 3D model asset filenames for armor pieces, preview, and stand
+---@field PREVIEW_SLOTS table<string, number> 3D model formspec bone/attachment slot indices
+---@field BONES table<string, string> Target skeletal bone names for player model attachment
+---@field ELEMENT_PIECES table<string, string[]> Element to constituent 3D piece IDs mapping
+---@field ATTACH_TRANSFORMS table<string, table<string, XPlayerArmorTransform>> Skeletal attachment transforms for GLB and B3D rigs
+---@field SOUNDS table<string, string> Built-in sound effect identifiers
+---@field FIRE_NODES table<string, number> Hazard node protection thresholds (1 to 5) for fire and lava mitigation
+---@field LEVEL_MULTIPLIER number Global damage mitigation scaling multiplier (setting: x_player_armor_level_multiplier)
+---@field HEAL_MULTIPLIER number Global health regeneration multiplier (setting: x_player_armor_heal_multiplier)
+---@field SET_BONUS boolean Whether full-set defense bonus is enabled (setting: x_player_armor_set_bonus)
+---@field FIRE_PROTECT boolean Whether fire and lava protection is active (setting: x_player_armor_fire_protect)
+---@field FIRE_PROTECT_TORCH boolean Whether torches deal damage requiring protection (setting: x_player_armor_fire_protect_torch)
+---@field WATER_PROTECT boolean Whether underwater drowning protection is active (setting: x_player_armor_water_protect)
+---@field FEATHER_FALL boolean Whether fall damage feather mitigation is active (setting: x_player_armor_feather_fall)
+---@field ENABLE_SOUNDS boolean Whether equipment and combat audio effects are enabled (setting: x_player_armor_enable_sounds)
+---@field DROP_ON_DEATH boolean Whether armor drops on player death (setting: x_player_armor_drop_on_death)
+---@field DESTROY_ON_DEATH boolean Whether armor is permanently destroyed on player death (setting: x_player_armor_destroy_on_death)
+---@field COMBAT_HUD_ENABLE boolean Whether in-combat armor status HUD is enabled (setting: x_player_armor_combat_hud)
+---@field COMBAT_HUD_TIMEOUT number Combat HUD display timeout in seconds (setting: x_player_armor_combat_hud_timeout)
+---@field COMBAT_HUD_POSITION string Combat HUD screen alignment ("bottom_right", "bottom_left", etc.)
+---@field COMBAT_HUD_SCALE number Combat HUD scaling factor (setting: x_player_armor_combat_hud_scale)
+---@field SHIELD_HUD_ENABLE boolean Whether 1st-person shield blocking HUD indicator is enabled
+---@field SHIELD_HUD_DELAY number Delay in seconds before 1st-person shield HUD appears
+---@field BLOCK_CONE_ANGLE number Half-width of default frontal blocking cone in degrees (52°)
+---@field BLOCK_ASYMMETRIC_BIAS number Off-hand angular bias towards left guard in degrees (22°)
+---@field BLOCK_DEFAULT_REDUCTION number Default frontal damage reduction fraction (0.20 = 20%)
+---@field BLOCK_DEFLECT_PROJECTILES boolean Global flag enabling physical projectile deflection
+---@field BLOCK_RESTITUTION number Projectile rebound velocity restitution fraction (0.50 = 50% velocity retained)
+---@field BLOCK_RECOIL_IMPULSE number Physics pushback impulse magnitude applied to attacker on shield block
+---@field SHIELD_TIER_PROPERTIES table<string, table<string, number>> Material-tiered defense, restitution, and blocking arc ratings
+---@field SHIELD_OFFSET table<string, table<string, table<string, number>>> Forearm attachment position and rotation offsets for GLB and B3D skeletons
 local constants = {}
 
 local S = core.get_translator("x_player_armor")

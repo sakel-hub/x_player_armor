@@ -186,7 +186,7 @@ end
 ---@nodiscard
 ---@param player ObjectRef Target player
 ---@return boolean can_block
-function x_player_armor.can_block(player)
+function combat.can_block(player)
 	if not player or not player:is_player() then
 		return false
 	end
@@ -214,12 +214,11 @@ function x_player_armor.can_block(player)
 
 	return true
 end
-combat.can_block = x_player_armor.can_block
 
 ---Checks whether a player is actively holding a shield block stance.
 ---@param player ObjectRef
 ---@return boolean is_blocking, ItemStack? shield_stack, number? slot_idx, string? mat_key
-function x_player_armor.is_blocking(player)
+function combat.is_blocking(player)
 	if not player or not player:is_player() then
 		return false, nil, nil, nil
 	end
@@ -255,7 +254,6 @@ function x_player_armor.is_blocking(player)
 
 	return false, nil, nil, nil
 end
-combat.is_blocking = x_player_armor.is_blocking
 
 ---Calculates the 3D world origin position of the shield contact surface (Tier 1 deflection origin).
 ---Biased to the lower-left viewport where the off-hand shield is actively held in guard stance.
@@ -307,7 +305,6 @@ function combat.get_shield_contact_pos(player)
 		z = eye_z + fz * d_fwd + rz * d_right + uz * d_up,
 	}
 end
-x_player_armor.get_shield_contact_pos = combat.get_shield_contact_pos
 
 ---Validates whether an incoming attack or projectile vector falls within the player's blocking cone.
 ---Incorporates Tier 2 asymmetric guard cone bias rotating the cone axis ~22 degrees counter-clockwise
@@ -362,7 +359,6 @@ function combat.is_facing_attack(player, attack_dir, max_arc_deg, bias_deg)
 	local min_dot = math.cos(math.rad(arc * 0.5))
 	return dot >= min_dot
 end
-x_player_armor.is_facing_attack = combat.is_facing_attack
 
 ---Resolves the attack direction pointing from attacker towards the player.
 ---@param player ObjectRef
@@ -400,7 +396,7 @@ end
 ---@param flight_dir vector? Incoming normalized flight direction
 ---@param _proj_data table? Optional projectile state data
 ---@return boolean deflected, vector? bounce_velocity
-function x_player_armor.try_deflect_projectile(player, proj_obj, hit_pos, flight_dir, _proj_data)
+function combat.try_deflect_projectile(player, proj_obj, hit_pos, flight_dir, _proj_data)
 	if not constants.BLOCK_DEFLECT_PROJECTILES then
 		return false
 	end
@@ -547,7 +543,6 @@ function x_player_armor.try_deflect_projectile(player, proj_obj, hit_pos, flight
 
 	return true, bounce_vel
 end
-combat.try_deflect_projectile = x_player_armor.try_deflect_projectile
 
 ---Handles on_punchplayer event and wear calculations.
 ---@param player ObjectRef

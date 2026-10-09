@@ -644,7 +644,6 @@ function ui.is_armor_ui_open(player)
 	end
 	return false
 end
-x_player_armor.is_armor_ui_open = ui.is_armor_ui_open
 
 ---Checks whether any connected player has an active armor inventory interface open.
 ---Optimizes multiplayer performance by idle-skipping background updates when no UI is open.
@@ -654,7 +653,6 @@ function ui.has_any_open_armor_ui()
 		or (next(ui.sfinv_open_players) ~= nil)
 		or (next(ui.unified_inv_open_players) ~= nil)
 end
-x_player_armor.has_any_open_armor_ui = ui.has_any_open_armor_ui
 
 ---Opens the armor and equipment inventory for a player.
 ---@param player ObjectRef
