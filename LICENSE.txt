@@ -21,23 +21,22 @@ Media & Asset Attribution Manifest
 ### 3D Models
 
 #### 1. Character Armor & Preview Models (CC BY-SA 3.0)
-Individual Blender source files in assets/ and glTF 2.0 Binary (.glb) exports in models/:
-- `assets/x_player_armor_helmet.blend` -> `models/x_player_armor_helmet.glb`
-- `assets/x_player_armor_chestplate.blend` -> `models/x_player_armor_chestplate.glb`
-- `assets/x_player_armor_sleeve_l.blend` -> `models/x_player_armor_sleeve_l.glb`
-- `assets/x_player_armor_sleeve_r.blend` -> `models/x_player_armor_sleeve_r.glb`
-- `assets/x_player_armor_leggings_l.blend` -> `models/x_player_armor_leggings_l.glb`
-- `assets/x_player_armor_leggings_r.blend` -> `models/x_player_armor_leggings_r.glb`
-- `assets/x_player_armor_boot_l.blend` -> `models/x_player_armor_boot_l.glb`
-- `assets/x_player_armor_boot_r.blend` -> `models/x_player_armor_boot_r.glb`
-- `assets/x_player_armor_shield.blend` -> `models/x_player_armor_shield.glb`
-- `assets/x_player_armor_preview.blend` -> `models/x_player_armor_preview.glb`
+glTF 2.0 Binary (.glb) models in models/:
+- `models/x_player_armor_helmet.glb`
+- `models/x_player_armor_chestplate.glb`
+- `models/x_player_armor_sleeve_l.glb`
+- `models/x_player_armor_sleeve_r.glb`
+- `models/x_player_armor_leggings_l.glb`
+- `models/x_player_armor_leggings_r.glb`
+- `models/x_player_armor_boot_l.glb`
+- `models/x_player_armor_boot_r.glb`
+- `models/x_player_armor_shield.glb`
+- `models/x_player_armor_preview.glb`
 Rigged, UV-mapped, and exported for Luanti by SaKeL under CC BY-SA 3.0.
 Base geometric references derived from Stuart Jones, MirceaKitsune, and Jordach (CC BY-SA 3.0).
 
-#### 2. Armor Stand & Promotional Scenes (CC-BY 4.0)
-- `assets/x_player_armor_stand.blend` -> `models/x_player_armor_stand.glb`
-- `assets/x_player_armor_poster.blend` (Promotional poster 3D staging scene)
+#### 2. Armor Stand Model (CC-BY 4.0)
+- `models/x_player_armor_stand.glb`
 Modeled, rigged, and exported for Luanti by SaKeL under CC-BY 4.0.
 
 ### Textures & Visual Assets
