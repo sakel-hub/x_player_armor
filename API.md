@@ -12,6 +12,9 @@ High-performance modular player armor, shield defense, durability, and damage mi
   - [XPlayerArmorItemDef](#xplayerarmoritemdef)
   - [XPlayerArmorTransform](#xplayerarmortransform)
   - [XPlayerArmorConstants](#xplayerarmorconstants)
+  - [XPlayerArmorElementDef](#xplayerarmorelementdef)
+  - [XPlayerArmorMaterialDef](#xplayerarmormaterialdef)
+  - [XPlayerArmorPlayerDef](#xplayerarmorplayerdef)
   - [XPlayerArmorPunchCallback](#xplayerarmorpunchcallback)
   - [XPlayerArmorSounds](#xplayerarmorsounds)
   - [SkinResolution](#skinresolution)
@@ -141,6 +144,61 @@ Core game constants, configuration defaults, and calibration properties for armo
 | `SHIELD_TIER_PROPERTIES` | `table<string,table<string,number>>` | Material-tiered defense, restitution, and blocking arc ratings |
 | `SHIELD_OFFSET` | `table<string,table<string,table<string,number>>>` | Forearm attachment position and rotation offsets for GLB and B3D skeletons |
 
+### `XPlayerArmorElementDef`
+
+Configuration table for registering an armor slot element.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `slot` | `number?` | Primary inventory slot index (1 to 6) |
+| `group` | `string?` | Item group associated with this element (e.g. "armor_head", "armor_torso") |
+| `label` | `string?` | Human-readable localized slot name (e.g. "Helmet", "Chestplate") |
+| `pieces` | `string[]?` | List of constituent 3D piece IDs (e.g. {"torso", "sleeve_l", "sleeve_r"}) |
+| `preview_slot` | `number?` | Preview 3D model slot index (0 to 8) |
+| `bone` | `string?` | Default skeletal bone name for attachment (e.g. "Head", "Body") |
+| `transforms` | `table<string,XPlayerArmorTransform>?` | Default skeletal bone transforms by model format |
+
+### `XPlayerArmorMaterialDef`
+
+Configuration table for registering an armor material.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `name` | `string` | Localized material display name (e.g. "Steel", "Diamond") |
+| `uses` | `number` | Base durability uses before breaking (e.g. 350, 1200) |
+| `level` | `table<string,number>` | Element to defense level rating map (e.g. {head = 10, torso = 15, legs = 12, feet = 8, shield = 10}) |
+| `heal` | `table<string,number>?` | Optional element to health regeneration level map |
+| `fire` | `table<string,number>?` | Optional element to fire/lava protection tier map (1 to 5) |
+| `water` | `table<string,number>?` | Optional element to water breathing/drowning protection level map |
+| `feather` | `table<string,number>?` | Optional element to fall damage feather mitigation level map |
+| `speed` | `table<string,number>?` | Optional element to physics movement speed multiplier map |
+| `jump` | `table<string,number>?` | Optional element to physics jump height multiplier map |
+| `gravity` | `table<string,number>?` | Optional element to physics gravity multiplier map |
+| `ingredient` | `string?` | Crafting recipe item or group identifier (e.g. "default:steel_ingot") |
+| `sound` | `string?` | Equipment sound identifier (e.g. "metal", "wood", "crystal") |
+
+### `XPlayerArmorPlayerDef`
+
+Runtime state definition cache for an active player.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `state` | `number` | Bitmask or numeric state flag of worn armor |
+| `count` | `number` | Number of equipped armor pieces |
+| `level` | `number` | Total aggregated defense level rating across all worn gear |
+| `heal` | `number` | Total health regeneration boost rating |
+| `jump` | `number` | Aggregated jump height multiplier modifier |
+| `speed` | `number` | Aggregated movement speed multiplier modifier |
+| `gravity` | `number` | Aggregated gravity multiplier modifier |
+| `fire` | `number` | Maximum fire/lava protection tier rating |
+| `water` | `number` | Total water breathing/drowning protection level |
+| `feather` | `number` | Total fall damage mitigation level |
+| `has_shield` | `boolean` | Whether a shield is currently equipped |
+| `has_reciprocate` | `boolean` | Whether damage reciprocation (thorns) is active |
+| `groups` | `table<string,number>` | Active defense ratings map against damage groups |
+| `textures` | `string[]` | Array of resolved texture strings for player mesh |
+| `skin` | `string` | Base skin texture filename |
+
 ### `XPlayerArmorPunchCallback`
 
 Callback invoked when a player wearing armor or holding a shield is punched.
@@ -201,12 +259,12 @@ x_player_armor.register_armor(name: string, def: XPlayerArmorItemDef) -> nil
 Registers an armor slot element specification (e.g. "head", "torso", "legs", "feet", "shield").
 
 ```lua
-x_player_armor.register_element(element: string, def: table) -> nil
+x_player_armor.register_element(element: string, def: XPlayerArmorElementDef) -> nil
 ```
 
 **Parameters:**
-- `element` (`string`) — Unique element identifier string
-- `def` (`table`) — Element configuration table defining slot mapping and model piece associations
+- `element` (`string`) — Unique element identifier string (e.g. "head", "torso", "legs", "feet", "shield")
+- `def` (`XPlayerArmorElementDef`) — Element configuration table defining slot mapping, groups, labels, and model pieces
 
 **Returns:**
 - (`nil`)
@@ -218,12 +276,12 @@ x_player_armor.register_element(element: string, def: table) -> nil
 Registers an armor material specification for tiered defense and craft generation.
 
 ```lua
-x_player_armor.register_material(material: string, def: table) -> nil
+x_player_armor.register_material(material: string, def: XPlayerArmorMaterialDef) -> nil
 ```
 
 **Parameters:**
 - `material` (`string`) — Unique material key string (e.g. "wood", "steel", "diamond")
-- `def` (`table`) — Material attributes table (crafting ingredients, tiers, and default stats)
+- `def` (`XPlayerArmorMaterialDef`) — Material attributes table specifying tiers, stats, and crafting ingredients
 
 **Returns:**
 - (`nil`)
@@ -253,14 +311,14 @@ Retrieves the armor definition table for a registered armor item.
 Checks internal registered_armors first, falling back to core.registered_tools or core.registered_items.
 
 ```lua
-x_player_armor.get_armor_def(item_name: string) -> table?
+x_player_armor.get_armor_def(item_name: string) -> XPlayerArmorItemDef?
 ```
 
 **Parameters:**
 - `item_name` (`string`) — Technical item name
 
 **Returns:**
-- `def` (`table?`) — Registered armor item definition or nil
+- `def` (`XPlayerArmorItemDef?`) — Registered armor item definition or nil
 
 ---
 
@@ -489,14 +547,14 @@ x_player_armor.get_valid_player(player: ObjectRef) -> string?, InvRef?
 Returns the active armor definition cache for a player.
 
 ```lua
-x_player_armor.get_player_def(player: ObjectRef) -> table
+x_player_armor.get_player_def(player: ObjectRef) -> XPlayerArmorPlayerDef
 ```
 
 **Parameters:**
 - `player` (`ObjectRef`) — Target player
 
 **Returns:**
-- `state` (`table`) — Active player armor runtime state table (stats, groups, levels)
+- `state` (`XPlayerArmorPlayerDef`) — Active player armor runtime state table (stats, groups, levels)
 
 ---
 

@@ -186,16 +186,41 @@ function api.run_callbacks(event_name, ...)
 	end
 end
 
+---Configuration table for registering an armor slot element.
+---@class XPlayerArmorElementDef
+---@field slot number? Primary inventory slot index (1 to 6)
+---@field group string? Item group associated with this element (e.g. "armor_head", "armor_torso")
+---@field label string? Human-readable localized slot name (e.g. "Helmet", "Chestplate")
+---@field pieces string[]? List of constituent 3D piece IDs (e.g. {"torso", "sleeve_l", "sleeve_r"})
+---@field preview_slot number? Preview 3D model slot index (0 to 8)
+---@field bone string? Default skeletal bone name for attachment (e.g. "Head", "Body")
+---@field transforms table<string, XPlayerArmorTransform>? Default skeletal bone transforms by model format
+
+---Configuration table for registering an armor material.
+---@class XPlayerArmorMaterialDef
+---@field name string Localized material display name (e.g. "Steel", "Diamond")
+---@field uses number Base durability uses before breaking (e.g. 350, 1200)
+---@field level table<string, number> Element to defense level rating map (e.g. {head = 10, torso = 15, legs = 12, feet = 8, shield = 10})
+---@field heal table<string, number>? Optional element to health regeneration level map
+---@field fire table<string, number>? Optional element to fire/lava protection tier map (1 to 5)
+---@field water table<string, number>? Optional element to water breathing/drowning protection level map
+---@field feather table<string, number>? Optional element to fall damage feather mitigation level map
+---@field speed table<string, number>? Optional element to physics movement speed multiplier map
+---@field jump table<string, number>? Optional element to physics jump height multiplier map
+---@field gravity table<string, number>? Optional element to physics gravity multiplier map
+---@field ingredient string? Crafting recipe item or group identifier (e.g. "default:steel_ingot")
+---@field sound string? Equipment sound identifier (e.g. "metal", "wood", "crystal")
+
 ---Registers an armor slot element specification (e.g. "head", "torso", "legs", "feet", "shield").
----@param element string Unique element identifier string
----@param def table Element configuration table defining slot mapping and model piece associations
+---@param element string Unique element identifier string (e.g. "head", "torso", "legs", "feet", "shield")
+---@param def XPlayerArmorElementDef Element configuration table defining slot mapping, groups, labels, and model pieces
 function api.register_element(element, def)
 	api.registered_elements[element] = def
 end
 
 ---Registers an armor material specification for tiered defense and craft generation.
 ---@param material string Unique material key string (e.g. "wood", "steel", "diamond")
----@param def table Material attributes table (crafting ingredients, tiers, and default stats)
+---@param def XPlayerArmorMaterialDef Material attributes table specifying tiers, stats, and crafting ingredients
 function api.register_material(material, def)
 	api.registered_materials[material] = def
 end
@@ -306,7 +331,7 @@ end
 ---Retrieves the armor definition table for a registered armor item.
 ---Checks internal registered_armors first, falling back to core.registered_tools or core.registered_items.
 ---@param item_name string Technical item name
----@return table? def Registered armor item definition or nil
+---@return XPlayerArmorItemDef? def Registered armor item definition or nil
 function api.get_armor_def(item_name)
 	if not item_name or item_name == "" then return nil end
 	local resolved = core.registered_aliases[item_name] or item_name
@@ -637,10 +662,28 @@ function api.set_shield_offset(format, pos, rot)
 	end
 end
 
+---Runtime state definition cache for an active player.
+---@class XPlayerArmorPlayerDef
+---@field state number Bitmask or numeric state flag of worn armor
+---@field count number Number of equipped armor pieces
+---@field level number Total aggregated defense level rating across all worn gear
+---@field heal number Total health regeneration boost rating
+---@field jump number Aggregated jump height multiplier modifier
+---@field speed number Aggregated movement speed multiplier modifier
+---@field gravity number Aggregated gravity multiplier modifier
+---@field fire number Maximum fire/lava protection tier rating
+---@field water number Total water breathing/drowning protection level
+---@field feather number Total fall damage mitigation level
+---@field has_shield boolean Whether a shield is currently equipped
+---@field has_reciprocate boolean Whether damage reciprocation (thorns) is active
+---@field groups table<string, number> Active defense ratings map against damage groups
+---@field textures string[] Array of resolved texture strings for player mesh
+---@field skin string Base skin texture filename
+
 ---Returns the active armor definition cache for a player.
 ---@nodiscard
 ---@param player ObjectRef Target player
----@return table state Active player armor runtime state table (stats, groups, levels)
+---@return XPlayerArmorPlayerDef state Active player armor runtime state table (stats, groups, levels)
 function api.get_player_def(player)
 	local name = player:get_player_name()
 	local pdef = rawget(api.def, name)

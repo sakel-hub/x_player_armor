@@ -129,6 +129,9 @@ async function main() {
         emit('  - [XPlayerArmorItemDef](#xplayerarmoritemdef)')
         emit('  - [XPlayerArmorTransform](#xplayerarmortransform)')
         emit('  - [XPlayerArmorConstants](#xplayerarmorconstants)')
+        emit('  - [XPlayerArmorElementDef](#xplayerarmorelementdef)')
+        emit('  - [XPlayerArmorMaterialDef](#xplayerarmormaterialdef)')
+        emit('  - [XPlayerArmorPlayerDef](#xplayerarmorplayerdef)')
         emit('  - [XPlayerArmorPunchCallback](#xplayerarmorpunchcallback)')
         emit('  - [XPlayerArmorSounds](#xplayerarmorsounds)')
         emit('  - [SkinResolution](#skinresolution)')
@@ -159,6 +162,9 @@ async function main() {
             'XPlayerArmorItemDef',
             'XPlayerArmorTransform',
             'XPlayerArmorConstants',
+            'XPlayerArmorElementDef',
+            'XPlayerArmorMaterialDef',
+            'XPlayerArmorPlayerDef',
             'XPlayerArmorPunchCallback',
             'XPlayerArmorSounds',
             'SkinResolution'
