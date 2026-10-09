@@ -135,7 +135,7 @@ local IMPACT_TEXPOOLS = {
 ---Spawns a particlespawner populated with both modern structured definitions and legacy fallback keys.
 ---Ensures 100% compatibility across all Luanti engine versions while keeping code DRY and optimized
 ---for multiplayer performance with targeted networking support.
----@param def table Modern structured particlespawner definition
+---@param def table Modern structured particlespawner definition (see Luanti doc/lua_api.md: ParticleSpawner definition)
 ---@return integer|nil spawner_id ID of registered particlespawner or nil
 function vfx.spawn_particles(def)
 	if not def then return nil end

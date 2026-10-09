@@ -394,7 +394,7 @@ end
 ---@param proj_obj ObjectRef Incoming projectile entity
 ---@param hit_pos vector? Impact position
 ---@param flight_dir vector? Incoming normalized flight direction
----@param _proj_data table? Optional projectile state data
+---@param _proj_data? XPlayerArmorProjectileData Optional projectile combat metadata
 ---@return boolean deflected, vector? bounce_velocity
 function combat.try_deflect_projectile(player, proj_obj, hit_pos, flight_dir, _proj_data)
 	if not constants.BLOCK_DEFLECT_PROJECTILES then
@@ -548,7 +548,7 @@ end
 ---@param player ObjectRef
 ---@param hitter ObjectRef?
 ---@param time_from_last_punch number?
----@param tool_capabilities table?
+---@param tool_capabilities table? Tool capabilities table of the punch (see Luanti doc/lua_api.md: Tool Capabilities)
 ---@param dir vector?
 ---@param damage number?
 function combat.handle_punch(player, hitter, time_from_last_punch, tool_capabilities, dir, damage)

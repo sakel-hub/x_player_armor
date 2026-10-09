@@ -2,10 +2,10 @@
 ---High-performance modular player armor, shield defense, durability, and damage mitigation system.
 ---@class XPlayerArmorAPI
 ---@field version string Semantic version of the mod
----@field def table<string, table<string, any>> Player armor state cache
----@field registered_armors table<string, table<string, any>> Registered armor item definitions
----@field registered_elements table<string, table<string, any>> Registered armor slot elements
----@field registered_materials table<string, table<string, any>> Registered armor materials
+---@field def table<string, XPlayerArmorPlayerDef> Player armor state cache
+---@field registered_armors table<string, XPlayerArmorItemDef> Registered armor item definitions
+---@field registered_elements table<string, XPlayerArmorElementDef> Registered armor slot elements
+---@field registered_materials table<string, XPlayerArmorMaterialDef> Registered armor materials
 ---@field registered_groups table<string, number> Base armor groups map
 ---@field callbacks table<string, function[]> Event callback listener tables
 ---@field constants XPlayerArmorConstants Constants and configuration settings
@@ -63,7 +63,7 @@ _G.x_player_armor = api
 
 ---Safely retrieves the global table of an optional mod if installed and loaded.
 ---@param modname string The name of the optional mod
----@return table|nil mod_api The global table or nil if absent
+---@return table<string, any>|nil mod_api The global table or nil if absent
 function api.get_mod_api(modname)
 	local mod = rawget(_G, modname)
 	if type(mod) == "table" then
@@ -150,7 +150,7 @@ function api.register_on_update(func)
 end
 
 ---Registers a global callback listener invoked when a player blocks an attack or deflects a projectile.
----@param func fun(player: ObjectRef, hitter: ObjectRef|table, damage: number, shield: ItemStack) Callback receiving player, hitter, damage, shield
+---@param func fun(player: ObjectRef, hitter: ObjectRef?, damage: number, shield: ItemStack) Callback receiving player, hitter, damage, shield
 function api.register_on_block(func)
 	table.insert(api.callbacks.on_block, func)
 end
@@ -226,7 +226,14 @@ function api.register_material(material, def)
 end
 
 ---Callback invoked when a player wearing armor or holding a shield is punched.
----@alias XPlayerArmorPunchCallback fun(player: ObjectRef, hitter?: ObjectRef, time?: number, tool_caps?: table, dir?: vector, damage?: number)
+---Receives defending player, attacking entity or player, seconds elapsed, tool capabilities table (see Luanti doc/lua_api.md: Tool Capabilities),
+---attack direction vector, and raw damage points.
+---@alias XPlayerArmorPunchCallback fun(player: ObjectRef, hitter?: ObjectRef, time?: number, tool_capabilities?: table, dir?: vector, damage?: number)
+
+---3D position and rotation offsets for skeletal bone attachment.
+---@class XPlayerArmorBoneOffset
+---@field pos Vector3|table<string, number> 3D position offset vector relative to bone origin {x, y, z}
+---@field rot Vector3|table<string, number> Euler rotation angles in degrees {x, y, z}
 
 ---Bone attachment configuration for custom 3D models.
 ---@class XPlayerArmorTransform
@@ -236,6 +243,33 @@ end
 ---@field rot Vector3|table<string, number> Euler rotation angles in degrees {x, y, z}
 ---@field scale Vector3|table<string, number>? Scale vector override {x, y, z} (default: {x=1, y=1, z=1})
 
+---Format-specific skeletal attachment transforms for modern GLTF/GLB and legacy B3D rigs.
+---@class XPlayerArmorFormatTransforms
+---@field glb? table<string, XPlayerArmorTransform> Skeletal transforms for modern GLTF/GLB models keyed by piece ID
+---@field b3d? table<string, XPlayerArmorTransform> Skeletal transforms for legacy B3D models keyed by piece ID
+
+---Skeletal bone transforms map either by piece ID or format-keyed.
+---@alias XPlayerArmorTransforms table<string, XPlayerArmorTransform>|XPlayerArmorFormatTransforms
+
+---Color gradient configuration for durability wear bar. Follows Luanti item definition standard.
+---@class XPlayerArmorWearColor
+---@field blend? "linear"|"constant" Color gradient interpolation mode between stops (default: "linear")
+---@field color_stops? table<number, string> Map of normalized wear thresholds (0.0 to 1.0) to ColorSpec (see Luanti doc/lua_api.md: Item definition)
+
+---Forearm attachment transform offsets for off-hand shields across model formats.
+---@class XPlayerArmorShieldOffset
+---@field glb? XPlayerArmorBoneOffset Attachment offsets for modern GLTF/GLB player models
+---@field b3d? XPlayerArmorBoneOffset Attachment offsets for legacy B3D player models
+---@field pos? Vector3|table<string, number> Shared position offset fallback vector {x, y, z}
+---@field rot? Vector3|table<string, number> Shared rotation angles fallback vector in degrees {x, y, z}
+
+---Custom hit and break particle spawner options. Follows Luanti ParticleSpawner definition.
+---@class XPlayerArmorParticleOpts
+---@field texture? string Custom particle texture filename (see Luanti doc/lua_api.md: ParticleSpawner definition)
+---@field count? number Number of particles spawned per burst
+---@field size? number|table Visual particle size range
+---@field glow? number Light emission level from 0 to 14
+
 ---Sound effects triggered during armor lifecycle and combat events.
 ---@class XPlayerArmorSounds
 ---@field equip string? Sound effect played when the item is equipped into an armor slot
@@ -243,6 +277,31 @@ end
 ---@field hit string? Sound effect played when armor absorbs a combat strike
 ---@field break_sound string? Sound effect played when the item breaks from wear exhaustion
 ---@field block string? Sound effect played when an incoming attack or projectile is deflected by a shield
+
+---Projectile combat metadata passed during projectile deflection queries.
+---@class XPlayerArmorProjectileData
+---@field damage? number Base projectile impact damage rating
+---@field shooter? ObjectRef Source entity or player that launched the projectile
+---@field name? string Technical projectile name or entity identifier
+---@field gravity? number Custom projectile gravity acceleration modifier
+
+---Configuration options for attaching or modifying a shield visual entity.
+---@class XPlayerArmorShieldVisualOpts
+---@field format? "glb"|"b3d" Target 3D model format
+---@field pos? Vector3|table<string, number> 3D attachment position offset vector
+---@field rot? Vector3|table<string, number> 3D Euler rotation angles vector in degrees
+---@field pos_glb? Vector3|table<string, number> Position offset override for GLTF/GLB models
+---@field rot_glb? Vector3|table<string, number> Rotation angles override for GLTF/GLB models
+---@field pos_b3d? Vector3|table<string, number> Position offset override for B3D models
+---@field rot_b3d? Vector3|table<string, number> Rotation angles override for B3D models
+---@field visual? string Entity visual mode (e.g. "wielditem" or "mesh")
+---@field visual_size? Vector3|table<string, number> Visual scaling factor override
+---@field glow? number Light emission level (0 to 14)
+---@field mesh? string Custom 3D mesh model asset filename
+---@field textures? string[] Custom textures array override
+---@field first_person? boolean Whether shield is visible in 1st person view
+---@field bone? string Target skeletal attachment bone (defaults to "Arm_Left")
+---@field entity_name? string Custom Lua entity name to spawn
 
 ---Complete configuration table for armor and shield item registration.
 ---Supports custom 3D models, bone transforms, audio, environmental perks, physics, and combat mechanics.
@@ -259,7 +318,7 @@ end
 ---@field mesh string? Custom 3D mesh filename (.glb or .b3d). Mutually exclusive with meshes (overridden if meshes is set).
 ---@field meshes table<string, string>? Map of piece IDs to custom 3D model files (e.g. {torso = "tunic.glb"}). Overrides mesh.
 ---@field pieces string[]? Array of piece IDs to attach from element definition (e.g. {"torso"}). Ignored if custom meshes is used.
----@field transforms table<string, XPlayerArmorTransform|table<string, XPlayerArmorTransform>>? Skeletal bone attachment transforms.
+---@field transforms XPlayerArmorTransforms? Skeletal bone attachment transforms keyed by piece ID or model format ("glb"|"b3d")
 ---@field glow number? Light emission level from 0 to 14 (ideal for enchanted, crystalline, or glowing gear). Ignored if custom 3D mesh is not used.
 ---@field visual_size Vector3|table<string, number>? Visual scale factor override for custom 3D models. Ignored if custom 3D mesh is not used.
 ---@field backface_culling boolean? Whether backface culling is enabled on the model entity (default: true). Ignored if custom 3D mesh is not used.
@@ -275,13 +334,13 @@ end
 ---@field material string? Material category key (e.g. "wood", "steel", "diamond", "nether"). Sets groups.armor_material_<material>.
 ---@field reciprocate_damage boolean|number? Whether damage is reflected back to attacker (thorns). Defaults true for shields, false for armor.
 ---@field reciprocate_percent number? Percentage of incoming damage reflected to attacker. Ignored if reciprocate_damage is false or nil.
----@field wear_color table? Durability bar color gradient configuration table
----@field shield_offset table? Custom shield forearm attachment transforms for glb and b3d skeletons. Ignored if element is not "shield".
+---@field wear_color XPlayerArmorWearColor? Durability bar color gradient configuration (see Luanti doc/lua_api.md: Item definition)
+---@field shield_offset XPlayerArmorShieldOffset? Custom shield forearm attachment transforms for glb and b3d skeletons. Ignored if element is not "shield".
 ---@field tower_shield boolean? Whether shield renders with tower shield model variant in preview and stand. Ignored if element is not "shield".
 ---@field block_reduction number? Frontal damage reduction fraction 0.0 to 1.0 (default: 0.20 or tiered). Ignored if element is not "shield".
 ---@field block_arc number? Custom frontal blocking arc angle in degrees (default: 44-64 deg tiered). Ignored if element is not "shield".
 ---@field deflect_projectiles boolean? Whether shield can physically deflect incoming arrows and projectiles. Ignored if element is not "shield".
----@field particles boolean|table? Custom hit and break particle effects configuration, or false to disable
+---@field particles (boolean|XPlayerArmorParticleOpts)? Custom hit and break particle spawner options, or false to disable (see Luanti doc/lua_api.md)
 ---@field groups table<string, number>? Item groups map. Automatically augmented with armor, perk, and material groups.
 ---@field armor_groups table<string, number>? Damage mitigation group ratings (e.g. {fleshy = 15})
 ---@field damage_groups table<string, number>? Tool durability degradation wear ratings against damage groups
@@ -631,7 +690,7 @@ end
 ---Gets the shield attachment transform for a given model format ("glb" or "b3d").
 ---@nodiscard
 ---@param format? string Model format ("glb" or "b3d", defaults to "glb")
----@return table offset Offset table containing pos and rot vectors for forearm shield attachment
+---@return XPlayerArmorBoneOffset offset Offset table containing pos and rot vectors for forearm shield attachment
 function api.get_shield_offset(format)
 	local fmt = format or "glb"
 	local consts = x_player_armor.constants
@@ -753,7 +812,7 @@ end
 ---@param player ObjectRef Defending player taking the punch
 ---@param hitter ObjectRef? Attacking entity or player
 ---@param time_from_last_punch number? Seconds elapsed since previous punch
----@param tool_capabilities table? Tool capabilities table of the punch
+---@param tool_capabilities table? Tool capabilities table of the punch (see Luanti doc/lua_api.md: Tool Capabilities)
 ---@param dir vector? Direction vector of the incoming attack
 ---@param damage number? Raw damage points before armor mitigation
 function api.punch(player, hitter, time_from_last_punch, tool_capabilities, dir, damage)
@@ -792,7 +851,7 @@ end
 
 ---Attaches modular armor visual entities to an arbitrary parent entity (such as a deathstats corpse).
 ---@param parent ObjectRef The entity to attach armor to
----@param player_or_name ObjectRef|string|table Player object, player name, or explicit armor item list
+---@param player_or_name ObjectRef|string|(string|ItemStack)[] Player object, player name, or explicit armor item list
 ---@param format string? Model format ("glb" or "b3d")
 ---@return ObjectRef[] entities List of spawned armor visual entities
 function api.attach_armor_to_entity(parent, player_or_name, format)
@@ -873,7 +932,7 @@ end
 ---@param proj_obj ObjectRef Incoming projectile entity
 ---@param hit_pos vector Impact position
 ---@param flight_dir vector? Incoming normalized flight direction
----@param proj_data table? Optional projectile state data
+---@param proj_data? XPlayerArmorProjectileData Optional projectile combat metadata
 ---@return boolean deflected True if the projectile was successfully deflected
 ---@return vector? bounce_velocity Deflected projectile velocity vector
 function api.try_deflect_projectile(player, proj_obj, hit_pos, flight_dir, proj_data)
@@ -908,8 +967,8 @@ end
 ---Attaches an off-hand shield entity to a player's left forearm or a target entity (such as a corpse).
 ---@param player_or_parent ObjectRef Target player or parent entity
 ---@param item_or_stack string|ItemStack Shield item name or stack
----@param format_or_opts? string|table Optional model format ("glb"|"b3d") or options table
----@param custom_opts? table Optional transform and visual overrides
+---@param format_or_opts? string|XPlayerArmorShieldVisualOpts Optional model format ("glb"|"b3d") or options table
+---@param custom_opts? XPlayerArmorShieldVisualOpts Optional transform and visual overrides
 ---@return ObjectRef? entity Attached entity reference or nil on failure
 function api.attach_shield(player_or_parent, item_or_stack, format_or_opts, custom_opts)
 	if not player_or_parent or (player_or_parent.is_valid and not player_or_parent:is_valid()) then
@@ -930,7 +989,7 @@ end
 ---@param parent ObjectRef The entity to attach the shield to
 ---@param item_or_stack string|ItemStack Shield item name or stack
 ---@param format string? Model format ("glb" or "b3d")
----@param custom_opts table? Optional custom overrides
+---@param custom_opts? XPlayerArmorShieldVisualOpts Optional custom overrides
 ---@return ObjectRef? entity The attached shield entity or nil
 function api.attach_shield_to_entity(parent, item_or_stack, format, custom_opts)
 	return api.visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_opts)
@@ -939,7 +998,7 @@ end
 ---Updates or modifies an attached off-hand shield entity via x_player_api.
 ---@param player ObjectRef Target player
 ---@param item_or_stack? string|ItemStack Shield item name or stack
----@param custom_opts? table Optional transform and visual overrides
+---@param custom_opts? XPlayerArmorShieldVisualOpts Optional transform and visual overrides
 ---@return ObjectRef? entity Updated shield entity reference or nil
 function api.update_shield(player, item_or_stack, custom_opts)
 	return api.compat_x_player_api.update_shield(player, item_or_stack, custom_opts)

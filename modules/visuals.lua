@@ -430,7 +430,7 @@ end)
 
 ---Attaches modular 3D armor visuals to a target parent entity (such as a corpse).
 ---@param parent ObjectRef The entity to attach armor to
----@param player_or_name ObjectRef|string|table Player object, name, or explicit armor item list
+---@param player_or_name ObjectRef|string|(string|ItemStack)[] Player object, player name, or explicit armor item list
 ---@param format string? Model format ("glb" or "b3d")
 ---@return ObjectRef[] entities List of spawned armor visual entities
 function visuals.attach_armor_to_entity(parent, player_or_name, format)
@@ -541,7 +541,7 @@ end
 ---@param parent ObjectRef The entity to attach the shield to
 ---@param item_or_stack string|ItemStack Shield item name or stack
 ---@param format string? Model format ("glb" or "b3d")
----@param custom_opts table? Optional custom overrides
+---@param custom_opts? XPlayerArmorShieldVisualOpts Optional custom overrides
 ---@return ObjectRef? entity The attached shield entity or nil
 function visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_opts)
 	if not parent or (parent.is_valid and not parent:is_valid()) then

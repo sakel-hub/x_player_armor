@@ -124,7 +124,7 @@ end
 ---Applies the forearm attachment transform (position and rotation) instead of generic hand grip.
 ---@param player ObjectRef Target player
 ---@param item_or_stack string|ItemStack Shield item name or stack
----@param custom_opts? table Optional transform and visual overrides
+---@param custom_opts? XPlayerArmorShieldVisualOpts Optional transform and visual overrides
 ---@return ObjectRef|nil entity Attached entity reference
 function x_api_compat.attach_shield(player, item_or_stack, custom_opts)
 	local x_api = get_api()
@@ -197,7 +197,7 @@ end
 ---Updates or modifies the attached left-hand shield entity using x_player_api
 ---@param player ObjectRef Target player
 ---@param item_or_stack? string|ItemStack Shield item name or stack
----@param custom_opts? table Optional transform and visual overrides
+---@param custom_opts? XPlayerArmorShieldVisualOpts Optional transform and visual overrides
 ---@return ObjectRef|nil entity Attached entity reference or nil
 function x_api_compat.update_shield(player, item_or_stack, custom_opts)
 	local x_api = get_api()
@@ -226,7 +226,7 @@ end
 ---@param parent ObjectRef Target parent entity
 ---@param item_or_stack string|ItemStack Shield item name or stack
 ---@param format? string Model format ("glb" or "b3d")
----@param custom_opts? table Optional transform and visual overrides
+---@param custom_opts? XPlayerArmorShieldVisualOpts Optional transform and visual overrides
 ---@return ObjectRef|nil entity Attached entity reference or nil
 function x_api_compat.attach_shield_to_entity(parent, item_or_stack, format, custom_opts)
 	return x_player_armor.visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_opts)

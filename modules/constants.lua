@@ -1,3 +1,11 @@
+---Material-tiered defense scaling and deflection properties for shields.
+---@class XPlayerArmorShieldTierProps
+---@field reduction number Frontal damage reduction fraction (0.0 to 1.0)
+---@field restitution number Projectile rebound velocity restitution fraction (0.0 to 1.0)
+---@field arc number Frontal blocking arc half-width angle in degrees
+---@field recoil_mult number Attacker recoil impulse multiplier
+---@field bias? number Lateral angular bias angle in degrees (default: 22)
+
 ---Core game constants, configuration defaults, and calibration properties for armor and shields.
 ---@class XPlayerArmorConstants
 ---@field SLOT_ELEMENTS table<number, string> Numeric slot index (1-5) to element name mapping
@@ -33,8 +41,8 @@
 ---@field BLOCK_DEFLECT_PROJECTILES boolean Global flag enabling physical projectile deflection
 ---@field BLOCK_RESTITUTION number Projectile rebound velocity restitution fraction (0.50 = 50% velocity retained)
 ---@field BLOCK_RECOIL_IMPULSE number Physics pushback impulse magnitude applied to attacker on shield block
----@field SHIELD_TIER_PROPERTIES table<string, table<string, number>> Material-tiered defense, restitution, and blocking arc ratings
----@field SHIELD_OFFSET table<string, table<string, table<string, number>>> Forearm attachment position and rotation offsets for GLB and B3D skeletons
+---@field SHIELD_TIER_PROPERTIES table<string, XPlayerArmorShieldTierProps> Material-tiered defense, restitution, and blocking arc ratings
+---@field SHIELD_OFFSET table<string, XPlayerArmorBoneOffset> Forearm attachment position and rotation offsets for GLB and B3D skeletons
 local constants = {}
 
 local S = core.get_translator("x_player_armor")

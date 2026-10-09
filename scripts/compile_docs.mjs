@@ -127,8 +127,17 @@ async function main() {
         emit()
         emit('- [Core Data Structures & Types](#core-data-structures--types)')
         emit('  - [XPlayerArmorItemDef](#xplayerarmoritemdef)')
+        emit('  - [XPlayerArmorTransforms](#xplayerarmortransforms)')
+        emit('  - [XPlayerArmorFormatTransforms](#xplayerarmorformattransforms)')
         emit('  - [XPlayerArmorTransform](#xplayerarmortransform)')
+        emit('  - [XPlayerArmorBoneOffset](#xplayerarmorboneoffset)')
+        emit('  - [XPlayerArmorShieldOffset](#xplayerarmorshieldoffset)')
+        emit('  - [XPlayerArmorShieldVisualOpts](#xplayerarmorshieldvisualopts)')
+        emit('  - [XPlayerArmorProjectileData](#xplayerarmorprojectiledata)')
+        emit('  - [XPlayerArmorWearColor](#xplayerarmorwearcolor)')
+        emit('  - [XPlayerArmorParticleOpts](#xplayerarmorparticleopts)')
         emit('  - [XPlayerArmorConstants](#xplayerarmorconstants)')
+        emit('  - [XPlayerArmorShieldTierProps](#xplayerarmorshieldtierprops)')
         emit('  - [XPlayerArmorElementDef](#xplayerarmorelementdef)')
         emit('  - [XPlayerArmorMaterialDef](#xplayerarmormaterialdef)')
         emit('  - [XPlayerArmorPlayerDef](#xplayerarmorplayerdef)')
@@ -160,8 +169,17 @@ async function main() {
 
         const primaryTypes = [
             'XPlayerArmorItemDef',
+            'XPlayerArmorTransforms',
+            'XPlayerArmorFormatTransforms',
             'XPlayerArmorTransform',
+            'XPlayerArmorBoneOffset',
+            'XPlayerArmorShieldOffset',
+            'XPlayerArmorShieldVisualOpts',
+            'XPlayerArmorProjectileData',
+            'XPlayerArmorWearColor',
+            'XPlayerArmorParticleOpts',
             'XPlayerArmorConstants',
+            'XPlayerArmorShieldTierProps',
             'XPlayerArmorElementDef',
             'XPlayerArmorMaterialDef',
             'XPlayerArmorPlayerDef',
@@ -178,6 +196,13 @@ async function main() {
             emit()
             if (typ.description) {
                 emit(typ.description)
+                emit()
+            }
+
+            if (typ.type === 'alias' && typ.typ) {
+                emit('```lua')
+                emit(`type ${typ.name} = ${typ.typ}`)
+                emit('```')
                 emit()
             }
 
