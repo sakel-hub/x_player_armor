@@ -115,6 +115,9 @@ Format-specific skeletal attachment transforms for modern GLTF/GLB and legacy B3
 | :--- | :--- | :--- |
 | `glb` | `table<string,XPlayerArmorTransform>?` | Skeletal transforms for modern GLTF/GLB models keyed by piece ID |
 | `b3d` | `table<string,XPlayerArmorTransform>?` | Skeletal transforms for legacy B3D models keyed by piece ID |
+| `skinsdb_b3d` | `table<string,XPlayerArmorTransform>?` | Skeletal transforms for skinsdb 1.8 3D character B3D models |
+| `skinsdb_glb` | `table<string,XPlayerArmorTransform>?` | Skeletal transforms for skinsdb 1.8 3D character GLB models |
+| `skinsdb` | `table<string,XPlayerArmorTransform>?` | Alias for skinsdb_b3d transforms |
 
 ### `XPlayerArmorTransform`
 

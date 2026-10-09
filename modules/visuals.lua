@@ -34,27 +34,54 @@ core.register_entity("x_player_armor:visual", {
 
 ---Determines the appropriate parent ObjectRef targets (handles x_player_api proxies if active).
 ---@param player ObjectRef
----@return table<{parent: ObjectRef, observers: table<string, boolean>?, format: string}> targets
+---@return table<{parent: ObjectRef, observers: table<string, boolean>?, format: string, is_skinsdb: boolean?}> targets
 local function get_attachment_targets(player)
 	local targets = {}
 	local x_api = x_player_armor.get_mod_api("x_player_api")
+
+	local model_name = (x_api and x_api.get_model_name and x_api.get_model_name(player))
+	if not model_name and player and player.get_properties then
+		local props = player:get_properties()
+		model_name = props and props.mesh
+	end
+
+	local is_skinsdb = model_name and (
+		model_name:find("skinsdb", 1, true) ~= nil or
+		model_name:find("3d_armor", 1, true) ~= nil
+	)
+
 	if x_api and x_api.get_visual_proxies then
 		if not (x_api.is_pure_native_b3d_active and x_api.is_pure_native_b3d_active(player)) then
 			local proxies = x_api.get_visual_proxies(player)
 			if proxies then
 				if proxies.glb and proxies.glb:is_valid() then
 					local observers = x_api.get_modern_observers and x_api.get_modern_observers()
-					table.insert(targets, {parent = proxies.glb, observers = observers, format = "glb"})
+					table.insert(targets, {
+						parent = proxies.glb,
+						observers = observers,
+						format = "glb",
+						is_skinsdb = is_skinsdb,
+					})
 				end
 				if proxies.b3d and proxies.b3d:is_valid() then
 					local observers = x_api.get_legacy_observers and x_api.get_legacy_observers()
-					table.insert(targets, {parent = proxies.b3d, observers = observers, format = "b3d"})
+					table.insert(targets, {
+						parent = proxies.b3d,
+						observers = observers,
+						format = "b3d",
+						is_skinsdb = is_skinsdb,
+					})
 				end
 			end
 		end
 	end
 	if #targets == 0 then
-		table.insert(targets, {parent = player, observers = nil, format = "b3d"})
+		table.insert(targets, {
+			parent = player,
+			observers = nil,
+			format = "b3d",
+			is_skinsdb = is_skinsdb,
+		})
 	end
 	return targets
 end
@@ -70,9 +97,32 @@ end
 local function spawn_piece(target, piece_id, default_texture, glow, player_name, item_def)
 	local parent = target.parent
 	local format = target.format or "b3d"
-	local default_trans = constants.ATTACH_TRANSFORMS[format] and constants.ATTACH_TRANSFORMS[format][piece_id]
+
+	local is_skinsdb = target.is_skinsdb
+	if is_skinsdb == nil then
+		local p_mesh = (parent.get_properties and parent:get_properties().mesh)
+		if p_mesh then
+			is_skinsdb = (p_mesh:find("skinsdb", 1, true) ~= nil) or (p_mesh:find("3d_armor", 1, true) ~= nil)
+		elseif player_name then
+			local p = core.get_player_by_name(player_name)
+			if p and p:is_player() then
+				local x_api = x_player_armor.get_mod_api("x_player_api")
+				local mname = (x_api and x_api.get_model_name and x_api.get_model_name(p))
+					or (p.get_properties and p:get_properties().mesh)
+				is_skinsdb = mname and (
+					(mname:find("skinsdb", 1, true) ~= nil) or
+					(mname:find("3d_armor", 1, true) ~= nil)
+				)
+			end
+		end
+	end
+
+	local rig_format = is_skinsdb and ("skinsdb_" .. format) or format
+	local default_trans = (constants.ATTACH_TRANSFORMS[rig_format] and constants.ATTACH_TRANSFORMS[rig_format][piece_id])
+		or (constants.ATTACH_TRANSFORMS[format] and constants.ATTACH_TRANSFORMS[format][piece_id])
 	local custom_trans = item_def and item_def.transforms and (
-		(item_def.transforms[format] and item_def.transforms[format][piece_id])
+		(item_def.transforms[rig_format] and item_def.transforms[rig_format][piece_id])
+		or (item_def.transforms[format] and item_def.transforms[format][piece_id])
 		or item_def.transforms[piece_id]
 	)
 
@@ -81,7 +131,10 @@ local function spawn_piece(target, piece_id, default_texture, glow, player_name,
 	local bone = (custom_trans and custom_trans.bone) or (default_trans and default_trans.bone) or "Body"
 	local pos = (custom_trans and custom_trans.pos) or (default_trans and default_trans.pos) or {x = 0, y = 0, z = 0}
 	local rot = (custom_trans and custom_trans.rot) or (default_trans and default_trans.rot) or {x = 0, y = 0, z = 0}
-	local scale = (custom_trans and custom_trans.scale) or (item_def and item_def.visual_size) or {x = 1, y = 1, z = 1}
+	local scale = (custom_trans and custom_trans.scale)
+		or (item_def and item_def.visual_size)
+		or (default_trans and default_trans.scale)
+		or {x = 1, y = 1, z = 1}
 
 	local model = nil
 	if item_def then
@@ -266,7 +319,8 @@ function visuals.update_player_visuals(player)
 			local needs_spawn = false
 			local target_pieces = (target.def and target.def.pieces) or (constants.ELEMENT_PIECES[element] or {})
 			local expected_count = #targets * #target_pieces
-			if not current or current.item ~= target.item or #current ~= expected_count then
+			local is_skinsdb_rig = (targets[1] and targets[1].is_skinsdb) or false
+			if not current or current.item ~= target.item or (current.is_skinsdb ~= is_skinsdb_rig) or #current ~= expected_count then
 				needs_spawn = true
 			else
 				-- Verify validity and attachment to an active target parent
@@ -299,6 +353,7 @@ function visuals.update_player_visuals(player)
 				clear_element_visuals(name, element)
 				local created = spawn_element_pieces(targets, element, target, name)
 				created.item = target.item
+				created.is_skinsdb = is_skinsdb_rig
 				visuals.player_entities[name][element] = created
 			end
 		end
@@ -495,7 +550,9 @@ function visuals.attach_armor_to_entity(parent, player_or_name, format)
 		return {}
 	end
 
-	local target = { parent = parent, format = fmt }
+	local p_mesh = (parent.get_properties and parent:get_properties().mesh) or ""
+	local is_skinsdb = (p_mesh:find("skinsdb", 1, true) ~= nil) or (p_mesh:find("3d_armor", 1, true) ~= nil)
+	local target = { parent = parent, format = fmt, is_skinsdb = is_skinsdb }
 	local created = {}
 
 	for _, stack in ipairs(armor_stacks) do

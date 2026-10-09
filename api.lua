@@ -247,6 +247,9 @@ end
 ---@class XPlayerArmorFormatTransforms
 ---@field glb? table<string, XPlayerArmorTransform> Skeletal transforms for modern GLTF/GLB models keyed by piece ID
 ---@field b3d? table<string, XPlayerArmorTransform> Skeletal transforms for legacy B3D models keyed by piece ID
+---@field skinsdb_b3d? table<string, XPlayerArmorTransform> Skeletal transforms for skinsdb 1.8 3D character B3D models
+---@field skinsdb_glb? table<string, XPlayerArmorTransform> Skeletal transforms for skinsdb 1.8 3D character GLB models
+---@field skinsdb? table<string, XPlayerArmorTransform> Alias for skinsdb_b3d transforms
 
 ---Skeletal bone transforms map either by piece ID or format-keyed.
 ---@alias XPlayerArmorTransforms table<string, XPlayerArmorTransform>|XPlayerArmorFormatTransforms

@@ -752,7 +752,9 @@ local function create_mock_player(name)
 	function player:set_breath(val) self.breath = val end
 	function player:set_armor_groups(groups) self.armor_groups = groups end
 	function player:set_physics_override(phys) self.physics = phys end
-	function player:get_properties() return {textures = {"x_player_armor_character.png"}} end
+	player.properties = {textures = {"x_player_armor_character.png"}, mesh = "character.b3d"}
+	function player:get_properties() return self.properties end
+	function player:set_properties(p) for k, v in pairs(p) do self.properties[k] = v end end
 	function player:get_wielded_item() return self.wielded_item or ItemStack("") end
 	function player:set_wielded_item(item) self.wielded_item = item end
 	function player:get_wield_index() return self.wield_index or 1 end
@@ -1180,6 +1182,66 @@ test("Dual-Format Armor Attachments & Visuals Reconciliation", function()
 	x_player_armor.visuals.clear_all("visual_tester")
 	assert(x_player_armor.visuals.player_entities["visual_tester"] == nil, "clear_all must clean up player table")
 	_G.x_player_api = nil
+end)
+
+test("SkinsDB 1.8 3D Rig Attachment Transforms & Torso Scaling Calibration", function()
+	local constants = x_player_armor.constants
+	assert(constants.ATTACH_TRANSFORMS.skinsdb_b3d, "skinsdb_b3d transform presets must exist")
+	assert(constants.ATTACH_TRANSFORMS.skinsdb_glb, "skinsdb_glb transform presets must exist")
+	assert(constants.ATTACH_TRANSFORMS.skinsdb, "skinsdb alias must exist")
+
+	-- Verify calibrated scaling factors for skinsdb 6.75 torso height & 1.8 outer layers
+	local s_b3d = constants.ATTACH_TRANSFORMS.skinsdb_b3d
+	assert(s_b3d.torso.scale and s_b3d.torso.scale.y == 1.08, "Torso scale Y must be 1.08 to envelope 6.75 torso")
+	assert(s_b3d.torso.scale.x == 1.05, "Torso scale X must be 1.05 to cover jacket overlay")
+	assert(s_b3d.sleeve_l.scale and s_b3d.sleeve_l.scale.y == 1.08, "Sleeve L scale Y must be 1.08")
+	assert(s_b3d.sleeve_l.scale.x == 1.06, "Sleeve L scale X must be 1.06 to cover sleeve overlay")
+	assert(s_b3d.sleeve_r.scale and s_b3d.sleeve_r.scale.y == 1.08, "Sleeve R scale Y must be 1.08")
+	assert(s_b3d.sleeve_r.scale.x == 1.06, "Sleeve R scale X must be 1.06 to cover sleeve overlay")
+
+	-- 1. Standard player with character.b3d
+	local norm_hero = create_mock_player("norm_player")
+	x_player_armor.inventory.init_player_inventory(norm_hero)
+	local _, n_inv = x_player_armor.get_valid_player(norm_hero)
+	n_inv:set_stack("armor", 2, ItemStack("x_player_armor:chestplate_steel"))
+	x_player_armor.visuals.update_player_visuals(norm_hero)
+
+	local n_ents = x_player_armor.visuals.player_entities["norm_player"]
+	assert(n_ents and n_ents.torso, "Torso entities must be spawned for standard player")
+	-- Normal character.b3d player uses default 1.0 scaling
+	local n_torso_props = n_ents.torso[1]:get_properties()
+	assert(n_torso_props.visual_size.y == 1, "Standard player torso visual_size.y must remain 1.0")
+
+	-- 2. Player with skinsdb_3d_armor_character_5.b3d model
+	local skin_hero = create_mock_player("skin_player")
+	skin_hero:set_properties({mesh = "skinsdb_3d_armor_character_5.b3d"})
+	x_player_armor.inventory.init_player_inventory(skin_hero)
+	local _, s_inv = x_player_armor.get_valid_player(skin_hero)
+	s_inv:set_stack("armor", 2, ItemStack("x_player_armor:chestplate_steel"))
+	x_player_armor.visuals.update_player_visuals(skin_hero)
+
+	local s_ents = x_player_armor.visuals.player_entities["skin_player"]
+	assert(s_ents and s_ents.torso, "Torso entities must be spawned for skinsdb player")
+	local s_torso_props = s_ents.torso[1]:get_properties()
+	assert(s_torso_props.visual_size.y == 1.08, "Skinsdb player torso visual_size.y must be scaled to 1.08")
+	assert(s_torso_props.visual_size.x == 1.05, "Skinsdb player torso visual_size.x must be scaled to 1.05")
+
+	-- Check sleeves on skinsdb player
+	local s_sleeve_l_props = s_ents.torso[2]:get_properties()
+	assert(s_sleeve_l_props.visual_size.y == 1.08, "Skinsdb player sleeve_l visual_size.y must be 1.08")
+	assert(s_sleeve_l_props.visual_size.x == 1.06, "Skinsdb player sleeve_l visual_size.x must be 1.06")
+
+	-- 3. Dynamic Model Transition: switching normal player to skinsdb player model
+	norm_hero:set_properties({mesh = "skinsdb_3d_armor_character_5.b3d"})
+	x_player_armor.visuals.update_player_visuals(norm_hero)
+	local transitioned_ents = x_player_armor.visuals.player_entities["norm_player"]
+	assert(transitioned_ents and transitioned_ents.torso, "Torso entities must exist after transition")
+	local trans_torso_props = transitioned_ents.torso[1]:get_properties()
+	assert(trans_torso_props.visual_size.y == 1.08, "Transitioned player torso must automatically respawn with 1.08 scale")
+
+	-- Clean up
+	x_player_armor.visuals.clear_all("norm_player")
+	x_player_armor.visuals.clear_all("skin_player")
 end)
 
 test("Modern Particle Spawners & VFX Particle Sheet Integration", function()
