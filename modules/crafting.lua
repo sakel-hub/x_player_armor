@@ -95,11 +95,12 @@ core.register_craft({
 core.register_craft({
 	output = "x_player_armor:stand",
 	recipe = {
-		{"", "default:fence_wood", ""},
-		{"", "default:fence_wood", ""},
-		{"default:wood", "default:wood", "default:wood"},
+		{"", "group:fence", ""},
+		{"", "group:fence", ""},
+		{"group:wood", "group:wood", "group:wood"},
 	},
 })
+
 
 -- Locked Armor Stand Recipe
 core.register_craft({

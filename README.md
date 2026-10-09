@@ -112,12 +112,24 @@ For complete class definitions, parameter types, callbacks, and subsystem method
 
 ---
 
+## Requirements & Compatibility
+
+- **Luanti**: Version **5.10.0** or higher
+- **Hard Dependencies**: **None** (zero hard dependencies — runs seamlessly in standalone custom games and arena servers)
+- **Optional Integrations**:
+  - `default` (Crafting recipes for cactus, steel, bronze, diamond, and gold gear)
+  - `player_api` / `x_player_api` (Player animations and off-hand shield attachment)
+  - `sfinv` / `unified_inventory` / `i3` (Inventory tabs and interactive 3D armor preview)
+  - `shields`, `3d_armor`, `3d_armor_stand` (Legacy API shims and drop-in compatibility)
+
+---
+
 ## Developer Tooling & Verification
 
 The mod includes full developer scripts, testing harnesses, and Luanti static analysis:
 
 ```bash
-# Run the 71-assertion automated unit test suite
+# Run the 73-assertion automated unit test suite
 npm test
 
 # Run Luanti static analysis (Luacheck)
