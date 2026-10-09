@@ -2,7 +2,7 @@ GNU LESSER GENERAL PUBLIC LICENSE
 Version 2.1, February 1999
 
 Copyright (C) 2026 SaKeL
-Based on 3d_armor Copyright (C) 2013-2020 Stuart Jones and contributors.
+Based on 3d_armor Copyright (C) 2013-2023 Stuart Jones and contributors.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -19,6 +19,8 @@ Media & Asset Attribution Manifest
 -------------------------------------------------------------------------------
 
 ### 3D Models
+
+#### 1. Character Armor & Preview Models (CC BY-SA 3.0)
 Individual Blender source files in assets/ and glTF 2.0 Binary (.glb) exports in models/:
 - `assets/x_player_armor_helmet.blend` -> `models/x_player_armor_helmet.glb`
 - `assets/x_player_armor_chestplate.blend` -> `models/x_player_armor_chestplate.glb`
@@ -30,10 +32,13 @@ Individual Blender source files in assets/ and glTF 2.0 Binary (.glb) exports in
 - `assets/x_player_armor_boot_r.blend` -> `models/x_player_armor_boot_r.glb`
 - `assets/x_player_armor_shield.blend` -> `models/x_player_armor_shield.glb`
 - `assets/x_player_armor_preview.blend` -> `models/x_player_armor_preview.glb`
+Rigged, UV-mapped, and exported for Luanti by SaKeL under CC BY-SA 3.0.
+Base geometric references derived from Stuart Jones, MirceaKitsune, and Jordach (CC BY-SA 3.0).
+
+#### 2. Armor Stand & Promotional Scenes (CC-BY 4.0)
 - `assets/x_player_armor_stand.blend` -> `models/x_player_armor_stand.glb`
 - `assets/x_player_armor_poster.blend` (Promotional poster 3D staging scene)
-Rigged, UV-mapped, and exported for Luanti by SaKeL under CC-BY 4.0.
-Base geometric references derived from Stuart Jones, MirceaKitsune, and Jordach (LGPL-2.1 / CC-BY 3.0).
+Modeled, rigged, and exported for Luanti by SaKeL under CC-BY 4.0.
 
 ### Textures & Visual Assets
 All armor and shield texture sheets, inventory sprites, UI textures, and VFX particle sheets (CC-BY 4.0):
@@ -51,23 +56,87 @@ Authored, colored, and optimized by SaKeL (CC-BY 4.0):
 - `textures/x_player_armor_nether.png`
 - `textures/x_player_armor_steel.png`
 - `textures/x_player_armor_wood.png`
-- Alternative texture sheets archive: `assets/textures_alt/x_player_armor_*.png`
 
-#### 2. Dedicated 2D Pixel-Art Inventory Sprites (16x16 Pixel Art)
+#### 2. Alternative Texture Sheets Archive
+Authored by SaKeL (CC-BY 4.0):
+- `assets/textures_alt/x_player_armor_admin.png`
+- `assets/textures_alt/x_player_armor_bronze.png`
+- `assets/textures_alt/x_player_armor_cactus.png`
+- `assets/textures_alt/x_player_armor_crystal.png`
+- `assets/textures_alt/x_player_armor_diamond.png`
+- `assets/textures_alt/x_player_armor_gold.png`
+- `assets/textures_alt/x_player_armor_mithril.png`
+- `assets/textures_alt/x_player_armor_nether.png`
+- `assets/textures_alt/x_player_armor_steel.png`
+- `assets/textures_alt/x_player_armor_wood.png`
+
+#### 3. Dedicated 2D Pixel-Art Inventory Sprites (16x16 Pixel Art)
 Hand-drawn pixel art sprites by SaKeL (CC-BY 4.0):
-- Helmets: `textures/x_player_armor_inv_helmet_<material>.png` (admin, bronze, cactus, crystal, diamond, gold, mithril, nether, steel, wood)
-- Chestplates: `textures/x_player_armor_inv_chestplate_<material>.png` (admin, bronze, cactus, crystal, diamond, gold, mithril, nether, steel, wood)
-- Leggings: `textures/x_player_armor_inv_leggings_<material>.png` (admin, bronze, cactus, crystal, diamond, gold, mithril, nether, steel, wood)
-- Boots: `textures/x_player_armor_inv_boots_<material>.png` (admin, bronze, cactus, crystal, diamond, gold, mithril, nether, steel, wood)
-- Shields: `textures/x_player_armor_inv_shield_<material>.png` (admin, bronze, cactus, crystal, diamond, gold, mithril, nether, steel, wood)
-- Enhanced Shields: `textures/x_player_armor_inv_shield_enhanced_cactus.png`, `textures/x_player_armor_inv_shield_enhanced_wood.png`
+- Helmets:
+  - `textures/x_player_armor_inv_helmet_admin.png`
+  - `textures/x_player_armor_inv_helmet_bronze.png`
+  - `textures/x_player_armor_inv_helmet_cactus.png`
+  - `textures/x_player_armor_inv_helmet_crystal.png`
+  - `textures/x_player_armor_inv_helmet_diamond.png`
+  - `textures/x_player_armor_inv_helmet_gold.png`
+  - `textures/x_player_armor_inv_helmet_mithril.png`
+  - `textures/x_player_armor_inv_helmet_nether.png`
+  - `textures/x_player_armor_inv_helmet_steel.png`
+  - `textures/x_player_armor_inv_helmet_wood.png`
+- Chestplates:
+  - `textures/x_player_armor_inv_chestplate_admin.png`
+  - `textures/x_player_armor_inv_chestplate_bronze.png`
+  - `textures/x_player_armor_inv_chestplate_cactus.png`
+  - `textures/x_player_armor_inv_chestplate_crystal.png`
+  - `textures/x_player_armor_inv_chestplate_diamond.png`
+  - `textures/x_player_armor_inv_chestplate_gold.png`
+  - `textures/x_player_armor_inv_chestplate_mithril.png`
+  - `textures/x_player_armor_inv_chestplate_nether.png`
+  - `textures/x_player_armor_inv_chestplate_steel.png`
+  - `textures/x_player_armor_inv_chestplate_wood.png`
+- Leggings:
+  - `textures/x_player_armor_inv_leggings_admin.png`
+  - `textures/x_player_armor_inv_leggings_bronze.png`
+  - `textures/x_player_armor_inv_leggings_cactus.png`
+  - `textures/x_player_armor_inv_leggings_crystal.png`
+  - `textures/x_player_armor_inv_leggings_diamond.png`
+  - `textures/x_player_armor_inv_leggings_gold.png`
+  - `textures/x_player_armor_inv_leggings_mithril.png`
+  - `textures/x_player_armor_inv_leggings_nether.png`
+  - `textures/x_player_armor_inv_leggings_steel.png`
+  - `textures/x_player_armor_inv_leggings_wood.png`
+- Boots:
+  - `textures/x_player_armor_inv_boots_admin.png`
+  - `textures/x_player_armor_inv_boots_bronze.png`
+  - `textures/x_player_armor_inv_boots_cactus.png`
+  - `textures/x_player_armor_inv_boots_crystal.png`
+  - `textures/x_player_armor_inv_boots_diamond.png`
+  - `textures/x_player_armor_inv_boots_gold.png`
+  - `textures/x_player_armor_inv_boots_mithril.png`
+  - `textures/x_player_armor_inv_boots_nether.png`
+  - `textures/x_player_armor_inv_boots_steel.png`
+  - `textures/x_player_armor_inv_boots_wood.png`
+- Shields:
+  - `textures/x_player_armor_inv_shield_admin.png`
+  - `textures/x_player_armor_inv_shield_bronze.png`
+  - `textures/x_player_armor_inv_shield_cactus.png`
+  - `textures/x_player_armor_inv_shield_crystal.png`
+  - `textures/x_player_armor_inv_shield_diamond.png`
+  - `textures/x_player_armor_inv_shield_gold.png`
+  - `textures/x_player_armor_inv_shield_mithril.png`
+  - `textures/x_player_armor_inv_shield_nether.png`
+  - `textures/x_player_armor_inv_shield_steel.png`
+  - `textures/x_player_armor_inv_shield_wood.png`
+- Enhanced Shields:
+  - `textures/x_player_armor_inv_shield_enhanced_cactus.png`
+  - `textures/x_player_armor_inv_shield_enhanced_wood.png`
 
-#### 3. In-World Enhanced Shield Textures
+#### 4. In-World Enhanced Shield Textures
 Authored by SaKeL (CC-BY 4.0):
 - `textures/x_player_armor_shield_enhanced_cactus.png`
 - `textures/x_player_armor_shield_enhanced_wood.png`
 
-#### 4. Armor Stand & UI Textures
+#### 5. Armor Stand & UI Textures
 Authored and arranged by SaKeL (CC-BY 4.0):
 - Stand Node Textures: `textures/x_player_armor_stand_shared.png`, `textures/x_player_armor_stand_locked.png`
 - Stand Inventory Icons: `textures/x_player_armor_stand_inv.png`, `textures/x_player_armor_stand_locked_inv.png`
@@ -75,7 +144,7 @@ Authored and arranged by SaKeL (CC-BY 4.0):
 - Navigation & Hotbar Icons: `textures/x_player_armor_icon.png`, `textures/x_player_armor_inventory_plus.png`
 - Baseline Preview Character Skin: `textures/x_player_armor_character.png`
 
-#### 5. Combat VFX Particle Sheet & Media
+#### 6. Combat VFX Particle Sheet & Media
 Authored by SaKeL (CC-BY 4.0 / CC0 1.0):
 - Combat Particle Sheet: `textures/x_player_armor_particles.png` (8 animation frames: healing sparkles, protective wards, shield impact deflect, and shatter shards)
 - Showcase Media: `screenshot.png` (In-game promotional showcase screenshot)
@@ -85,19 +154,29 @@ Authored by SaKeL (CC-BY 4.0 / CC0 1.0):
 
 #### Armor & Shield Equipment Sounds (CC0 1.0 Universal)
 Mastered, sliced, trimmed, anti-click micro-faded, and transcoded to mono 44.1 kHz Ogg Vorbis specifically for Luanti by SaKeL:
-- `sounds/x_player_armor_equip.1.ogg`, `sounds/x_player_armor_equip.2.ogg`, `sounds/x_player_armor_equip.3.ogg`
-- `sounds/x_player_armor_unequip.1.ogg`, `sounds/x_player_armor_unequip.2.ogg`
-- `sounds/x_player_armor_hit_metal.1.ogg`, `sounds/x_player_armor_hit_metal.2.ogg`, `sounds/x_player_armor_hit_metal.3.ogg`
-- `sounds/x_player_armor_hit_wood.1.ogg`, `sounds/x_player_armor_hit_wood.2.ogg`
-- `sounds/x_player_armor_hit_crystal.1.ogg`, `sounds/x_player_armor_hit_crystal.2.ogg`
-- `sounds/x_player_armor_shield_block.1.ogg`, `sounds/x_player_armor_shield_block.2.ogg`, `sounds/x_player_armor_shield_block.3.ogg`
+- `sounds/x_player_armor_equip.1.ogg`
+- `sounds/x_player_armor_equip.2.ogg`
+- `sounds/x_player_armor_equip.3.ogg`
+- `sounds/x_player_armor_unequip.1.ogg`
+- `sounds/x_player_armor_unequip.2.ogg`
+- `sounds/x_player_armor_hit_metal.1.ogg`
+- `sounds/x_player_armor_hit_metal.2.ogg`
+- `sounds/x_player_armor_hit_metal.3.ogg`
+- `sounds/x_player_armor_hit_wood.1.ogg`
+- `sounds/x_player_armor_hit_wood.2.ogg`
+- `sounds/x_player_armor_hit_crystal.1.ogg`
+- `sounds/x_player_armor_hit_crystal.2.ogg`
+- `sounds/x_player_armor_shield_block.1.ogg`
+- `sounds/x_player_armor_shield_block.2.ogg`
+- `sounds/x_player_armor_shield_block.3.ogg`
 - `sounds/x_player_armor_break_metal.ogg`
 - `sounds/x_player_armor_break_wood.ogg`
-- `sounds/x_player_armor_break_crystal.ogg`, `sounds/x_player_armor_break_glass.ogg`
+- `sounds/x_player_armor_break_crystal.ogg`
+- `sounds/x_player_armor_break_glass.ogg`
 - `sounds/x_player_armor_warn.ogg`
 License: Creative Commons 0 1.0 Universal (CC0 1.0) / Public Domain
 Audio synthesis, mastering, and engineering: SaKeL.
-Original acoustic sources: Ogrebane, TinyWorlds, and rubberduck (CC0 1.0).
+
 
 #### Armor Stand Node Interaction Sounds (CC0 1.0 Universal)
 Sourced from Freesound.org, sliced, trimmed, anti-click micro-faded, peak-normalized (-1.0 dBFS), and transcoded to mono 44.1 kHz Ogg Vorbis specifically for Luanti by SaKeL:

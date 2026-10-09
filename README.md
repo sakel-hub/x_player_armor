@@ -149,4 +149,4 @@ npm run push:ci
 
 - **Mod Author**: SaKeL
 - **Code License**: GNU Lesser General Public License v2.1 or later (LGPL-2.1+)
-- **Media License**: Creative Commons Attribution 4.0 International (CC-BY 4.0) & CC0 1.0
+- **Media License**: Creative Commons Attribution-ShareAlike 3.0 (CC BY-SA 3.0), CC-BY 4.0 & CC0 1.0 (see [LICENSE.txt](LICENSE.txt))
