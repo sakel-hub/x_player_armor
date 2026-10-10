@@ -19,7 +19,7 @@ x_api_compat.get_api = get_api
 ---Check whether x_player_api is present and active
 ---@return boolean
 function x_api_compat.is_present()
-	return is_x_player_api_present and (get_api() ~= nil)
+	return (is_x_player_api_present or get_api() ~= nil) and (get_api() ~= nil)
 end
 
 ---Initialize x_player_api integrations if available
@@ -171,11 +171,16 @@ function x_api_compat.attach_shield(player, item_or_stack, custom_opts)
 		or (item_def and (item_def.textures or (item_def.texture and {item_def.texture})))
 	local visual_type = (custom_opts and custom_opts.visual) or (custom_mesh and "mesh") or "wielditem"
 
+	local is_pure_b3d = (x_api.is_pure_native_b3d_active and x_api.is_pure_native_b3d_active(player)) or false
+	local fp_visible = (custom_opts and custom_opts.first_person ~= nil)
+		and (custom_opts.first_person == true)
+		or ((first_person ~= false) and not is_pure_b3d)
+
 	local opts = {
 		visual = visual_type,
 		mesh = custom_mesh,
 		textures = custom_textures,
-		first_person = (first_person ~= false),
+		first_person = fp_visible,
 		override_transform = true,
 		pos_glb = pos_glb,
 		rot_glb = rot_glb,

@@ -54,23 +54,35 @@ local function get_attachment_targets(player)
 		if not (x_api.is_pure_native_b3d_active and x_api.is_pure_native_b3d_active(player)) then
 			local proxies = x_api.get_visual_proxies(player)
 			if proxies then
-				if proxies.glb and proxies.glb:is_valid() then
-					local observers = x_api.get_modern_observers and x_api.get_modern_observers()
-					table.insert(targets, {
-						parent = proxies.glb,
-						observers = observers,
-						format = "glb",
-						is_skinsdb = is_skinsdb,
-					})
-				end
-				if proxies.b3d and proxies.b3d:is_valid() then
-					local observers = x_api.get_legacy_observers and x_api.get_legacy_observers()
-					table.insert(targets, {
-						parent = proxies.b3d,
-						observers = observers,
-						format = "b3d",
-						is_skinsdb = is_skinsdb,
-					})
+				local active_format = (x_api.get_model_format and x_api.get_model_format()) or "glb"
+				if active_format == "b3d" then
+					if proxies.b3d and proxies.b3d:is_valid() then
+						table.insert(targets, {
+							parent = proxies.b3d,
+							observers = nil,
+							format = "b3d",
+							is_skinsdb = is_skinsdb,
+						})
+					end
+				else
+					if proxies.glb and proxies.glb:is_valid() then
+						local observers = x_api.get_modern_observers and x_api.get_modern_observers()
+						table.insert(targets, {
+							parent = proxies.glb,
+							observers = observers,
+							format = "glb",
+							is_skinsdb = is_skinsdb,
+						})
+					end
+					if proxies.b3d and proxies.b3d:is_valid() then
+						local observers = x_api.get_legacy_observers and x_api.get_legacy_observers()
+						table.insert(targets, {
+							parent = proxies.b3d,
+							observers = observers,
+							format = "b3d",
+							is_skinsdb = is_skinsdb,
+						})
+					end
 				end
 			end
 		end

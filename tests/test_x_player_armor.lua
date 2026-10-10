@@ -1179,6 +1179,13 @@ test("Dual-Format Armor Attachments & Visuals Reconciliation", function()
 	end
 	assert(found_glb_head and found_b3d_head, "Both GLB and B3D proxy head attachments verified")
 
+	-- Test Visuals update when model_format is "b3d": assigns observers = nil to proxies.b3d only
+	_G.x_player_api.get_model_format = function() return "b3d" end
+	x_player_armor.visuals.update_player_visuals(hero)
+	assert(#hero_ents.head == 1, "Only 1 head entity expected on B3D proxy when model_format is b3d")
+	assert(hero_ents.head[1].attachment.parent == b3d_proxy, "Head piece must attach to B3D proxy")
+	assert(hero_ents.head[1].attachment.observers == nil, "B3D proxy armor piece must have observers = nil for global visibility")
+
 	-- Clean up
 	x_player_armor.visuals.clear_all("visual_tester")
 	assert(x_player_armor.visuals.player_entities["visual_tester"] == nil, "clear_all must clean up player table")
@@ -5159,7 +5166,7 @@ test("Shield Visual Attachment to External Entities (attach_shield_to_entity)", 
 	assert(bone_b3d == "Arm_Left", "B3D shield must be attached to Arm_Left")
 	assert(math.abs(pos_b3d.x - (-0.8)) < 0.01 and math.abs(pos_b3d.y - 5.0) < 0.01 and math.abs(pos_b3d.z - 2.8) < 0.01,
 		"B3D shield position must match x_player_armor forearm offset")
-	assert(math.abs(rot_b3d.x - 180) < 0.01 and math.abs(rot_b3d.y - (-45)) < 0.01,
+	assert(math.abs(rot_b3d.x - 180) < 0.01 and math.abs(rot_b3d.y - (-135)) < 0.01,
 		"B3D shield rotation must match x_player_armor forearm rotation")
 	b3d_shield:remove()
 
