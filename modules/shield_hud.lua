@@ -26,6 +26,10 @@ shield_hud.request_seq = {}
 ---@type table<string, string>
 shield_hud.texture_cache = {}
 
+---Per-player cached window information tables keyed by player name
+---@type table<string, table>
+shield_hud.window_cache = {}
+
 ---Extrusion depth in texels on reference canvas (scaled to wielditem plate thickness, ~20% of previous)
 local EXTRUDE_DEPTH = 12
 ---Base canvas dimension for high-resolution sub-texel layer stacking
@@ -109,47 +113,109 @@ local function build_extruded_texture(base_img)
 end
 shield_hud.build_extruded_texture = build_extruded_texture
 
+---Retrieves active player window information, updating the local cache when available.
+---@param player_or_name ObjectRef|string
+---@return table|nil win
+local function get_cached_window_info(player_or_name)
+	if not player_or_name then
+		return nil
+	end
+	local pname = type(player_or_name) == "string" and player_or_name or player_or_name:get_player_name()
+	if not pname then
+		return nil
+	end
+
+	local win = core.get_player_window_information(pname)
+	if win and win.size and win.size.y and win.size.y > 0 then
+		shield_hud.window_cache[pname] = win
+		return win
+	end
+	return shield_hud.window_cache[pname]
+end
+shield_hud.get_cached_window_info = get_cached_window_info
+
 ---Calculates dynamic scale and offset for a real-sized shield held in 1st person.
 ---Targets ~45% of viewport width, clamped to 45% of screen height and width,
 ---with natural spacing from the left screen frame and 2.5D extruded rim thickness.
 ---The bottom portion exceeding 45% screen height is submerged below the bottom screen edge,
 ---grounding it flush with the lower screen border with zero detachment gap.
+---Accounts for display density and client HUD scaling (e.g., Retina displays)
+---to prevent double-scaling on high-DPI viewports.
 ---@param player ObjectRef
 ---@return {x: number, y: number} scale, {x: number, y: number} offset
 local function get_proportional_geometry(player)
-	local win = core.get_player_window_information(player:get_player_name())
+	local win = get_cached_window_info(player)
+	local win_w
+	local win_h
+
 	if win and win.size and win.size.y and win.size.y > 0 then
-		local win_h = win.size.y
-		local win_w = (win.size.x and win.size.x > 0) and win.size.x or (win_h * 16 / 9)
-
-		-- Natural spacing from the left screen frame (doubled: 48px on 1080p, 32px on 720p)
-		local offset_x = math.max(24, math.floor(48 * (win_w / 1920) + 0.5))
-
-		-- Target and clamp width to 45% of viewport width
-		local max_w = win_w * 0.45
-		local crosshair_limit = (win_w * 0.50) - 32 - offset_x
-		if crosshair_limit > 96 and max_w > crosshair_limit then
-			max_w = crosshair_limit
-		end
-
-		local total_w = max_w
-		local s = math.max(0.5, math.floor((total_w / REFERENCE_SIZE) * 1000 + 0.5) / 1000)
-		local total_h = s * REFERENCE_SIZE
-
-		-- Clamp visible height to at most 45% of screen height
-		local max_visible_h = win_h * 0.45
-		local visible_h = math.min(total_h, max_visible_h)
-		local submerged_y = math.max(0, math.floor(total_h - visible_h + 0.5))
-
-		return {x = s, y = s}, {x = offset_x, y = submerged_y}
+		win_h = win.size.y
+		win_w = (win.size.x and win.size.x > 0) and win.size.x or (win_h * 16 / 9)
+	else
+		-- Baseline fallback when client window information is not yet available (Luanti default window baseline 1024x600).
+		-- Targets ~45% width/height so the shield stays cleanly within the bottom-left corner across all resolutions.
+		win_w = 1024
+		win_h = 600
 	end
 
-	-- Baseline fallback for standard 1080p (45% width = 864px, scale = 1.649, submerged = 378px, left offset = 48px):
-	local fallback_s = math.floor((864 / REFERENCE_SIZE) * 1000 + 0.5) / 1000
-	local fallback_submerged = math.max(0, math.floor(fallback_s * REFERENCE_SIZE - (1080 * 0.45) + 0.5))
-	return {x = fallback_s, y = fallback_s}, {x = 48, y = fallback_submerged}
+	-- Retrieve dynamic HUD scaling factor (DPI / display density and user setting).
+	-- In Luanti C++ engine (src/client/hud.cpp), HUD image elements are rendered as:
+	-- dstsize = imgsize * scale * m_scale_factor
+	-- offset  = offset * m_scale_factor
+	-- where m_scale_factor equals win.real_hud_scaling (or 1.0 baseline).
+	-- On macOS Retina displays or high-DPI screens, real_hud_scaling is typically 2.0.
+	-- We divide scale and offset by hud_scale so the rendered dimensions on the player's
+	-- display match the exact intended target viewport pixels without double-scaling.
+	local hud_scale = 1.0
+	if win and (win.real_hud_scaling or win.hud_scaling) and (win.real_hud_scaling or win.hud_scaling) > 0 then
+		hud_scale = win.real_hud_scaling or win.hud_scaling
+	end
+
+	local user_scale = (x_player_armor.constants and x_player_armor.constants.SHIELD_HUD_SCALE) or 1.0
+	local target_ox = math.max(24, math.floor(48 * (win_w / 1920) + 0.5))
+
+	-- Target and clamp width to ~45% of viewport width
+	local max_w = win_w * 0.45 * user_scale
+	local crosshair_limit = (win_w * 0.50) - 32 - target_ox
+	if crosshair_limit > 96 and max_w > crosshair_limit then
+		max_w = crosshair_limit
+	end
+
+	local total_w = max_w
+	local s = math.max(0.1, math.floor((total_w / (REFERENCE_SIZE * hud_scale)) * 1000 + 0.5) / 1000)
+	local offset_x = math.floor(target_ox / hud_scale + 0.5)
+
+	-- Total rendered height on screen (image canvas is square REFERENCE_SIZExREFERENCE_SIZE)
+	local total_h = total_w
+
+	-- Clamp visible height to at most 45% of screen height
+	local max_visible_h = win_h * 0.45 * user_scale
+	local visible_h = math.min(total_h, max_visible_h)
+	local target_submerged_y = math.max(0, math.floor(total_h - visible_h + 0.5))
+	local submerged_y = math.floor(target_submerged_y / hud_scale + 0.5)
+
+	core.log("action", string.format("[x_player_armor] shield_hud geometry for '%s': win=(%dx%d), hud_scale=%.2f -> s=%.3f, offset=(%d,%d)",
+		player:get_player_name(), win_w, win_h, hud_scale, s, offset_x, submerged_y))
+
+	return {x = s, y = s}, {x = offset_x, y = submerged_y}
 end
 shield_hud.get_proportional_geometry = get_proportional_geometry
+
+---Refreshes active shield HUD geometry in-place if player window information changed
+---@param player ObjectRef Target player
+function shield_hud.refresh_geometry(player)
+	if not player or not player:is_player() then
+		return
+	end
+	local pname = player:get_player_name()
+	local existing_id = shield_hud.active_huds[pname]
+	if not existing_id then
+		return
+	end
+	local scale, offset = get_proportional_geometry(player)
+	player:hud_change(existing_id, "scale", scale)
+	player:hud_change(existing_id, "offset", offset)
+end
 
 ---Resolves the equipped or wielded shield item and returns the memoized extruded texture string.
 ---Uses build_extruded_texture with ambient occlusion depth layers and reference canvas dimensions.
@@ -321,10 +387,7 @@ function shield_hud.show(player, immediate)
 			end
 
 			local p = core.get_player_by_name(pname) or player
-			if not p or not p:is_player() then
-				return
-			end
-			if p.is_valid and not p:is_valid() then
+			if not p or not p:is_player() or not p:is_valid() then
 				return
 			end
 
@@ -363,6 +426,18 @@ function shield_hud.show(player, immediate)
 
 	if hud_id then
 		shield_hud.active_huds[pname] = hud_id
+		-- If window info was not yet cached when shown, schedule deferred geometry refresh
+		if not shield_hud.window_cache[pname] then
+			core.after(0.5, function()
+				local p = core.get_player_by_name(pname)
+				if p and p:is_player() and p:is_valid() then
+					local win = get_cached_window_info(p)
+					if win and win.size and win.size.y and win.size.y > 0 then
+						shield_hud.refresh_geometry(p)
+					end
+				end
+			end)
+		end
 	end
 	return hud_id
 end
@@ -408,6 +483,7 @@ function shield_hud.cleanup(player_name)
 		shield_hud.pending_timers[player_name] = nil
 	end
 	shield_hud.active_huds[player_name] = nil
+	shield_hud.window_cache[player_name] = nil
 	last_bits[player_name] = nil
 	last_block_states[player_name] = nil
 end
@@ -422,10 +498,30 @@ function shield_hud.init()
 		shield_hud.hide(player)
 	end)
 
+	core.register_on_joinplayer(function(player)
+		local pname = player:get_player_name()
+		-- Delayed polling to capture window information once client network handshake settles
+		local function poll_window(delay)
+			core.after(delay, function()
+				local p = core.get_player_by_name(pname)
+				if not p or not p:is_player() or not p:is_valid() then
+					return
+				end
+				local win = get_cached_window_info(p)
+				if win and win.size and win.size.y and win.size.y > 0 then
+					shield_hud.refresh_geometry(p)
+				end
+			end)
+		end
+		poll_window(0.5)
+		poll_window(1.5)
+	end)
+
 	-- Standalone fallback for environments without x_player_api:
 	-- Only register globalstep if x_player_api is NOT present after all mods have loaded.
 	core.register_on_mods_loaded(function()
-		if x_player_armor.compat_x_player_api.is_present() then
+		if (x_player_armor.compat_x_player_api and x_player_armor.compat_x_player_api.is_present())
+				or core.get_modpath("x_player_api") ~= nil then
 			-- With x_player_api, HUD is 100% event-driven via register_on_state_change (zero globalsteps)
 			return
 		end

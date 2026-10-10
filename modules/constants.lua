@@ -242,6 +242,7 @@ constants.COMBAT_HUD_POSITION = settings:get("x_player_armor_combat_hud_position
 constants.COMBAT_HUD_SCALE = tonumber(settings:get("x_player_armor_combat_hud_scale")) or 1.0
 constants.SHIELD_HUD_ENABLE = settings:get_bool("x_player_armor_enable_shield_hud", true)
 constants.SHIELD_HUD_DELAY = tonumber(settings:get("x_player_armor_shield_hud_delay")) or 0.35
+constants.SHIELD_HUD_SCALE = tonumber(settings:get("x_player_armor_shield_hud_scale")) or 1.0
 
 -- Shield blocking & projectile deflection baseline constants
 constants.BLOCK_CONE_ANGLE = 52
@@ -275,7 +276,7 @@ constants.SHIELD_OFFSET = {
 	},
 	b3d = {
 		pos = {x = -0.8, y = 5.0, z = 2.8},
-		rot = {x = 180, y = -45, z = 0},
+		rot = {x = 180, y = -135, z = 0},
 	},
 }
 

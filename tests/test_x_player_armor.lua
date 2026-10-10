@@ -2310,14 +2310,31 @@ test("1st-Person Shield Blocking HUD Indicator Lifecycle, Sizing & Z-Index", fun
 	assert(updated_elem.scale.x == 1.099 and updated_elem.scale.y == 1.099, "Scale on 720p must be 1.099 (45% screen width)")
 	assert(updated_elem.offset.x == 32 and updated_elem.offset.y == 252, "Offset on 720p must provide 32px left spacing and submerge bottom tip (y=252)")
 
-	-- 4b. Test fallback when window info is nil
+	-- 4b. Test fallback and cache preservation when window info is nil
 	core.get_player_window_information = function()
 		return nil
 	end
+	-- Cache preservation: retains last known valid window size (720p)
+	x_player_armor.shield_hud.show(player)
+	local cached_elem = player:hud_get(hud_id)
+	assert(cached_elem.scale.x == 1.099 and cached_elem.scale.y == 1.099, "Cached window scale must be preserved")
+	assert(cached_elem.offset.x == 32 and cached_elem.offset.y == 252, "Cached window offset must be preserved")
+
+	-- Cold fallback baseline (1024x600 default) when cache is empty
+	x_player_armor.shield_hud.window_cache["hud_hero"] = nil
 	x_player_armor.shield_hud.show(player)
 	local fallback_elem = player:hud_get(hud_id)
-	assert(fallback_elem.scale.x == 1.649 and fallback_elem.scale.y == 1.649, "Fallback scale must be 1.649")
-	assert(fallback_elem.offset.x == 48 and fallback_elem.offset.y == 378, "Fallback offset must be {x=48, y=378}")
+	assert(fallback_elem.scale.x == 0.866 and fallback_elem.scale.y == 0.866, "Fallback scale must be 0.866 (45% width on 1024x600 baseline)")
+	assert(fallback_elem.offset.x == 26 and fallback_elem.offset.y == 184, "Fallback offset must be {x=26, y=184}")
+
+	-- 4c. Test Retina / high-DPI scaling (real_hud_scaling = 2.0)
+	core.get_player_window_information = function()
+		return {size = {x = 1920, y = 1080}, real_hud_scaling = 2.0}
+	end
+	x_player_armor.shield_hud.show(player)
+	local retina_elem = player:hud_get(hud_id)
+	assert(retina_elem.scale.x == 0.824 and retina_elem.scale.y == 0.824, "Scale on 1080p with real_hud_scaling=2.0 must be 0.824")
+	assert(retina_elem.offset.x == 24 and retina_elem.offset.y == 189, "Offset with real_hud_scaling=2.0 must be {x=24, y=189}")
 	core.get_player_window_information = orig_win_fn
 
 	-- 5. Test hide()
