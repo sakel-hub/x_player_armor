@@ -316,7 +316,7 @@ function utils.format_armor_tooltip(params)
 	if params.hint then
 		table.insert(lines, core.colorize(utils.UI_COLORS.hint, params.hint))
 	elseif is_shield then
-		table.insert(lines, core.colorize(utils.UI_COLORS.hint, S("Tip: Equip in shield slot; hold RMB to raise guard")))
+		table.insert(lines, core.colorize(utils.UI_COLORS.hint, S("Tip: Equip in shield slot, hold RMB to raise guard")))
 	else
 		table.insert(lines, core.colorize(utils.UI_COLORS.hint, S("Tip: Right-click in hand to quick-equip or swap")))
 	end

@@ -5195,6 +5195,20 @@ test("Shield Visual Attachment to External Entities (attach_shield_to_entity)", 
 	top_shield:remove()
 end)
 
+test("Armor Item Tooltips: Zero Unescaped Formspec Delimiters (Unified Inventory Compatibility)", function()
+	local checked_items = 0
+	for name, def in pairs(core.registered_items) do
+		if name:find("^x_player_armor:") and def.description then
+			checked_items = checked_items + 1
+			assert(not def.description:find(";"),
+				string.format("Item '%s' description must not contain raw semicolons (prevents Unified Inventory formspec parsing errors)", name))
+			assert(not def.description:find("%[") and not def.description:find("%]"),
+				string.format("Item '%s' description must not contain raw brackets (prevents formspec element injection)", name))
+		end
+	end
+	assert(checked_items >= 40, "Must check all registered x_player_armor items")
+end)
+
 print(string.format("\n=========================================="))
 print(string.format("  ALL %d UNIT TESTS PASSED SUCCESSFULLY!  ", passed))
 print(string.format("=========================================="))

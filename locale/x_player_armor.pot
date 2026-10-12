@@ -480,8 +480,8 @@ msgstr ""
 msgid "★ Tower Shield: Counts toward matching 4-piece set bonus"
 msgstr ""
 
-#: modules/utils.lua:300
-msgid "Tip: Equip in shield slot; hold RMB to raise guard"
+#: modules/utils.lua:319
+msgid "Tip: Equip in shield slot, hold RMB to raise guard"
 msgstr ""
 
 #: modules/utils.lua:302

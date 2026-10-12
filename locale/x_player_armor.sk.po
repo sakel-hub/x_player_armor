@@ -496,9 +496,9 @@ msgstr ""
 msgid "★ Tower Shield: Counts toward matching 4-piece set bonus"
 msgstr "★ Vežový štít: Počíta sa do bonusu 4-dielneho setu"
 
-#: modules/utils.lua:300
-msgid "Tip: Equip in shield slot; hold RMB to raise guard"
-msgstr "Tip: Vložte do slotu štítu; držte pravé tlačidlo pre krytie"
+#: modules/utils.lua:319
+msgid "Tip: Equip in shield slot, hold RMB to raise guard"
+msgstr "Tip: Vložte do slotu štítu, držte pravé tlačidlo pre krytie"
 
 #: modules/utils.lua:302
 msgid "Tip: Right-click in hand to quick-equip or swap"

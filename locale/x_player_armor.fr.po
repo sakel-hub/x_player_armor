@@ -507,9 +507,9 @@ msgstr ""
 msgid "★ Tower Shield: Counts toward matching 4-piece set bonus"
 msgstr "★ Pavois: Compte pour le bonus d'ensemble de 4 pièces"
 
-#: modules/utils.lua:300
-msgid "Tip: Equip in shield slot; hold RMB to raise guard"
-msgstr "Astuce: Équipez en main secondaire; maintenez clic droit pour bloquer"
+#: modules/utils.lua:319
+msgid "Tip: Equip in shield slot, hold RMB to raise guard"
+msgstr "Astuce: Équipez en main secondaire, maintenez clic droit pour bloquer"
 
 #: modules/utils.lua:302
 msgid "Tip: Right-click in hand to quick-equip or swap"
