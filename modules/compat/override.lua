@@ -74,9 +74,10 @@ local function restore_clean_model(player)
 		local x_api = x_player_armor.get_mod_api("x_player_api")
 		if x_api and x_api.set_model then
 			local cur_model = x_api.get_model_name and x_api.get_model_name(p)
-			if cur_model and (cur_model == "3d_armor_character.b3d" or cur_model:find("3d_armor")) then
+			if cur_model and (cur_model == "3d_armor_character.b3d" or (cur_model:find("3d_armor", 1, true) and not cur_model:find("skinsdb", 1, true))) then
 				local default_model = (x_api.get_default_model and x_api.get_default_model()) or "character"
 				x_api.set_model(p, default_model)
+				x_player_armor.update_player_visuals(p)
 			end
 			return
 		end
@@ -85,8 +86,9 @@ local function restore_clean_model(player)
 		local p_api = x_player_armor.get_mod_api("player_api")
 		if p_api and p_api.set_model then
 			local cur_model = p_api.get_model and p_api.get_model(p)
-			if cur_model and (cur_model == "3d_armor_character.b3d" or cur_model:find("3d_armor")) then
+			if cur_model and (cur_model == "3d_armor_character.b3d" or (cur_model:find("3d_armor", 1, true) and not cur_model:find("skinsdb", 1, true))) then
 				p_api.set_model(p, "character.b3d")
+				x_player_armor.update_player_visuals(p)
 			end
 		end
 	end
@@ -299,6 +301,91 @@ function override.takeover_legacy_armor()
 	if not override.join_hook_registered then
 		override.join_hook_registered = true
 		core.register_on_joinplayer(restore_clean_model)
+	end
+
+	-- Hook engine and mod visual triggers (player_api.set_model, skins, armor visual methods)
+	override.hook_visual_triggers()
+end
+
+---Hooks model setting and skin changing functions to ensure armor visuals reconcile seamlessly.
+function override.hook_visual_triggers()
+	local p_api = x_player_armor.get_mod_api("player_api")
+	if p_api and p_api.set_model and not p_api._x_pa_set_model_wrapped then
+		local orig_set_model = p_api.set_model
+		p_api._x_pa_set_model_wrapped = true
+		p_api.set_model = function(player, model_name)
+			orig_set_model(player, model_name)
+			if player and player:is_player() and (not player.is_valid or player:is_valid()) then
+				local pname = player:get_player_name()
+				x_player_armor.visuals.schedule_player_restore(pname)
+			end
+		end
+	end
+
+	local x_api = x_player_armor.get_mod_api("x_player_api")
+	if x_api and x_api.set_model and not x_api._x_pa_set_model_wrapped then
+		local orig_x_set_model = x_api.set_model
+		x_api._x_pa_set_model_wrapped = true
+		x_api.set_model = function(player, model_name)
+			orig_x_set_model(player, model_name)
+			if player and player:is_player() and (not player.is_valid or player:is_valid()) then
+				local pname = player:get_player_name()
+				x_player_armor.visuals.schedule_player_restore(pname)
+			end
+		end
+	end
+
+	local skins_api = x_player_armor.get_mod_api("skins")
+	if skins_api and not skins_api._x_pa_wrapped then
+		skins_api._x_pa_wrapped = true
+		if skins_api.update_player_skin then
+			local orig_update_skin = skins_api.update_player_skin
+			skins_api.update_player_skin = function(player)
+				orig_update_skin(player)
+				if player and player:is_player() and (not player.is_valid or player:is_valid()) then
+					local pname = player:get_player_name()
+					x_player_armor.visuals.schedule_player_restore(pname)
+				end
+			end
+		end
+		if skins_api.set_player_skin then
+			local orig_set_skin = skins_api.set_player_skin
+			skins_api.set_player_skin = function(player, skin)
+				local res = orig_set_skin(player, skin)
+				if player and player:is_player() and (not player.is_valid or player:is_valid()) then
+					local pname = player:get_player_name()
+					x_player_armor.visuals.schedule_player_restore(pname)
+				end
+				return res
+			end
+		end
+	end
+
+	if _G.armor and not _G.armor._x_pa_wrapped then
+		_G.armor._x_pa_wrapped = true
+		local orig_armor_vis = _G.armor.update_player_visuals
+		_G.armor.update_player_visuals = function(self_or_player, maybe_player)
+			local player = (type(self_or_player) == "userdata" and self_or_player)
+				or (type(maybe_player) == "userdata" and maybe_player)
+			if orig_armor_vis then
+				orig_armor_vis(self_or_player, maybe_player)
+			end
+			if player and player:is_player() and (not player.is_valid or player:is_valid()) then
+				x_player_armor.visuals.update_player_visuals(player)
+			end
+		end
+
+		local orig_armor_set = _G.armor.set_player_armor
+		_G.armor.set_player_armor = function(self_or_player, maybe_player)
+			local player = (type(self_or_player) == "userdata" and self_or_player)
+				or (type(maybe_player) == "userdata" and maybe_player)
+			if orig_armor_set then
+				orig_armor_set(self_or_player, maybe_player)
+			end
+			if player and player:is_player() and (not player.is_valid or player:is_valid()) then
+				x_player_armor.visuals.update_player_visuals(player)
+			end
+		end
 	end
 end
 

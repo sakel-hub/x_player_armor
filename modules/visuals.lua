@@ -17,15 +17,15 @@ core.register_entity("x_player_armor:visual", {
 		mesh = "",
 		textures = {"blank.png"},
 		visual_size = {x = 1, y = 1, z = 1},
-		backface_culling = true,
+		backface_culling = false,
 		shaded = true,
 		glow = 0,
 	},
 	on_activate = function(self)
 		self.object:set_armor_groups({immortal = 1})
 	end,
-	on_deactivate = function(self, removal)
-		if removal and not self._intentional_removal and self._player_name then
+	on_deactivate = function(self)
+		if not self._intentional_removal and self._player_name then
 			visuals.schedule_player_restore(self._player_name)
 		end
 	end,
@@ -55,8 +55,28 @@ local function get_attachment_targets(player)
 			local proxies = x_api.get_visual_proxies(player)
 			if proxies then
 				local active_format = (x_api.get_model_format and x_api.get_model_format()) or "glb"
-				if active_format == "b3d" then
-					if proxies.b3d and proxies.b3d:is_valid() then
+				local pdata = x_api.get_animation and x_api.get_animation(player)
+				local m_name = (pdata and pdata.model) or model_name or (x_api.get_default_model and x_api.get_default_model())
+				local model_def = m_name and x_api.get_model and x_api.get_model(m_name)
+				local has_glb = (active_format ~= "b3d")
+				if model_def then
+					has_glb = (active_format ~= "b3d") and (model_def.mesh_glb ~= nil or (model_def.mesh and model_def.mesh:match("%.glb$") ~= nil))
+				end
+
+				-- Verify active proxies and non-zero visual size
+				local glb_props = proxies.glb and proxies.glb:is_valid() and proxies.glb.get_properties and proxies.glb:get_properties()
+				if glb_props and glb_props.visual_size and (glb_props.visual_size.x == 0 or glb_props.visual_size.y == 0) then
+					has_glb = false
+				end
+
+				local b3d_props = proxies.b3d and proxies.b3d:is_valid() and proxies.b3d.get_properties and proxies.b3d:get_properties()
+				local has_b3d = (proxies.b3d and proxies.b3d:is_valid()) and true or false
+				if b3d_props and b3d_props.visual_size and (b3d_props.visual_size.x == 0 or b3d_props.visual_size.y == 0) then
+					has_b3d = false
+				end
+
+				if active_format == "b3d" or not has_glb then
+					if has_b3d then
 						table.insert(targets, {
 							parent = proxies.b3d,
 							observers = nil,
@@ -64,21 +84,29 @@ local function get_attachment_targets(player)
 							is_skinsdb = is_skinsdb,
 						})
 					end
-				else
-					if proxies.glb and proxies.glb:is_valid() then
-						local observers = x_api.get_modern_observers and x_api.get_modern_observers()
+				elseif not has_b3d then
+					if has_glb then
 						table.insert(targets, {
 							parent = proxies.glb,
-							observers = observers,
+							observers = nil,
 							format = "glb",
 							is_skinsdb = is_skinsdb,
 						})
 					end
-					if proxies.b3d and proxies.b3d:is_valid() then
-						local observers = x_api.get_legacy_observers and x_api.get_legacy_observers()
+				else
+					-- Dual format mode: both proxies active
+					if has_glb then
+						table.insert(targets, {
+							parent = proxies.glb,
+							observers = nil,
+							format = "glb",
+							is_skinsdb = is_skinsdb,
+						})
+					end
+					if has_b3d then
 						table.insert(targets, {
 							parent = proxies.b3d,
-							observers = observers,
+							observers = nil,
 							format = "b3d",
 							is_skinsdb = is_skinsdb,
 						})
@@ -88,6 +116,14 @@ local function get_attachment_targets(player)
 		end
 	end
 	if #targets == 0 then
+		local is_proxy_active = x_api and x_api.get_visual_proxies and not (x_api.is_pure_native_b3d_active and x_api.is_pure_native_b3d_active(player))
+		if is_proxy_active then
+			local pname = player and player:is_player() and player:get_player_name()
+			if pname then
+				visuals.schedule_player_restore(pname)
+			end
+			return targets
+		end
 		table.insert(targets, {
 			parent = player,
 			observers = nil,
@@ -184,7 +220,7 @@ local function spawn_piece(target, piece_id, default_texture, glow, player_name,
 	end
 
 	local item_glow = (item_def and item_def.glow) or glow or 0
-	local backface_culling = true
+	local backface_culling = false
 	if item_def and item_def.backface_culling ~= nil then
 		backface_culling = item_def.backface_culling
 	end
@@ -380,7 +416,9 @@ function visuals.update_player_visuals(player)
 				or (type(stack_or_name) == "string" and stack_or_name:match("%S+"))
 				or ""
 			local current_left = x_player_armor.compat_x_player_api.get_left_wield_item(player)
-			if current_left ~= "" and current_left == target_name then
+			local x_api = x_player_armor.get_mod_api("x_player_api")
+			local left_ent = x_api and x_api.get_left_wield_entity and x_api.get_left_wield_entity(player)
+			if current_left ~= "" and current_left == target_name and left_ent and left_ent:is_valid() then
 				x_player_armor.compat_x_player_api.update_shield(player, stack_or_name)
 			else
 				x_player_armor.compat_x_player_api.attach_shield(player, stack_or_name)
@@ -389,6 +427,9 @@ function visuals.update_player_visuals(player)
 			x_player_armor.compat_x_player_api.remove_shield(player)
 		end
 	end
+
+	-- Eagerly assemble and deliver dynamic 3D preview model if custom pieces are worn
+	x_player_armor.gltf_assembler.update_player(player)
 end
 
 ---Removes all visual armor entities for a player.
@@ -488,12 +529,140 @@ core.register_on_shutdown(function()
 end)
 
 core.register_on_respawnplayer(function(player)
-	core.after(0.1, function()
+	core.after(0.05, function()
 		if player and player:is_player() then
 			visuals.update_player_visuals(player)
 		end
 	end)
+	core.after(0.2, function()
+		if player and player:is_player() then
+			visuals.verify_player_visuals(player)
+		end
+	end)
 end)
+
+---Verifies that all worn armor and shield pieces for a player have valid, attached visual entities.
+---Performs an on-demand reconciliation if any worn piece is missing, detached, or on an unready proxy.
+---@param player ObjectRef Target player
+---@return boolean needs_repair True if visuals required and executed repair, false if already healthy
+function visuals.verify_player_visuals(player)
+	if not player or not player:is_player() or (player.is_valid and not player:is_valid()) then
+		return false
+	end
+
+	local name, inv = x_player_armor.get_valid_player(player)
+	if not name or not inv then return false end
+
+	local armor_list = inv:get_list("armor")
+	if not armor_list then return false end
+
+	local has_any_armor = false
+	for slot = 1, 5 do
+		local stack = armor_list[slot]
+		if stack and not stack:is_empty() then
+			has_any_armor = true
+			break
+		end
+	end
+
+	if not has_any_armor then return false end
+
+	local ents = visuals.player_entities[name]
+	local needs_repair = not ents
+
+	if not needs_repair then
+		for slot = 1, 4 do
+			local el = constants.SLOT_ELEMENTS[slot]
+			local stack = armor_list[slot]
+			if stack and not stack:is_empty() then
+				local el_ents = ents[el]
+				if not el_ents or #el_ents == 0 then
+					needs_repair = true
+					break
+				else
+					for e = 1, #el_ents do
+						local obj = el_ents[e]
+						if not obj or not obj:is_valid() then
+							needs_repair = true
+							break
+						end
+						local p = obj:get_attach()
+						if not p or (p.is_valid and not p:is_valid()) then
+							needs_repair = true
+							break
+						end
+						local pprops = p.get_properties and p:get_properties()
+						if pprops and pprops.visual_size and (pprops.visual_size.x == 0 or pprops.visual_size.y == 0) then
+							needs_repair = true
+							break
+						end
+					end
+				end
+			end
+			if needs_repair then break end
+		end
+
+		-- Check shield (slot 5)
+		if not needs_repair then
+			local shield_stack = armor_list[5]
+			if shield_stack and not shield_stack:is_empty() then
+				if x_player_armor.compat_x_player_api and x_player_armor.compat_x_player_api.is_present() then
+					local cur_item = x_player_armor.compat_x_player_api.get_left_wield_item(player)
+					local x_api = x_player_armor.get_mod_api("x_player_api")
+					local left_ent = x_api and x_api.get_left_wield_entity and x_api.get_left_wield_entity(player)
+					if cur_item == "" or not left_ent or not left_ent:is_valid() then
+						needs_repair = true
+					end
+				else
+					local s_ents = ents.shield
+					if not s_ents or #s_ents == 0 or not s_ents[1] or not s_ents[1]:is_valid() then
+						needs_repair = true
+					end
+				end
+			end
+		end
+	end
+
+	if needs_repair then
+		visuals.update_player_visuals(player)
+		return true
+	end
+	return false
+end
+
+-- Event-driven visual self-healing registration.
+-- Hooks proxy activation and lifecycle events without continuous globalstep polling.
+local watchdog_registered = false
+function visuals.register_watchdog()
+	if watchdog_registered then return end
+	watchdog_registered = true
+
+	-- luacheck: push
+	-- luacheck: ignore 122
+	local function hook_proxy_entity(entity_name)
+		local edef = core.registered_entities[entity_name]
+		if edef and not edef._x_pa_proxy_wrapped then
+			edef._x_pa_proxy_wrapped = true
+			local orig_activate = edef.on_activate
+			edef.on_activate = function(self, staticdata, dtime_s)
+				if orig_activate then
+					orig_activate(self, staticdata, dtime_s)
+				end
+				core.after(0.05, function()
+					if self.object and self.object:is_valid() then
+						local parent = self.object:get_attach()
+						if parent and parent:is_player() then
+							visuals.schedule_player_restore(parent:get_player_name())
+						end
+					end
+				end)
+			end
+		end
+	end
+	hook_proxy_entity("x_player_api:visual_glb")
+	hook_proxy_entity("x_player_api:visual_b3d")
+	-- luacheck: pop
+end
 
 ---Attaches modular 3D armor visuals to a target parent entity (such as a corpse).
 ---@param parent ObjectRef The entity to attach armor to
@@ -637,32 +806,67 @@ function visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_o
 	local b3d_trans = shield_trans.b3d or {}
 	local item_offset = item_def and (item_def.shield_offset or item_def.shield_transform)
 
-	local pos_glb = (custom_opts and custom_opts.pos_glb)
-		or (item_offset and item_offset.glb and item_offset.glb.pos)
-		or (item_offset and item_offset.pos)
-		or (custom_opts and custom_opts.pos)
-		or glb_trans.pos or {x = -0.8, y = 5.0, z = -2.8}
-	local rot_glb = (custom_opts and custom_opts.rot_glb)
-		or (item_offset and item_offset.glb and item_offset.glb.rot)
-		or (item_offset and item_offset.rot)
-		or (custom_opts and custom_opts.rot)
-		or glb_trans.rot or {x = 180, y = 45, z = 0}
+	local custom_mesh = (custom_opts and custom_opts.mesh)
+		or (item_def and (item_def.mesh or item_def.model))
 
-	local pos_b3d = (custom_opts and custom_opts.pos_b3d)
-		or (item_offset and item_offset.b3d and item_offset.b3d.pos)
-		or (item_offset and item_offset.pos)
-		or (custom_opts and custom_opts.pos)
-		or b3d_trans.pos or {x = -0.8, y = 5.0, z = 2.8}
-	local rot_b3d = (custom_opts and custom_opts.rot_b3d)
-		or (item_offset and item_offset.b3d and item_offset.b3d.rot)
-		or (item_offset and item_offset.rot)
-		or (custom_opts and custom_opts.rot)
-		or b3d_trans.rot or {x = 180, y = -45, z = 0}
+	local item_tex = (item_name ~= "" and visuals.get_item_texture(item_name))
+		or (item_def and (item_def.texture or item_def.inventory_image))
 
-	local custom_mesh = (custom_opts and custom_opts.mesh) or (item_def and (item_def.mesh or item_def.model))
 	local custom_textures = (custom_opts and custom_opts.textures)
 		or (item_def and (item_def.textures or (item_def.texture and {item_def.texture})))
+		or (item_tex and {item_tex})
+
 	local visual_type = (custom_opts and custom_opts.visual) or (custom_mesh and "mesh") or "wielditem"
+
+	local is_bone_local = (custom_opts and custom_opts.bone_local)
+		or (item_def and item_def.bone_local)
+
+	local pos_glb
+	local rot_glb
+	local pos_b3d
+	local rot_b3d
+	local scale
+
+	if is_bone_local and not item_offset and not (custom_opts and (custom_opts.pos or custom_opts.pos_glb)) then
+		pos_glb = {x = 0, y = 0, z = 0}
+		rot_glb = {x = 180, y = 0, z = 0}
+		pos_b3d = {x = 0, y = 0, z = 0}
+		rot_b3d = {x = 180, y = 180, z = 0}
+		scale = (custom_opts and (custom_opts.scale_glb or custom_opts.scale)) or {x = 1, y = 1, z = 1}
+	else
+		pos_glb = (custom_opts and custom_opts.pos_glb)
+			or (item_offset and item_offset.glb and item_offset.glb.pos)
+			or (item_offset and item_offset.pos)
+			or (custom_opts and custom_opts.pos)
+			or glb_trans.pos
+			or {x = -0.8, y = 5.0, z = -1.7}
+		rot_glb = (custom_opts and custom_opts.rot_glb)
+			or (item_offset and item_offset.glb and item_offset.glb.rot)
+			or (item_offset and item_offset.rot)
+			or (custom_opts and custom_opts.rot)
+			or glb_trans.rot
+			or {x = 180, y = -135, z = 0}
+
+		pos_b3d = (custom_opts and custom_opts.pos_b3d)
+			or (item_offset and item_offset.b3d and item_offset.b3d.pos)
+			or (item_offset and item_offset.pos)
+			or (custom_opts and custom_opts.pos)
+			or b3d_trans.pos
+			or {x = -0.8, y = 5.0, z = 1.7}
+		rot_b3d = (custom_opts and custom_opts.rot_b3d)
+			or (item_offset and item_offset.b3d and item_offset.b3d.rot)
+			or (item_offset and item_offset.rot)
+			or (custom_opts and custom_opts.rot)
+			or b3d_trans.rot
+			or {x = 180, y = 45, z = 0}
+
+		scale = (custom_opts and (custom_opts.scale_glb or custom_opts.scale))
+			or (item_offset and item_offset.glb and item_offset.glb.scale)
+			or (item_offset and item_offset.scale)
+			or glb_trans.scale
+			or (item_def and item_def.visual_size)
+			or {x = 1.45, y = 1.15, z = 1.15}
+	end
 
 	local opts = {
 		visual = visual_type,
@@ -673,6 +877,8 @@ function visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_o
 		rot_glb = rot_glb,
 		pos_b3d = pos_b3d,
 		rot_b3d = rot_b3d,
+		scale = scale,
+		visual_size = scale,
 	}
 
 	if custom_opts then
@@ -701,7 +907,8 @@ function visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_o
 		local obj = core.add_entity(pos, ent_name)
 		if obj and obj:is_valid() then
 			local v_size = (visual_type == "wielditem") and {x = 0.25, y = 0.25, z = 0.25}
-				or (custom_opts and custom_opts.visual_size) or (item_def and item_def.visual_size) or {x = 1, y = 1, z = 1}
+				or (custom_opts and (custom_opts.visual_size or custom_opts.scale))
+				or scale or (item_def and item_def.visual_size) or {x = 1, y = 1, z = 1}
 			local glow = (custom_opts and custom_opts.glow) or (item_def and item_def.glow) or 0
 			obj:set_properties({
 				visual = visual_type,

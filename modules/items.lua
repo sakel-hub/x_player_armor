@@ -164,6 +164,7 @@ for mat_key, mat_data in pairs(MATERIALS) do
 			armor_groups = {fleshy = lvl},
 			damage_groups = {cracky = 2, snappy = 3, choppy = 2, crumbly = 1, level = 1},
 			reciprocate_damage = (piece_key == "shield"),
+			backface_culling = false,
 			wear_color = {
 				blend = "linear",
 				color_stops = {
@@ -224,9 +225,9 @@ for mat_key, es in pairs(enhanced_shields) do
 		texture = es.tex_img,
 		preview = es.preview,
 		element = "shield",
+		mesh = x_player_armor.constants.MODELS.shield_tower,
 		groups = {
 			armor_shield = es.level,
-			armor_shield_tower = 1,
 			shield = 1,
 			armor_uses = es_uses,
 			["armor_material_" .. mat_key] = 1,

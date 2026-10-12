@@ -116,7 +116,7 @@ function skins.resolve_player_skin(player)
 
 	-- Inspect player_api or engine properties if raw_skin is not yet resolved
 	local p_api = x_player_armor.get_mod_api("player_api")
-	local textures = p_api and p_api.get_textures(player)
+	local textures = p_api and p_api.get_textures and p_api.get_textures(player)
 	if not textures then
 		local props = player:get_properties()
 		textures = props and props.textures

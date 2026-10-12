@@ -88,6 +88,7 @@ constants.MODELS = {
 	feet_l = "x_player_armor_boot_l.glb",
 	feet_r = "x_player_armor_boot_r.glb",
 	shield = "x_player_armor_shield.glb",
+	shield_tower = "x_player_armor_shield_tower.glb",
 	preview = "x_player_armor_preview.glb",
 	stand = "x_player_armor_stand.glb",
 	stand_entity = "x_player_armor_preview.glb",
@@ -102,8 +103,7 @@ constants.PREVIEW_SLOTS = {
 	legs = 4,
 	feet = 5,
 	shield = 6,
-	shield_tower = 7,
-	wield = 8,
+	wield = 7,
 }
 
 constants.BONES = {
@@ -132,6 +132,10 @@ constants.ATTACH_TRANSFORMS = {
 		legs_r = {bone = "Leg_Right", model = constants.MODELS.legs_r, pos = {x = 0, y = 0, z = 0}, rot = {x = 180, y = 0, z = 0}},
 		feet_l = {bone = "Leg_Left", model = constants.MODELS.feet_l, pos = {x = 0, y = 0, z = 0}, rot = {x = 180, y = 0, z = 0}},
 		feet_r = {bone = "Leg_Right", model = constants.MODELS.feet_r, pos = {x = 0, y = 0, z = 0}, rot = {x = 180, y = 0, z = 0}},
+		shield = {bone = "Arm_Left", model = constants.MODELS.shield,
+			pos = {x = -0.9, y = 5.0, z = 1.4}, rot = {x = 0, y = 50, z = 165}, scale = {x = 1.45, y = 1.15, z = 1.15}},
+		shield_tower = {bone = "Arm_Left", model = constants.MODELS.shield_tower,
+			pos = {x = -0.9, y = 5.0, z = 1.4}, rot = {x = 0, y = 50, z = 165}, scale = {x = 1.45, y = 1.15, z = 1.15}},
 	},
 	b3d = {
 		head = {bone = "Head", model = constants.MODELS.head, pos = {x = 0, y = 0, z = 0}, rot = {x = 0, y = 180, z = 0}},
@@ -142,6 +146,10 @@ constants.ATTACH_TRANSFORMS = {
 		legs_r = {bone = "Leg_Right", model = constants.MODELS.legs_r, pos = {x = 0, y = 0, z = 0}, rot = {x = 180, y = 180, z = 0}},
 		feet_l = {bone = "Leg_Left", model = constants.MODELS.feet_l, pos = {x = 0, y = 0, z = 0}, rot = {x = 180, y = 180, z = 0}},
 		feet_r = {bone = "Leg_Right", model = constants.MODELS.feet_r, pos = {x = 0, y = 0, z = 0}, rot = {x = 180, y = 180, z = 0}},
+		shield = {bone = "Arm_Left", model = constants.MODELS.shield,
+			pos = {x = -0.9, y = 5.0, z = -1.4}, rot = {x = 0, y = -50, z = -165}, scale = {x = 1.45, y = 1.15, z = 1.15}},
+		shield_tower = {bone = "Arm_Left", model = constants.MODELS.shield_tower,
+			pos = {x = -0.9, y = 5.0, z = -1.4}, rot = {x = 0, y = -50, z = -165}, scale = {x = 1.45, y = 1.15, z = 1.15}},
 	},
 	skinsdb_b3d = {
 		head = {bone = "Head", model = constants.MODELS.head, pos = {x = 0, y = 0, z = 0}, rot = {x = 0, y = 180, z = 0},
@@ -160,6 +168,10 @@ constants.ATTACH_TRANSFORMS = {
 			scale = {x = 1.02, y = 1.02, z = 1.02}},
 		feet_r = {bone = "Leg_Right", model = constants.MODELS.feet_r, pos = {x = 0, y = 0, z = 0}, rot = {x = 180, y = 180, z = 0},
 			scale = {x = 1.02, y = 1.02, z = 1.02}},
+		shield = {bone = "Arm_Left", model = constants.MODELS.shield,
+			pos = {x = -0.9, y = 5.0, z = -1.4}, rot = {x = 0, y = -50, z = -165}, scale = {x = 1.45, y = 1.15, z = 1.15}},
+		shield_tower = {bone = "Arm_Left", model = constants.MODELS.shield_tower,
+			pos = {x = -0.9, y = 5.0, z = -1.4}, rot = {x = 0, y = -50, z = -165}, scale = {x = 1.45, y = 1.15, z = 1.15}},
 	},
 	skinsdb_glb = {
 		head = {bone = "Head", model = constants.MODELS.head, pos = {x = 0, y = 0, z = 0}, rot = {x = 0, y = 0, z = 0},
@@ -178,6 +190,10 @@ constants.ATTACH_TRANSFORMS = {
 			scale = {x = 1.02, y = 1.02, z = 1.02}},
 		feet_r = {bone = "Leg_Right", model = constants.MODELS.feet_r, pos = {x = 0, y = 0, z = 0}, rot = {x = 180, y = 0, z = 0},
 			scale = {x = 1.02, y = 1.02, z = 1.02}},
+		shield = {bone = "Arm_Left", model = constants.MODELS.shield,
+			pos = {x = -0.9, y = 5.0, z = 1.4}, rot = {x = 0, y = 50, z = 165}, scale = {x = 1.45, y = 1.15, z = 1.15}},
+		shield_tower = {bone = "Arm_Left", model = constants.MODELS.shield_tower,
+			pos = {x = -0.9, y = 5.0, z = 1.4}, rot = {x = 0, y = 50, z = 165}, scale = {x = 1.45, y = 1.15, z = 1.15}},
 	},
 }
 constants.ATTACH_TRANSFORMS.skinsdb = constants.ATTACH_TRANSFORMS.skinsdb_b3d
@@ -268,15 +284,17 @@ constants.SHIELD_TIER_PROPERTIES = {
 	admin =   { reduction = 1.00, restitution = 0.90, arc = 180, recoil_mult = 0.0, bias = 0 },
 }
 
--- Forearm wielditem attachment transforms for shields (attached to Arm_Left)
+-- Forearm attachment transforms for shields (attached to Arm_Left)
 constants.SHIELD_OFFSET = {
 	glb = {
-		pos = {x = -0.8, y = 5.0, z = -2.8},
-		rot = {x = 180, y = 45, z = 0},
+		pos = {x = -0.8, y = 5.0, z = -1.7},
+		rot = {x = 180, y = -135, z = 0},
+		scale = {x = 1.45, y = 1.15, z = 1.15},
 	},
 	b3d = {
-		pos = {x = -0.8, y = 5.0, z = 2.8},
-		rot = {x = 180, y = -135, z = 0},
+		pos = {x = -0.8, y = 5.0, z = 1.7},
+		rot = {x = 180, y = 45, z = 0},
+		scale = {x = 1.45, y = 1.15, z = 1.15},
 	},
 }
 

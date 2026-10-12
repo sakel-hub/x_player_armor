@@ -423,6 +423,9 @@ end
 function armor.set_player_armor(self_or_player, maybe_player)
 	local player = resolve_args(self_or_player, maybe_player)
 	x_player_armor.set_player_armor(player)
+	if player and player:is_player() and (not player.is_valid or player:is_valid()) then
+		x_player_armor.update_player_visuals(player)
+	end
 end
 
 ---Updates visual attachment entities for a player.

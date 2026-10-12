@@ -194,9 +194,6 @@ local function get_proportional_geometry(player)
 	local target_submerged_y = math.max(0, math.floor(total_h - visible_h + 0.5))
 	local submerged_y = math.floor(target_submerged_y / hud_scale + 0.5)
 
-	core.log("action", string.format("[x_player_armor] shield_hud geometry for '%s': win=(%dx%d), hud_scale=%.2f -> s=%.3f, offset=(%d,%d)",
-		player:get_player_name(), win_w, win_h, hud_scale, s, offset_x, submerged_y))
-
 	return {x = s, y = s}, {x = offset_x, y = submerged_y}
 end
 shield_hud.get_proportional_geometry = get_proportional_geometry
