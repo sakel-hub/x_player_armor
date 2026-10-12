@@ -9,6 +9,7 @@
 ---@field registered_groups table<string, number> Base armor groups map
 ---@field callbacks table<string, function[]> Event callback listener tables
 ---@field constants XPlayerArmorConstants Constants and configuration settings
+---@field gltf_assembler XPlayerArmorGltfAssembler In-memory glTF 2.0 dynamic model assembler facade
 local DEFAULT_ELEMENTS = {"head", "torso", "legs", "feet", "shield"}
 local DEFAULT_ATTRIBUTES = {"heal", "fire", "water", "feather"}
 
@@ -234,6 +235,7 @@ end
 ---@class XPlayerArmorBoneOffset
 ---@field pos Vector3|table<string, number> 3D position offset vector relative to bone origin {x, y, z}
 ---@field rot Vector3|table<string, number> Euler rotation angles in degrees {x, y, z}
+---@field scale Vector3|table<string, number>? Scale vector override {x, y, z}
 
 ---Bone attachment configuration for custom 3D models.
 ---@class XPlayerArmorTransform
@@ -324,7 +326,7 @@ end
 ---@field transforms XPlayerArmorTransforms? Skeletal bone attachment transforms keyed by piece ID or model format ("glb"|"b3d")
 ---@field glow number? Light emission level from 0 to 14 (ideal for enchanted, crystalline, or glowing gear). Ignored if custom 3D mesh is not used.
 ---@field visual_size Vector3|table<string, number>? Visual scale factor override for custom 3D models. Ignored if custom 3D mesh is not used.
----@field backface_culling boolean? Whether backface culling is enabled on the model entity (default: true). Ignored if custom 3D mesh is not used.
+---@field backface_culling boolean? Whether backface culling is enabled on the model entity (default: false). Ignored if custom 3D mesh is not used.
 ---@field shaded boolean? Whether diffuse shading and lighting is enabled on the model entity (default: true). Ignored if custom 3D mesh is not used.
 ---@field sounds XPlayerArmorSounds? Custom sound effects table for equip, unequip, hit, break, and block events
 ---@field heal number? Passive health regeneration boost level (sets groups.armor_heal)
@@ -569,15 +571,36 @@ function api.register_armor(name, def)
 		def.preview = def.inventory_image
 	end
 
-	-- Normalize custom 3D model meshes and transforms
-	def.model = def.model or def.mesh
+	if def.textures and type(def.textures) == "table" and #def.textures > 0 then
+		if not def.texture and def.textures[1] then
+			def.texture = def.textures[1]
+		end
+	elseif def.texture then
+		def.textures = {def.texture}
+	end
+
+	-- Normalize 3D model meshes and transforms (single source of truth: mesh, textures, shield_offset)
 	def.mesh = def.mesh or def.model
+	if not def.mesh and def.element == "shield" then
+		local c_models = constants.MODELS or (x_player_armor.constants and x_player_armor.constants.MODELS)
+		if def.tower_shield or (def.groups and def.groups.armor_shield_tower and def.groups.armor_shield_tower > 0) then
+			def.mesh = c_models and c_models.shield_tower or "x_player_armor_shield_tower.glb"
+		else
+			def.mesh = c_models and c_models.shield or "x_player_armor_shield.glb"
+		end
+	end
+	def.model = def.mesh
 	def.models = def.models or def.meshes
-	def.meshes = def.meshes or def.models
+	def.meshes = def.models
 	def.transforms = def.transforms or def.attach_transforms
-	def.attach_transforms = def.attach_transforms or def.transforms
+	def.attach_transforms = def.transforms
 	def.shield_offset = def.shield_offset or def.shield_transform
-	def.shield_transform = def.shield_transform or def.shield_offset
+	def.shield_transform = def.shield_offset
+
+	-- Normalize visual rendering flags (default backface_culling to false for 3D armor interiors)
+	if def.backface_culling == nil then
+		def.backface_culling = false
+	end
 
 	-- Normalize sound effects
 	if type(def.sounds) ~= "table" then
@@ -701,14 +724,19 @@ function api.get_shield_offset(format)
 	if not tbl and consts.SHIELD_OFFSET then
 		tbl = consts.SHIELD_OFFSET.glb
 	end
-	return tbl or {pos = {x = -0.8, y = 5.0, z = -2.8}, rot = {x = 180, y = 45, z = 0}}
+	return tbl or {
+		pos = {x = -0.8, y = 5.0, z = -1.7},
+		rot = {x = 180, y = -135, z = 0},
+		scale = {x = 1.45, y = 1.15, z = 1.15},
+	}
 end
 
 ---Sets or overrides the shield attachment transform for a model format.
 ---@param format string Model format ("glb" or "b3d")
 ---@param pos Vector3 Offset position vector
 ---@param rot Vector3 Euler rotation angles in degrees
-function api.set_shield_offset(format, pos, rot)
+---@param scale? Vector3 Scale vector override
+function api.set_shield_offset(format, pos, rot, scale)
 	local consts = x_player_armor.constants
 	if not consts.SHIELD_OFFSET then
 		consts.SHIELD_OFFSET = {}
@@ -721,6 +749,9 @@ function api.set_shield_offset(format, pos, rot)
 	end
 	if rot then
 		consts.SHIELD_OFFSET[format].rot = {x = rot.x or 0, y = rot.y or 0, z = rot.z or 0}
+	end
+	if scale then
+		consts.SHIELD_OFFSET[format].scale = {x = scale.x or 1, y = scale.y or 1, z = scale.z or 1}
 	end
 end
 
@@ -827,6 +858,7 @@ end
 ---@param player ObjectRef Target player to recalculate armor groups, physics, and stats for
 function api.set_player_armor(player)
 	api.effects.update_player_armor(player)
+	api.visuals.update_player_visuals(player)
 end
 
 ---Updates modular bone attachments and visual entity state for a player.
@@ -852,6 +884,14 @@ function api.schedule_player_visual_restore(player_name)
 	api.visuals.schedule_player_restore(player_name)
 end
 
+---Verifies that all worn armor items have valid, visible, attached visual entities.
+---Performs an on-demand repair if any worn piece is missing or detached.
+---@param player ObjectRef Target player
+---@return boolean repaired True if visuals were repaired, false if already healthy
+function api.verify_player_visuals(player)
+	return api.visuals.verify_player_visuals(player)
+end
+
 ---Attaches modular armor visual entities to an arbitrary parent entity (such as a deathstats corpse).
 ---@param parent ObjectRef The entity to attach armor to
 ---@param player_or_name ObjectRef|string|(string|ItemStack)[] Player object, player name, or explicit armor item list
@@ -867,6 +907,49 @@ end
 ---@return string preview_texture Composite preview texture string for 3D model formspecs
 function api.get_player_preview_texture(player)
 	return api.ui.get_preview_texture(player)
+end
+
+---Unified preview resolution entry point for both player formspec and in-world armor stand.
+---@param armor_list (ItemStack|table)[] Equipped items array
+---@param opts? table Options: { player = ObjectRef, is_stand = boolean, base_textures = string[], wield_tex = string }
+---@return string model_name, string|string[] textures Resolved model filename and texture specification
+function api.resolve_preview(armor_list, opts)
+	return api.gltf_assembler.resolve_preview(armor_list, opts)
+end
+
+---Checks if a dynamically assembled mesh is already downloaded and ready on the client.
+---@param filename string Model filename
+---@param player_name? string Optional player name for targeted delivery check
+---@return boolean is_ready True if model is acknowledged ready on client
+function api.is_media_ready(filename, player_name)
+	return api.gltf_assembler.is_media_ready(filename, player_name)
+end
+
+---Queues or executes a callback once the specified dynamic media is acknowledged as ready on the client.
+---@param filename string Model filename
+---@param callback fun() Callback function executed when media is ready
+function api.when_media_ready(filename, callback)
+	return api.gltf_assembler.when_media_ready(filename, callback)
+end
+
+---Scans an armor inventory list and detects 3D mesh pieces to attach to the preview armature.
+---@param armor_list (ItemStack|table)[] Armor inventory list
+---@param custom_only boolean? If true, only detects explicitly defined custom 3D models (excluding standard fallbacks)
+---@return boolean has_custom, table[] pieces_to_attach, table<string, boolean> slot_mask
+function api.detect_custom_pieces(armor_list, custom_only)
+	return api.gltf_assembler.detect_custom_pieces(armor_list, custom_only)
+end
+
+---Builds a spec-compliant .glb binary string combining base preview model and custom pieces in RAM.
+---@param pieces_to_attach table[] Array of piece descriptor tables
+---@return string? glb_binary, string[] material_textures
+function api.assemble_glb(pieces_to_attach)
+	return api.gltf_assembler.assemble_glb(pieces_to_attach)
+end
+
+---Clears all in-memory dynamic media caches and active player previews.
+function api.clear_media_cache()
+	return api.gltf_assembler.clear_cache()
 end
 
 ---Opens the armor and equipment inventory formspec for a player.

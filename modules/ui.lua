@@ -121,89 +121,25 @@ function ui.get_wield_texture(player)
 end
 
 ---Builds the composite preview texture for the 3D formspec model.
----For 9-material meshes (e.g. x_player_armor_preview.glb): returns "body10,body18,head,torso,legs,feet,shield_std,shield_tower,wield"
+---For 6-material meshes (e.g. x_player_armor_preview.glb): returns "body10,body18,head,torso,legs,feet"
 ---@param player ObjectRef
 ---@param _preview_model? string Optional preview model override (unused, maintained for compatibility)
 ---@return string composite_texture
 function ui.get_preview_texture(player, _preview_model)
-	local skin_info = x_player_armor.skins.resolve_player_skin(player)
-
-	local name, inv = x_player_armor.get_valid_player(player)
-	local head_tex = "blank.png"
-	local torso_tex = "blank.png"
-	local legs_tex = "blank.png"
-	local feet_tex = "blank.png"
-	local shield_std_tex = "blank.png"
-	local shield_tower_tex = "blank.png"
-	local wield_tex = ui.get_wield_texture(player)
-
-	if name and inv then
-		local armor_list = inv:get_list("armor")
-		if armor_list then
-			-- Slot 1: Head
-			if armor_list[1] and not armor_list[1]:is_empty() then
-				local tex = x_player_armor.visuals.get_item_texture(armor_list[1]:get_name())
-				if tex and tex ~= "" then
-					head_tex = tex
-				end
-			end
-			-- Slot 2: Torso
-			if armor_list[2] and not armor_list[2]:is_empty() then
-				local tex = x_player_armor.visuals.get_item_texture(armor_list[2]:get_name())
-				if tex and tex ~= "" then
-					torso_tex = tex
-				end
-			end
-			-- Slot 3: Legs
-			if armor_list[3] and not armor_list[3]:is_empty() then
-				local tex = x_player_armor.visuals.get_item_texture(armor_list[3]:get_name())
-				if tex and tex ~= "" then
-					legs_tex = tex
-				end
-			end
-			-- Slot 4: Feet
-			if armor_list[4] and not armor_list[4]:is_empty() then
-				local tex = x_player_armor.visuals.get_item_texture(armor_list[4]:get_name())
-				if tex and tex ~= "" then
-					feet_tex = tex
-				end
-			end
-			-- Slot 5: Shield (Standard vs Tower)
-			if armor_list[5] and not armor_list[5]:is_empty() then
-				local shield_item = armor_list[5]:get_name()
-				local tex = x_player_armor.visuals.get_item_texture(shield_item)
-				if tex and tex ~= "" then
-					local is_tower = core.get_item_group(shield_item, "armor_shield_tower") > 0
-						or core.get_item_group(shield_item, "armor_tower_shield") > 0
-					if not is_tower then
-						local def = core.registered_items[shield_item]
-						if def and (def.tower_shield or def.tower) then
-							is_tower = true
-						end
-					end
-
-					if is_tower then
-						shield_tower_tex = tex
-					else
-						shield_std_tex = tex
-					end
-				end
-			end
+	if player then
+		local name = player:get_player_name()
+		local dyn_model, dyn_textures = x_player_armor.gltf_assembler.resolve_player_preview(player)
+		if dyn_model and dyn_textures and x_player_armor.gltf_assembler.is_media_ready(dyn_model, name) then
+			return dyn_textures
 		end
 	end
 
-	return string.format(
-		"%s,%s,%s,%s,%s,%s,%s,%s,%s",
-		skin_info.body10,
-		skin_info.body18,
-		head_tex,
-		torso_tex,
-		legs_tex,
-		feet_tex,
-		shield_std_tex,
-		shield_tower_tex,
-		wield_tex
-	)
+	local _, inv = x_player_armor.get_valid_player(player)
+	local armor_list = inv and inv:get_list("armor")
+	local skin_info = x_player_armor.skins.resolve_player_skin(player)
+	local wield_tex = ui.get_wield_texture(player)
+	local base_texs = x_player_armor.gltf_assembler.resolve_base_preview_textures(armor_list, skin_info, wield_tex)
+	return table.concat(base_texs, ",")
 end
 
 ui.registered_preview_models = {
@@ -216,10 +152,25 @@ ui.registered_preview_models = {
 
 ---Resolves the 3D preview model mesh for the player.
 ---The 3D preview is a dedicated preview of the armor and uses the production preview model.
----@param _player? ObjectRef Optional player reference (maintained for API compatibility)
+---@param player? ObjectRef Optional player reference
 ---@return string model_name
-function ui.get_preview_model(_player)
-	return (x_player_armor.constants.MODELS and x_player_armor.constants.MODELS.preview) or "x_player_armor_preview.glb"
+function ui.get_preview_model(player)
+	if player then
+		local name = player:get_player_name()
+		local dyn_model = x_player_armor.gltf_assembler.resolve_player_preview(player)
+		if dyn_model then
+			if x_player_armor.gltf_assembler.is_media_ready(dyn_model, name) then
+				return dyn_model
+			end
+			-- Seamlessly upgrade to assembled model as soon as client receives the media
+			x_player_armor.gltf_assembler.when_media_ready(dyn_model, function()
+				if player:is_player() then
+					ui.refresh_player_formspec(player)
+				end
+			end)
+		end
+	end
+	return x_player_armor.constants.MODELS.preview
 end
 
 local SLOTS_LAYOUT = {
@@ -476,6 +427,9 @@ end
 ---@param player ObjectRef
 ---@return string formspec
 function ui.get_formspec(player)
+	if player and player:is_player() then
+		x_player_armor.visuals.verify_player_visuals(player)
+	end
 	local name = player:get_player_name()
 	local pdef = x_player_armor.get_player_def(player)
 	local preview_model = ui.get_preview_model(player)

@@ -12,31 +12,47 @@ local constants = x_player_armor.constants
 local utils = x_player_armor.utils
 
 -- Debounced restoration queue for self-healing when entities are cleared
+local update_stand_entity
 local pending_restores = {}
-local restore_scheduled = false
+local restore_queue = {}
+local restore_in_progress = false
 
 local function hash_pos(pos)
 	return core.hash_node_position(pos)
 end
 
----Registers a stand position for deferred rehydration.
----@param pos vector
+local function process_restore_queue()
+	local budget = 2 -- Process up to 2 stands per tick to prevent server lag spikes
+	while budget > 0 and #restore_queue > 0 do
+		local pos = table.remove(restore_queue, 1)
+		local node = core.get_node_or_nil(pos)
+		if node and (node.name == "x_player_armor:stand" or node.name == "x_player_armor:locked_stand") then
+			update_stand_entity(pos)
+			budget = budget - 1
+		end
+	end
+
+	if #restore_queue > 0 then
+		core.after(0.05, process_restore_queue)
+	else
+		restore_in_progress = false
+		pending_restores = {}
+	end
+end
+
+---Registers a stand position for deferred time-sliced rehydration across server ticks.
+---@param pos vector Position of the armor stand node
 function stand.schedule_restore(pos)
 	local hash = hash_pos(pos)
-	pending_restores[hash] = vector.new(pos)
-	if not restore_scheduled then
-		restore_scheduled = true
-		core.after(0.5, function()
-			restore_scheduled = false
-			local batch = pending_restores
-			pending_restores = {}
-			for _, p in pairs(batch) do
-				local node = core.get_node_or_nil(p)
-				if node and (node.name == "x_player_armor:stand" or node.name == "x_player_armor:locked_stand") then
-					stand.update_stand_entity(p)
-				end
-			end
-		end)
+	if pending_restores[hash] then
+		return
+	end
+	pending_restores[hash] = true
+	table.insert(restore_queue, vector.new(pos))
+
+	if not restore_in_progress then
+		restore_in_progress = true
+		core.after(0.05, process_restore_queue)
 	end
 end
 
@@ -49,9 +65,6 @@ core.register_entity("x_player_armor:stand_entity", {
 		visual = "mesh",
 		mesh = constants.MODELS.stand_entity,
 		textures = {
-			"blank.png",
-			"blank.png",
-			"blank.png",
 			"blank.png",
 			"blank.png",
 			"blank.png",
@@ -129,7 +142,7 @@ end
 
 ---Updates the mannequin textures and attached equipment on the stand entity.
 ---@param pos vector
-local function update_stand_entity(pos)
+update_stand_entity = function(pos)
 	local meta = core.get_meta(pos)
 	local inv = meta:get_inventory()
 	if inv:get_size("armor") < 6 then
@@ -142,76 +155,31 @@ local function update_stand_entity(pos)
 	local dir = core.facedir_to_dir(node.param2 or 0)
 	local yaw = (core.dir_to_yaw(dir) + math.pi) % (2 * math.pi)
 
-	-- Material array for x_player_armor_preview.glb (9 slots):
+	-- Material array for x_player_armor_preview.glb (6 base slots):
 	-- Slot 0: Body10 (blank.png; stand 3D node already has wooden arms built in)
 	-- Slot 1: Body18 (blank.png)
 	-- Slot 2: Head (list[1])
 	-- Slot 3: Torso (list[2])
 	-- Slot 4: Legs (list[3])
 	-- Slot 5: Feet (list[4])
-	-- Slot 6: Shield_Standard (list[5] if standard shield)
-	-- Slot 7: Shield_Tower (list[5] if tower shield)
-	-- Slot 8: Wielditem (list[6])
 
-	local head_tex = "blank.png"
-	if list[1] and not list[1]:is_empty() then
-		head_tex = x_player_armor.visuals.get_item_texture(list[1]:get_name()) or "blank.png"
-	end
+	local textures = x_player_armor.gltf_assembler.resolve_base_preview_textures(list, nil)
 
-	local torso_tex = "blank.png"
-	if list[2] and not list[2]:is_empty() then
-		torso_tex = x_player_armor.visuals.get_item_texture(list[2]:get_name()) or "blank.png"
-	end
-
-	local legs_tex = "blank.png"
-	if list[3] and not list[3]:is_empty() then
-		legs_tex = x_player_armor.visuals.get_item_texture(list[3]:get_name()) or "blank.png"
-	end
-
-	local feet_tex = "blank.png"
-	if list[4] and not list[4]:is_empty() then
-		feet_tex = x_player_armor.visuals.get_item_texture(list[4]:get_name()) or "blank.png"
-	end
-
-	local shield_std_tex = "blank.png"
-	local shield_tower_tex = "blank.png"
-	if list[5] and not list[5]:is_empty() then
-		local shield_item = list[5]:get_name()
-		local s_tex = x_player_armor.visuals.get_item_texture(shield_item)
-		if s_tex and s_tex ~= "" then
-			local is_tower = core.get_item_group(shield_item, "armor_shield_tower") > 0
-				or core.get_item_group(shield_item, "armor_tower_shield") > 0
-			if not is_tower then
-				local def = core.registered_items[shield_item]
-				if def and (def.tower_shield or def.tower) then
-					is_tower = true
+	local stand_mesh = constants.MODELS.stand_entity
+	local dyn_mesh, dyn_textures = x_player_armor.gltf_assembler.resolve_stand_preview(list, textures)
+	if dyn_mesh and dyn_textures then
+		if x_player_armor.gltf_assembler.is_media_ready(dyn_mesh) then
+			stand_mesh = dyn_mesh
+			textures = dyn_textures
+		else
+			x_player_armor.gltf_assembler.when_media_ready(dyn_mesh, function()
+				local cur_node = core.get_node(pos)
+				if cur_node.name == "x_player_armor:stand" or cur_node.name == "x_player_armor:locked_stand" then
+					update_stand_entity(pos)
 				end
-			end
-
-			if is_tower then
-				shield_tower_tex = s_tex
-			else
-				shield_std_tex = s_tex
-			end
+			end)
 		end
 	end
-
-	local wield_tex = "blank.png"
-	if list[6] and not list[6]:is_empty() then
-		wield_tex = x_player_armor.ui.get_item_wield_texture(list[6])
-	end
-
-	local textures = {
-		"blank.png", -- Slot 0: Body10
-		"blank.png", -- Slot 1: Body18
-		head_tex,    -- Slot 2: Head
-		torso_tex,   -- Slot 3: Torso
-		legs_tex,    -- Slot 4: Legs
-		feet_tex,    -- Slot 5: Feet
-		shield_std_tex,   -- Slot 6: Shield Standard
-		shield_tower_tex, -- Slot 7: Shield Tower
-		wield_tex,   -- Slot 8: Wielditem
-	}
 
 	local ent_pos = vector.add(pos, STAND_ENTITY_OFFSET)
 	local obj = get_stand_entity(pos)
@@ -229,6 +197,7 @@ local function update_stand_entity(pos)
 		end
 		obj:set_yaw(yaw)
 		obj:set_properties({
+			mesh = stand_mesh,
 			textures = textures,
 			backface_culling = false,
 		})
@@ -537,10 +506,10 @@ function stand.get_stand_formspec(pos, player)
 	table.insert(fs, x_player_armor.ui.render_player_inventory(1.275, 7.05))
 
 	-- Shift-click circular listring loop
-	table.insert(fs, string.format("listring[nodemeta:%d,%d,%d;armor]", pos.x, pos.y, pos.z))
 	table.insert(fs, string.format("listring[detached:%s_armor;armor]", name))
 	table.insert(fs, "listring[current_player;main]")
 	table.insert(fs, string.format("listring[nodemeta:%d,%d,%d;armor]", pos.x, pos.y, pos.z))
+	table.insert(fs, "listring[current_player;main]")
 
 	return table.concat(fs, "")
 end
@@ -1096,7 +1065,7 @@ core.register_lbm({
 	nodenames = {"x_player_armor:stand", "x_player_armor:locked_stand"},
 	run_at_every_load = true,
 	action = function(pos)
-		update_stand_entity(pos)
+		stand.schedule_restore(pos)
 	end,
 })
 

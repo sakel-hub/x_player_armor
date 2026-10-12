@@ -428,11 +428,17 @@ end
 
 core.register_on_joinplayer(function(player)
 	inventory.init_player_inventory(player)
+	x_player_armor.gltf_assembler.update_player(player)
 	core.after(0.1, function()
 		if player:is_player() then
 			x_player_armor.visuals.cleanup_orphaned_visuals()
 			x_player_armor.set_player_armor(player)
 			x_player_armor.update_player_visuals(player)
+		end
+	end)
+	core.after(0.5, function()
+		if player:is_player() then
+			x_player_armor.visuals.verify_player_visuals(player)
 		end
 	end)
 end)
