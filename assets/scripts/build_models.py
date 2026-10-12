@@ -20,6 +20,7 @@ Executed via Blender headless CLI:
 """
 
 import os
+import math
 import bpy
 import bmesh
 
@@ -191,7 +192,7 @@ def build_armor_models():
         },
         "x_player_armor_leggings_r": {
             "range": range(72, 78),
-            "transform": lambda co: ((co[0] - 1.0) * scale_xy, co[1] * scale_xy, max(-6.30, (co[2] - 6.75) * scale_z_body)),
+            "transform": lambda co: ((co[0] - 1.0) * 1.058, co[1] * 1.058, max(-6.30, (co[2] - 6.75) * scale_z_body)),
             "texture": "../textures/x_player_armor_steel.png",
         },
         "x_player_armor_leggings_l": {
@@ -206,7 +207,7 @@ def build_armor_models():
         },
         "x_player_armor_boot_r": {
             "range": range(90, 96),
-            "transform": lambda co: ((co[0] - 1.0) * 1.08, co[1] * 1.08, -7.20 if co[2] <= 1.0 else -3.10),
+            "transform": lambda co: ((co[0] - 1.0) * 1.088, co[1] * 1.088, -7.20 if co[2] <= 1.0 else -3.10),
             "texture": "../textures/x_player_armor_steel.png",
         },
     }
@@ -226,17 +227,20 @@ def build_armor_models():
     for name, cfg in pieces_config.items():
         extract_and_export_piece(name, extracted_data[name], cfg["texture"], cfg["transform"])
 
-    # Build solid low-poly beveled shield model (S2) for in-world attached entity
+    # Build solid low-poly contour-aware shield models for in-world attached entity
     build_solid_shield_model()
+    build_solid_shield_tower_model()
 
-    # Build clean standalone x_player_armor_preview.blend and .glb (7 material slots)
+    # Build clean standalone x_player_armor_preview.blend and .glb (6 material slots)
     build_preview_model()
 
 
 def build_solid_shield_model():
     """
-    Builds a clean, solid, low-poly beveled shield model (S2) with front face,
-    back face, side rim walls, and arm straps. Replaces legacy stacked planes.
+    Builds a clean, solid, contour-aware 3D shield model with front face,
+    back face, and solid side perimeter walls matching the 16x16 shield texture.
+    Normalized origin-centered coordinates (0, 0, 0) matching x_mobs standards:
+    Width = 4.0 (X in [-2.0, 2.0]), Height = 6.0 (Y in [-3.0, 3.0]), Depth = 0.40 (Z in [0.0, 0.40]).
     """
     print("Building solid 3D shield model for in-world entity...")
     bpy.ops.wm.read_homefile(use_empty=True)
@@ -249,82 +253,16 @@ def build_solid_shield_model():
     bm = bmesh.new()
     uv_layer = bm.loops.layers.uv.new("UVMap")
 
-    # Local coordinates for shield mounted on Arm_Left:
-    p_fb = bmesh.types.BMVert and None # dummy for typing
-    from mathutils import Vector
-    p_fb = Vector((-1.57, -2.24, -8.05))  # Front-bottom
-    p_ft = Vector((-2.75, -1.89, -1.96))  # Front-top
-    p_bt = Vector((-0.43,  4.67, -1.90))  # Back-top
-    p_bb = Vector(( 0.75,  4.33, -7.98))  # Back-bottom
+    from mathutils import Vector, Euler
+    # Normalized origin-centered coordinates (width=4.0, height=6.0, thickness=0.40)
+    base = Vector((2.00, -0.20, -3.00))
+    axis_u = Vector((-4.00, 0.00, 0.00))
+    axis_v = Vector((0.00, 0.00, 6.00))
+    axis_n = Vector((0.00, 1.00, 0.00))
+    thickness = 0.40
+    uv_rect = (0.0, 0.5, 0.25, 1.0)
 
-    v_u = p_fb - p_bb
-    v_v = p_bt - p_bb
-    normal = v_u.cross(v_v).normalized()
-    thickness = 0.35
-    dn = normal * thickness
-
-    vf0 = bm.verts.new(p_bb)
-    vf1 = bm.verts.new(p_fb)
-    vf2 = bm.verts.new(p_ft)
-    vf3 = bm.verts.new(p_bt)
-
-    vb0 = bm.verts.new(p_bb - dn)
-    vb1 = bm.verts.new(p_fb - dn)
-    vb2 = bm.verts.new(p_ft - dn)
-    vb3 = bm.verts.new(p_bt - dn)
-
-    u0, v0, u1, v1 = 0.0, 0.5, 0.25, 1.0
-    uc = (u0 + u1) / 2.0
-
-    # Front face (+normal)
-    f_front = bm.faces.new((vf0, vf1, vf2, vf3))
-    f_front.loops[0][uv_layer].uv = (u0, v0)
-    f_front.loops[1][uv_layer].uv = (u1, v0)
-    f_front.loops[2][uv_layer].uv = (u1, v1)
-    f_front.loops[3][uv_layer].uv = (u0, v1)
-
-    # Back face (-normal)
-    f_back = bm.faces.new((vb3, vb2, vb1, vb0))
-    f_back.loops[0][uv_layer].uv = (u0, v1)
-    f_back.loops[1][uv_layer].uv = (u1, v1)
-    f_back.loops[2][uv_layer].uv = (u1, v0)
-    f_back.loops[3][uv_layer].uv = (u0, v0)
-
-    # Rim perimeter faces (Top, Bottom, Front, Back)
-    rim_uv = (uc, 0.98)
-    for fverts in [
-        (vf3, vf2, vb2, vb3),  # Top
-        (vf1, vf0, vb0, vb1),  # Bottom
-        (vf2, vf1, vb1, vb2),  # Front edge
-        (vf0, vf3, vb3, vb0),  # Back edge
-    ]:
-        f = bm.faces.new(fverts)
-        for l in f.loops:
-            l[uv_layer].uv = rim_uv
-
-    # Arm Straps wrapping around Arm_Left
-    for strap_z in [-3.5, -6.5]:
-        sw = 0.4
-        s_shield = (p_bb - dn).lerp(p_bt - dn, 0.7 if strap_z == -3.5 else 0.2)
-        p0 = Vector((s_shield.x, s_shield.y, strap_z - sw / 2))
-        p1 = Vector((0.3, s_shield.y, strap_z - sw / 2))
-        p2 = Vector((0.3, -0.8, strap_z - sw / 2))
-        p3 = Vector((s_shield.x, -0.8, strap_z - sw / 2))
-
-        p0_top = Vector((p0.x, p0.y, strap_z + sw / 2))
-        p1_top = Vector((p1.x, p1.y, strap_z + sw / 2))
-        p2_top = Vector((p2.x, p2.y, strap_z + sw / 2))
-        p3_top = Vector((p3.x, p3.y, strap_z + sw / 2))
-
-        vs = [bm.verts.new(p) for p in [p0, p1, p2, p3, p0_top, p1_top, p2_top, p3_top]]
-        for q in [
-            (vs[0], vs[1], vs[5], vs[4]),
-            (vs[1], vs[2], vs[6], vs[5]),
-            (vs[2], vs[3], vs[7], vs[6]),
-        ]:
-            sf = bm.faces.new(q)
-            for l in sf.loops:
-                l[uv_layer].uv = (0.1, 0.6)
+    add_voxel_extruder_to_bm(bm, uv_layer, None, base, axis_u, axis_v, axis_n, thickness, uv_rect, 0, None)
 
     bm.to_mesh(mesh)
     bm.free()
@@ -334,6 +272,78 @@ def build_solid_shield_model():
     obj.data.materials.append(mat)
 
     set_viewport_material_shading()
+
+    for area in bpy.context.screen.areas:
+        if area.type == "VIEW_3D":
+            for space in area.spaces:
+                if space.type == "VIEW_3D":
+                    r3d = space.region_3d
+                    r3d.view_location = (0.0, 0.0, 0.0)
+                    r3d.view_distance = 10.0
+                    r3d.view_rotation = Euler((math.radians(75), 0, math.radians(-30)), "XYZ").to_quaternion()
+
+    blend_path = os.path.join(ASSETS_DIR, f"{name}.blend")
+    bpy.ops.wm.save_as_mainfile(filepath=blend_path)
+    bpy.ops.file.make_paths_relative()
+    bpy.ops.wm.save_as_mainfile(filepath=blend_path)
+
+    glb_path = os.path.join(MODELS_DIR, f"{name}.glb")
+    bpy.ops.export_scene.gltf(
+        filepath=glb_path,
+        export_format="GLB",
+        export_materials="EXPORT",
+        export_yup=True,
+    )
+    patch_glb_materials(glb_path)
+    print(f"Built solid {name}: blend={os.path.getsize(blend_path)}B, glb={os.path.getsize(glb_path)}B ({len(mesh.polygons)} polygons)")
+
+
+def build_solid_shield_tower_model():
+    """
+    Builds a clean, solid, contour-aware 3D tower shield model with front face,
+    back face, and solid side perimeter walls.
+    Normalized origin-centered coordinates (0, 0, 0) matching x_mobs standards:
+    Width = 4.0 (X in [-2.0, 2.0]), Height = 10.0 (Y in [-5.0, 5.0]), Depth = 0.40 (Z in [0.0, 0.40]).
+    """
+    print("Building solid 3D tower shield model for in-world entity...")
+    bpy.ops.wm.read_homefile(use_empty=True)
+
+    name = "x_player_armor_shield_tower"
+    mesh = bpy.data.meshes.new(name)
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.scene.collection.objects.link(obj)
+
+    bm = bmesh.new()
+    uv_layer = bm.loops.layers.uv.new("UVMap")
+
+    from mathutils import Vector, Euler
+    # Normalized origin-centered coordinates for tower shield (width=4.0, height=10.0, thickness=0.40)
+    base = Vector((2.00, -0.20, -5.00))
+    axis_u = Vector((-4.00, 0.00, 0.00))
+    axis_v = Vector((0.00, 0.00, 10.00))
+    axis_n = Vector((0.00, 1.00, 0.00))
+    thickness = 0.40
+    uv_rect = (0.0, 0.5, 0.25, 1.0)
+
+    add_voxel_extruder_to_bm(bm, uv_layer, None, base, axis_u, axis_v, axis_n, thickness, uv_rect, 0, None)
+
+    bm.to_mesh(mesh)
+    bm.free()
+
+    mat = bpy.data.materials.new(name="Armor")
+    setup_material_texture(mat, "../textures/x_player_armor_steel.png", ASSETS_DIR)
+    obj.data.materials.append(mat)
+
+    set_viewport_material_shading()
+
+    for area in bpy.context.screen.areas:
+        if area.type == "VIEW_3D":
+            for space in area.spaces:
+                if space.type == "VIEW_3D":
+                    r3d = space.region_3d
+                    r3d.view_location = (0.0, 0.0, 0.0)
+                    r3d.view_distance = 15.0
+                    r3d.view_rotation = Euler((math.radians(75), 0, math.radians(-30)), "XYZ").to_quaternion()
 
     blend_path = os.path.join(ASSETS_DIR, f"{name}.blend")
     bpy.ops.wm.save_as_mainfile(filepath=blend_path)
@@ -355,7 +365,7 @@ def add_voxel_extruder_to_bm(bm, uv_layer, dvert_lay, base, axis_u, axis_v, axis
     """
     Builds a 16x16 grid of 3D cuboid cells (256 voxels) with solid perimeter edge walls.
     UV mapping maps front/back faces to the cell rectangle and edge walls to the pixel center.
-    Assigns all vertices to the specified material slot and vertex group.
+    Assigns all vertices to the specified material slot and vertex group if provided.
     """
     u_min, v_min, u_max, v_max = uv_rect
     du = axis_u / 16.0
@@ -394,8 +404,9 @@ def add_voxel_extruder_to_bm(bm, uv_layer, dvert_lay, base, axis_u, axis_v, axis
                 bm.verts.new(c2 - dn),
                 bm.verts.new(c3 - dn),
             ]
-            for v in verts_front + verts_back:
-                v[dvert_lay][vg_idx] = 1.0
+            if dvert_lay is not None and vg_idx is not None:
+                for v in verts_front + verts_back:
+                    v[dvert_lay][vg_idx] = 1.0
 
             if not flip:
                 # Front face (+normal along +axis_n)
@@ -520,7 +531,7 @@ def patch_glb_materials(glb_path):
 
 
 def build_preview_model():
-    print(f"Building 9-material universal 3D preview model from {ARMOR_BLEND} and {SKINSDB_BLEND}...")
+    print(f"Building 6-material universal 3D preview model from {ARMOR_BLEND} and {SKINSDB_BLEND}...")
 
     from mathutils import Vector
 
@@ -602,7 +613,7 @@ def build_preview_model():
         elif idx in range(84, 96):
             poly_mat[idx] = 5   # Boots Left/Right -> Feet
 
-    # Assign 9 dedicated material slots
+    # Assign 6 dedicated material slots
     mat_configs = [
         ("Body", "../textures/x_player_armor_character.png"),
         ("Body18", "../textures/blank.png"),
@@ -610,9 +621,6 @@ def build_preview_model():
         ("Torso", "../textures/x_player_armor_steel.png"),
         ("Legs", "../textures/x_player_armor_steel.png"),
         ("Feet", "../textures/x_player_armor_steel.png"),
-        ("Shield_Standard", "../textures/x_player_armor_steel.png"),
-        ("Shield_Tower", "../textures/x_player_armor_shield_enhanced_cactus.png"),
-        ("Wielditem", "../textures/x_player_armor_character.png"),
     ]
 
     player_obj.data.materials.clear()
@@ -647,12 +655,32 @@ def build_preview_model():
             for v_idx in f.vertices:
                 boot_vert_indices.add(v_idx)
 
+    # Identify leg vertices (material_index == 4)
+    leg_vert_indices = set()
+    for f in player_mesh.polygons:
+        if f.material_index == 4:
+            for v_idx in f.vertices:
+                leg_vert_indices.add(v_idx)
+
     scale_xy_boot = 1.08
+    scale_xy_boot_r = 1.088
+    scale_xy_leg_r = 1.058
     for v in player_mesh.vertices:
+        is_right = (v.co.x > 0.0)
         if v.index in boot_vert_indices:
-            v.co.x *= scale_xy_boot
-            v.co.y *= scale_xy_boot
+            s = scale_xy_boot_r if is_right else scale_xy_boot
+            v.co.x *= s
+            v.co.y *= s
             v.co.z = -0.90 if v.co.z <= 1.5 else 3.20
+        elif v.index in leg_vert_indices and is_right:
+            v.co.x *= scale_xy_leg_r
+            v.co.y *= scale_xy_leg_r
+            if v.co.z <= 0.0:
+                v.co.z = 0.0
+            elif v.co.z <= 13.5:
+                v.co.z *= scale_z_body
+            else:
+                v.co.z = 12.6 + (v.co.z - 13.5) * scale_z_head
         else:
             v.co.x *= scale_xy
             v.co.y *= scale_xy
@@ -663,15 +691,11 @@ def build_preview_model():
             else:
                 v.co.z = 12.6 + (v.co.z - 13.5) * scale_z_head
 
-    # Generate 3D Voxel Extruder Grid for Standard Shield (Slot 6), Tower Shield (Slot 7), and Wielditem (Slot 8)
-    # and append Format 1.8 faces to Body18 (Slot 1)
+    # Append Format 1.8 faces to Body18 (Slot 1)
     bpy.ops.object.mode_set(mode="EDIT")
     bm = bmesh.from_edit_mesh(player_mesh)
     uv_layer = bm.loops.layers.uv.active
     dvert_lay = bm.verts.layers.deform.verify()
-
-    arm_l_idx = player_obj.vertex_groups["Arm_Left"].index
-    arm_r_idx = player_obj.vertex_groups["Arm_Right"].index
 
     # Append Format 1.8 geometry (Slot 1)
     vg_indices = {vg.name: vg.index for vg in player_obj.vertex_groups}
@@ -685,35 +709,6 @@ def build_preview_model():
         face.material_index = 1  # Body18
         for l, uv in zip(face.loops, loop_uvs):
             l[uv_layer].uv = uv
-
-    # 1. Shield Standard (Slot 6) on Arm_Left (Medium heater/buckler shield)
-    shield_base = Vector((-2.40, 4.33, 3.68))
-    shield_axis_u = Vector((-2.32, -6.57, -0.07))
-    shield_axis_v = Vector((-1.18, 0.34, 6.08))
-    shield_axis_n = Vector((-0.925, 0.329, -0.198))
-    shield_uv_rect = (0.0, 0.5, 0.25, 1.0)
-    add_voxel_extruder_to_bm(bm, uv_layer, dvert_lay, shield_base, shield_axis_u, shield_axis_v, shield_axis_n, 0.35, shield_uv_rect, 6, arm_l_idx)
-
-    # 2. Shield Tower (Slot 7) on Arm_Left (Tall boots-to-neckline tower shield)
-    # Raised bottom to Z=1.80 (mid-boot / ankle level) to prevent ground clipping while preserving neckline coverage
-    shield_base_tower = Vector((-2.46, 4.68, 1.80))
-    shield_axis_u_tower = Vector((-2.40, -6.80, -0.07))
-    shield_axis_v_tower = Vector((-2.00, 0.58, 10.70))
-    shield_axis_n_tower = Vector((-0.925, 0.329, -0.198))
-    add_voxel_extruder_to_bm(bm, uv_layer, dvert_lay, shield_base_tower, shield_axis_u_tower, shield_axis_v_tower, shield_axis_n_tower, 0.35, shield_uv_rect, 7, arm_l_idx)
-
-    # 3. Wielditem (Slot 8) on Arm_Right (Universal 16x16 Extruder)
-    # Canonical Luanti wield orientation:
-    # Diagonal tool axis extends horizontally forward (+Y) from hand (base Y=-0.15 -> tip Y=+7.60 at Z=7.35)
-    # Grip sits comfortably in palm/fingers (Y=+0.88..+1.92), crossguard emerges in front of hand (Y=+1.92..+3.80)
-    # Sharp side of axe / cutting edge (uv 0,1) points DOWN towards Z=3.22
-    # Back/butt of tool (uv 1,0) points UP towards Z=11.48
-    wield_base = Vector((3.15, -0.15, 7.35))
-    wield_axis_u = Vector((0.0, 4.14, 4.13))
-    wield_axis_v = Vector((0.0, 4.13, -4.13))
-    wield_axis_n = Vector((1.0, 0.0, 0.0))   # +X normal (facing outward)
-    wield_uv_rect = (0.0, 0.0, 1.0, 1.0)
-    add_voxel_extruder_to_bm(bm, uv_layer, dvert_lay, wield_base, wield_axis_u, wield_axis_v, wield_axis_n, 0.35, wield_uv_rect, 8, arm_r_idx)
 
     bmesh.update_edit_mesh(player_mesh)
     bpy.ops.object.mode_set(mode="OBJECT")
