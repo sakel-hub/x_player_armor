@@ -147,7 +147,7 @@ Authored and arranged by SaKeL (CC-BY 4.0):
 Authored by SaKeL (CC-BY 4.0 / CC0 1.0):
 - Combat Particle Sheet: `textures/x_player_armor_particles.png` (8 animation frames: healing sparkles, protective wards, shield impact deflect, and shatter shards)
 - Showcase Media: `screenshot.png` (In-game promotional showcase screenshot)
-- Preview Weapon Sprites: `assets/default_tool_steelsword.png`, `assets/default_tool_diamondsword.png` (Derived from Luanti Minetest Game `default` mod, CC-BY-SA 3.0 / CC0 1.0).
+- Preview Weapon Sprites: `assets/default_tool_steelsword.png`, `assets/default_tool_diamondsword.png` (Derived from Luanti Game `default` mod, CC-BY-SA 3.0 / CC0 1.0).
 
 ### Audio & Sound Effects
 

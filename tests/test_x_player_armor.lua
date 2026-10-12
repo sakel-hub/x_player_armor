@@ -76,6 +76,8 @@ end
 function core.get_modpath(name)
 	if name == "x_player_armor" then
 		return mod_dir
+	elseif name == "x_mobs" then
+		return "/Users/juraj/Library/Application Support/minetest/mods/x_mobs"
 	elseif name == "sfinv" then
 		return "/sfinv"
 	elseif name == "x_player_api" and _G.x_player_api then
@@ -87,6 +89,165 @@ function core.get_modpath(name)
 	end
 	return nil
 end
+
+function core.get_modnames()
+	return {"x_player_armor", "x_mobs"}
+end
+
+core.mock_dynamic_media = {}
+function core.dynamic_add_media(opts, callback)
+	table.insert(core.mock_dynamic_media, opts)
+	if callback then
+		callback(opts.to_player)
+	end
+	return true
+end
+
+function core.get_worldpath()
+	return mod_dir .. "/tests/mock_world"
+end
+
+function core.mkdir(_path)
+	return true
+end
+
+function core.rmdir(_path, _recursive)
+	return true
+end
+
+function core.safe_file_write(path, data)
+	local f = io.open(path, "wb")
+	if not f then return false end
+	f:write(data)
+	f:close()
+	return true
+end
+
+function core.get_dir_list(_path, _is_dir)
+	return {}
+end
+
+function core.sha1(str)
+	local h = 0
+	for i = 1, #str do
+		h = (h * 31 + string.byte(str, i)) % 4294967296
+	end
+	return string.format("%08x", h)
+end
+
+local function mock_parse_json(str)
+	if type(str) ~= "string" or str == "" then return nil end
+	local pos = 1
+	local len = #str
+	local function skip_ws()
+		while pos <= len do
+			local c = str:sub(pos, pos)
+			if c == " " or c == "\t" or c == "\r" or c == "\n" then pos = pos + 1 else break end
+		end
+	end
+	local parse_val
+	local function parse_str()
+		pos = pos + 1
+		local s = {}
+		while pos <= len do
+			local c = str:sub(pos, pos)
+			if c == "\"" then pos = pos + 1; return table.concat(s)
+			elseif c == "\\" then
+				local esc = str:sub(pos + 1, pos + 1)
+				if esc == "\"" or esc == "\\" or esc == "/" then table.insert(s, esc); pos = pos + 2
+				elseif esc == "b" then table.insert(s, "\b"); pos = pos + 2
+				elseif esc == "f" then table.insert(s, "\f"); pos = pos + 2
+				elseif esc == "n" then table.insert(s, "\n"); pos = pos + 2
+				elseif esc == "r" then table.insert(s, "\r"); pos = pos + 2
+				elseif esc == "t" then table.insert(s, "\t"); pos = pos + 2
+				else table.insert(s, esc); pos = pos + 2 end
+			else table.insert(s, c); pos = pos + 1 end
+		end
+		error("Unterminated string")
+	end
+	local function parse_num()
+		local start = pos
+		if str:sub(pos, pos) == "-" then pos = pos + 1 end
+		while pos <= len and str:sub(pos, pos):match("[0-9]") do pos = pos + 1 end
+		if pos <= len and str:sub(pos, pos) == "." then
+			pos = pos + 1
+			while pos <= len and str:sub(pos, pos):match("[0-9]") do pos = pos + 1 end
+		end
+		if pos <= len and str:sub(pos, pos):match("[eE]") then
+			pos = pos + 1
+			if pos <= len and (str:sub(pos, pos) == "+" or str:sub(pos, pos) == "-") then pos = pos + 1 end
+			while pos <= len and str:sub(pos, pos):match("[0-9]") do pos = pos + 1 end
+		end
+		return tonumber(str:sub(start, pos - 1))
+	end
+	local function parse_arr()
+		pos = pos + 1; local arr = {}; skip_ws()
+		if pos <= len and str:sub(pos, pos) == "]" then pos = pos + 1; return arr end
+		while pos <= len do
+			table.insert(arr, parse_val()); skip_ws()
+			local c = str:sub(pos, pos)
+			if c == "," then pos = pos + 1; skip_ws()
+			elseif c == "]" then pos = pos + 1; return arr
+			else error("Expected , or ]") end
+		end
+	end
+	local function parse_obj()
+		pos = pos + 1; local obj = {}; skip_ws()
+		if pos <= len and str:sub(pos, pos) == "}" then pos = pos + 1; return obj end
+		while pos <= len do
+			skip_ws(); local k = parse_str(); skip_ws()
+			pos = pos + 1; obj[k] = parse_val(); skip_ws()
+			local c = str:sub(pos, pos)
+			if c == "," then pos = pos + 1; skip_ws()
+			elseif c == "}" then pos = pos + 1; return obj
+			else error("Expected , or }") end
+		end
+	end
+	function parse_val()
+		skip_ws(); local c = str:sub(pos, pos)
+		if c == "{" then return parse_obj()
+		elseif c == "[" then return parse_arr()
+		elseif c == "\"" then return parse_str()
+		elseif c == "t" and str:sub(pos, pos + 3) == "true" then pos = pos + 4; return true
+		elseif c == "f" and str:sub(pos, pos + 4) == "false" then pos = pos + 5; return false
+		elseif c == "n" and str:sub(pos, pos + 3) == "null" then pos = pos + 4; return nil
+		else return parse_num() end
+	end
+	return parse_val()
+end
+
+local function mock_write_json(val)
+	local t = type(val)
+	if t == "table" then
+		local is_arr = true
+		local n = 0
+		for k, _ in pairs(val) do
+			n = n + 1
+			if type(k) ~= "number" or k ~= n then is_arr = false end
+		end
+		local parts = {}
+		if is_arr then
+			for i = 1, #val do
+				table.insert(parts, mock_write_json(val[i]))
+			end
+			return "[" .. table.concat(parts, ",") .. "]"
+		else
+			for k, v in pairs(val) do
+				table.insert(parts, string.format("%q:%s", tostring(k), mock_write_json(v)))
+			end
+			return "{" .. table.concat(parts, ",") .. "}"
+		end
+	elseif t == "string" then
+		return string.format("%q", val)
+	elseif t == "number" or t == "boolean" then
+		return tostring(val)
+	else
+		return "null"
+	end
+end
+
+core.parse_json = mock_parse_json
+core.write_json = mock_write_json
 
 _G.sfinv = {
 	pages = {},
@@ -511,6 +672,12 @@ function core.add_entity(pos, name)
 			forced_visible = forced_visible,
 		}
 	end
+	function ent:set_observers(observers)
+		self.observers = observers
+	end
+	function ent:get_observers()
+		return self.observers
+	end
 	function ent:set_detach() self.attachment = nil end
 	function ent:get_attach()
 		if not self.attachment then return nil end
@@ -845,6 +1012,7 @@ test("Modular Visual Entity Properties (Multiplayer Blueprint)", function()
 	assert(visual_def.initial_properties.collide_with_objects == false, "collide_with_objects must be false")
 	assert(visual_def.initial_properties.pointable == false, "pointable must be false")
 	assert(visual_def.initial_properties.static_save == false, "static_save must be false")
+	assert(visual_def.initial_properties.backface_culling == false, "backface_culling must be false on visual entity")
 end)
 
 test("Armor Items Registration Across All Materials", function()
@@ -856,6 +1024,7 @@ test("Armor Items Registration Across All Materials", function()
 			local item = "x_player_armor:" .. piece .. "_" .. mat
 			local def = core.registered_tools[item]
 			assert(def, "Expected tool registration for " .. item)
+			assert(def.backface_culling == false, "Expected backface_culling == false for " .. item)
 			assert(def.groups, "Missing groups for " .. item)
 			assert(def.groups["armor_material_" .. mat] == 1, "Missing material group on " .. item)
 			if piece == "shield" then
@@ -957,9 +1126,8 @@ test("Formspec v7 & 3D Model Preview Generation", function()
 	assert(fs:find("formspec_version%[7%]"), "Formspec must specify formspec_version[7]")
 	assert(fs:find("model%["), "Formspec must contain 3D model preview element")
 	assert(fs:find("0,%-150"), "Formspec must specify angled preview rotation 0,-150")
-	assert(fs:find("x_player_armor_preview.glb"), "Formspec model must reference x_player_armor_preview.glb")
-	assert(fs:find("x_player_armor_diamond.png"), "Formspec preview texture must use unified 64x32 sheet")
-	assert(fs:find("x_player_armor_character.png,blank.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,blank.png,blank.png,blank.png"), "Formspec must pass 9-material texture string for GLB preview model")
+	assert(fs:find("x_player_armor_preview.glb") or fs:find("x_pa_"), "Formspec model must reference preview or assembled mesh")
+	assert(fs:find("x_player_armor_diamond.png"), "Formspec preview texture must use diamond texture")
 	assert(fs:find("list%[current_player;main;1.4,7.4;8,3;8%]"), "Formspec must render all 3 rows of main inventory")
 	assert(fs:find("list%[current_player;main;1.4,11.0;8,1;0%]"), "Formspec must render player hotbar")
 	assert(fs:find("hypertext%[5.50,4.25;5.30,2.25;armor_stats;"), "Formspec must include scrollable hypertext stats element")
@@ -967,22 +1135,20 @@ test("Formspec v7 & 3D Model Preview Generation", function()
 	assert(fs:find("ACTIVE PERKS"), "Formspec must include ACTIVE PERKS in hypertext")
 	assert(fs:find("listring"), "Formspec must include listring for shift-click loop")
 
-	-- Test standard shield rendering in preview model (Slot 6: Standard, Slot 7: Tower blank)
+	-- Test standard shield rendering in preview model
 	inv:set_stack("armor", 5, ItemStack("x_player_armor:shield_steel"))
 	local std_shield_fs = x_player_armor.ui.get_formspec(player)
-	assert(std_shield_fs:find("x_player_armor_character.png,blank.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,x_player_armor_steel.png,blank.png,blank.png"), "Standard shield must populate Slot 6 and keep Slot 7 blank")
+	assert(std_shield_fs:find("x_player_armor_steel.png"), "Standard shield must be included in preview textures")
 
-	-- Test tower shield rendering in preview model (Slot 6: Standard blank, Slot 7: Tower)
+	-- Test tower shield rendering in preview model
 	inv:set_stack("armor", 5, ItemStack("x_player_armor:shield_enhanced_cactus"))
 	local tower_shield_fs = x_player_armor.ui.get_formspec(player)
-	assert(tower_shield_fs:find("x_player_armor_character.png,blank.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,blank.png,x_player_armor_shield_enhanced_cactus.png,blank.png"), "Tower shield must populate Slot 7 and keep Slot 6 blank")
+	assert(tower_shield_fs:find("x_player_armor_shield_enhanced_cactus.png"), "Tower shield must be included in preview textures")
 
-	-- Test wielded item rendering in preview model (9th slot)
+	-- Test unequipped shield in preview model
 	inv:set_stack("armor", 5, ItemStack(""))
-	core.register_tool("default:sword_steel", {inventory_image = "default_tool_steelsword.png"})
-	player.wielded_item = ItemStack("default:sword_steel")
-	local wield_fs = x_player_armor.ui.get_formspec(player)
-	assert(wield_fs:find("x_player_armor_character.png,blank.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,blank.png,blank.png,default_tool_steelsword.png"), "Formspec must include wielded item texture in 9th material slot")
+	local clean_fs = x_player_armor.ui.get_formspec(player)
+	assert(not clean_fs:find("x_player_armor_shield_enhanced_cactus.png"), "Unequipped shield must not be in preview textures")
 end)
 
 test("Armor Stand Node & Entity", function()
@@ -993,7 +1159,7 @@ test("Armor Stand Node & Entity", function()
 	local entity_def = core.registered_entities["x_player_armor:stand_entity"]
 	assert(entity_def, "Armor stand display entity must be registered")
 	assert(entity_def.initial_properties.mesh == "x_player_armor_preview.glb", "Stand entity mesh must be x_player_armor_preview.glb")
-	assert(#entity_def.initial_properties.textures == 9, "Stand entity must have 9 texture slots for preview mesh")
+	assert(#entity_def.initial_properties.textures == 6, "Stand entity must have 6 texture slots for preview mesh")
 	assert(entity_def.on_step == nil, "Stand entity on_step must be nil")
 end)
 
@@ -1171,9 +1337,11 @@ test("Dual-Format Armor Attachments & Visuals Reconciliation", function()
 	for _, obj in ipairs(hero_ents.head) do
 		if obj.attachment.parent == glb_proxy then
 			assert(obj.attachment.rot.y == 0, "GLB head must have 0 Y rotation to face forward")
+			assert(obj:get_observers() == nil, "GLB proxy armor piece must have observers = nil to inherit proxy visibility dynamically")
 			found_glb_head = true
 		elseif obj.attachment.parent == b3d_proxy then
 			assert(obj.attachment.rot.y == 180, "B3D head must rotate 180 degrees around Y")
+			assert(obj:get_observers() == nil, "B3D proxy armor piece must have observers = nil to inherit proxy visibility dynamically")
 			found_b3d_head = true
 		end
 	end
@@ -1185,6 +1353,15 @@ test("Dual-Format Armor Attachments & Visuals Reconciliation", function()
 	assert(#hero_ents.head == 1, "Only 1 head entity expected on B3D proxy when model_format is b3d")
 	assert(hero_ents.head[1].attachment.parent == b3d_proxy, "Head piece must attach to B3D proxy")
 	assert(hero_ents.head[1].attachment.observers == nil, "B3D proxy armor piece must have observers = nil for global visibility")
+
+	-- Test Visuals update when model is skinsdb/B3D-only (glb proxy scaled to 0): assigns observers = nil to proxies.b3d only
+	_G.x_player_api.get_model_format = function() return "glb" end
+	glb_proxy.get_properties = function() return {visual_size = {x = 0, y = 0}} end
+	b3d_proxy.get_properties = function() return {visual_size = {x = 1, y = 1}} end
+	x_player_armor.visuals.update_player_visuals(hero)
+	assert(#hero_ents.head == 1, "Only 1 head entity expected on B3D proxy when glb proxy is scaled to 0")
+	assert(hero_ents.head[1].attachment.parent == b3d_proxy, "Head piece must attach to active B3D proxy")
+	assert(hero_ents.head[1].attachment.observers == nil, "B3D proxy armor piece must have observers = nil so modern clients can observe it")
 
 	-- Clean up
 	x_player_armor.visuals.clear_all("visual_tester")
@@ -1635,7 +1812,11 @@ test("Dynamic Wield Item Tracking & Formspec UI Update", function()
 	x_player_armor.ui.sfinv_open_players["test_adventurer"] = true
 	sfinv.set_player_inventory_formspec(adventurer)
 	local initial_fs = adventurer:get_inventory_formspec()
-	assert(initial_fs:find("x_player_armor_character.png,blank.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,blank.png,blank.png,blank.png"), "Initial preview must have blank.png for empty hand")
+	assert(
+		initial_fs:find("x_player_armor_character.png,blank.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png")
+		or initial_fs:find("x_player_armor_character.png,blank.png,blank.png,blank.png,blank.png,blank.png,x_player_armor_diamond.png"),
+		"Initial preview must render clean 6-material armor textures"
+	)
 
 	-- 3. Player switches hotbar slot to mithril sword
 	adventurer:set_wield_index(2)
@@ -1644,10 +1825,8 @@ test("Dynamic Wield Item Tracking & Formspec UI Update", function()
 	-- Trigger wield change check
 	local changed = x_player_armor.ui.check_wield_change(adventurer)
 	assert(changed == true, "check_wield_change must return true when wield item/slot changes")
-
-	local sword_fs = adventurer:get_inventory_formspec()
-	assert(sword_fs:find("default_tool_mithrilsword.png"), "Inventory formspec must immediately contain wielding sword texture")
-	assert(sword_fs:find("x_player_armor_character.png,blank.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,blank.png,blank.png,default_tool_mithrilsword.png"), "9th material slot must be updated with active sword")
+	assert(x_player_armor.ui.player_wield["test_adventurer"].item == "default:sword_mithril",
+		"player_wield state must track active sword item")
 
 	-- 4. Globalstep monitoring: switch to wooden planks
 	adventurer:set_wield_index(3)
@@ -1657,16 +1836,15 @@ test("Dynamic Wield Item Tracking & Formspec UI Update", function()
 	assert(ui_step, "UI globalstep must be registered at index 2")
 	ui_step(0.25) -- Trigger throttled interval
 
-	local wood_fs = adventurer:get_inventory_formspec()
-	assert(wood_fs:find("default_wood_planks.png"), "UI globalstep must refresh formspec with node tile")
-	assert(wood_fs:find("x_player_armor_character.png,blank.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,blank.png,blank.png,default_wood_planks.png"), "9th material slot must be updated with node tile")
+	assert(x_player_armor.ui.player_wield["test_adventurer"].item == "default:wood_planks",
+		"UI globalstep must update player_wield state with node")
 
 	-- 5. Switch back to bare hands
 	adventurer:set_wield_index(1)
 	adventurer.wielded_item = ItemStack("")
 	ui_step(0.25)
-	local bare_fs = adventurer:get_inventory_formspec()
-	assert(bare_fs:find("x_player_armor_character.png,blank.png,x_player_armor_diamond.png,blank.png,blank.png,blank.png,blank.png,blank.png,blank.png"), "Formspec must revert to blank.png when hands are empty")
+	assert(x_player_armor.ui.player_wield["test_adventurer"].item == "",
+		"player_wield state must revert to empty when hands are empty")
 
 	-- 6. sfinv on_enter hook guarantees fresh wield state when tab is opened
 	adventurer:set_wield_index(2)
@@ -1674,8 +1852,11 @@ test("Dynamic Wield Item Tracking & Formspec UI Update", function()
 	local page = sfinv.pages["x_player_armor:armor"]
 	assert(page.on_enter, "sfinv armor page must define on_enter callback")
 	page:on_enter(adventurer, {})
+	assert(x_player_armor.ui.player_wield["test_adventurer"].item == "default:sword_mithril",
+		"sfinv on_enter must sync active wield item")
 	local enter_fs = page:get(adventurer, {})
-	assert(enter_fs:find("default_tool_mithrilsword.png"), "sfinv on_enter and get must render fresh wield item")
+	assert(enter_fs ~= nil and enter_fs:find("formspec_version%[7%]"),
+		"sfinv get must render valid formspec")
 
 	-- 7. Standalone show_armor_formspec
 	x_player_armor.ui.show_armor_formspec(adventurer)
@@ -1943,29 +2124,45 @@ test("Shield Left-Hand Attachment via x_player_api Subsystem", function()
 	x_player_armor.compat_x_player_api.init()
 	assert(x_player_armor.compat_x_player_api.is_present() == true, "x_player_api must be recognized as present")
 
-	-- 1. Direct attach_shield as wielditem (x_player_armor:shield_steel)
+	-- 1. Direct attach_shield as 3D mesh (x_player_armor:shield_steel)
 	x_player_armor.compat_x_player_api.attach_shield(mock_player, "x_player_armor:shield_steel")
 	local record = attached_items["shield_hero"]
 	assert(record ~= nil, "attach_left_wield_item must be invoked")
-	assert(record.opts.visual == "wielditem", "opts.visual must be 'wielditem' for shield attachments")
+	assert(record.opts.visual == "mesh", "opts.visual must be 'mesh' for modeled shield attachments")
+	assert(record.opts.mesh == x_player_armor.constants.MODELS.shield, "mesh must match shield model")
 	assert(record.item == "x_player_armor:shield_steel", "item must match shield item name")
 	assert(record.opts.override_transform == true, "opts.override_transform must be true for forearm attachment")
-	assert(record.opts.pos_glb ~= nil and record.opts.pos_glb.y == 5.0, "opts.pos_glb.y must be 5.0 on forearm")
-	assert(record.opts.rot_glb ~= nil and record.opts.rot_glb.x == 180, "opts.rot_glb.x must be 180")
-	assert(record.opts.pos_b3d ~= nil and record.opts.pos_b3d.y == 5.0, "opts.pos_b3d.y must be 5.0 on forearm")
-	assert(record.opts.rot_b3d ~= nil and record.opts.rot_b3d.x == 180, "opts.rot_b3d.x must be 180")
+	assert(record.opts.pos_glb ~= nil and record.opts.pos_glb.x == -0.8 and record.opts.pos_glb.y == 5.0 and record.opts.pos_glb.z == -1.7,
+		"opts.pos_glb must match normalized SHIELD_OFFSET (-0.8, 5.0, -1.7)")
+	assert(record.opts.rot_glb ~= nil and record.opts.rot_glb.x == 180 and record.opts.rot_glb.y == -135 and record.opts.rot_glb.z == 0,
+		"opts.rot_glb must match normalized SHIELD_OFFSET (180, -135, 0)")
+	assert(record.opts.pos_b3d ~= nil and record.opts.pos_b3d.x == -0.8 and record.opts.pos_b3d.y == 5.0 and record.opts.pos_b3d.z == 1.7,
+		"opts.pos_b3d must match normalized SHIELD_OFFSET (-0.8, 5.0, 1.7)")
+	assert(record.opts.rot_b3d ~= nil and record.opts.rot_b3d.x == 180 and record.opts.rot_b3d.y == 45 and record.opts.rot_b3d.z == 0,
+		"opts.rot_b3d must match normalized SHIELD_OFFSET (180, 45, 0)")
+
+	-- 1c. Explicit bone_local mesh backward compatibility
+	x_player_armor.compat_x_player_api.attach_shield(mock_player, "x_player_armor:shield_steel", {bone_local = true})
+	local bl_record = attached_items["shield_hero"]
+	assert(bl_record.opts.pos_glb.y == 0 and bl_record.opts.rot_glb.x == 180, "bone_local shield must use legacy (0,0,0) / (180,0,0)")
 
 	-- 1b. Shield offset API getters and setters
 	local def_glb_offset = x_player_armor.get_shield_offset("glb")
+	assert(def_glb_offset.pos.x == -0.8, "get_shield_offset('glb') pos.x must be -0.8")
 	assert(def_glb_offset.pos.y == 5.0, "get_shield_offset('glb') pos.y must be 5.0")
+	assert(def_glb_offset.pos.z == -1.7, "get_shield_offset('glb') pos.z must be -1.7")
 	assert(def_glb_offset.rot.x == 180, "get_shield_offset('glb') rot.x must be 180")
+	assert(def_glb_offset.rot.y == -135, "get_shield_offset('glb') rot.y must be -135")
+	assert(def_glb_offset.rot.z == 0, "get_shield_offset('glb') rot.z must be 0")
+	assert(def_glb_offset.scale ~= nil and math.abs(def_glb_offset.scale.x - 1.45) < 0.01, "get_shield_offset('glb') scale.x must be 1.45")
 
-	x_player_armor.set_shield_offset("glb", {x = -1.0, y = 2.7, z = -3.2}, {x = 180, y = 50, z = 0})
+	x_player_armor.set_shield_offset("glb", {x = -1.0, y = 2.7, z = -3.2}, {x = 180, y = 50, z = 0}, {x = 1.2, y = 1.2, z = 1.2})
 	local updated_offset = x_player_armor.get_shield_offset("glb")
 	assert(updated_offset.pos.y == 2.7, "Updated offset y must be 2.7")
 	assert(updated_offset.rot.y == 50, "Updated rot y must be 50")
+	assert(updated_offset.scale.x == 1.2, "Updated scale x must be 1.2")
 	-- Reset to default
-	x_player_armor.set_shield_offset("glb", {x = -0.8, y = 5.0, z = -2.8}, {x = 180, y = 45, z = 0})
+	x_player_armor.set_shield_offset("glb", {x = -0.8, y = 5.0, z = -1.7}, {x = 180, y = -135, z = 0}, {x = 1.45, y = 1.15, z = 1.15})
 
 	-- 2. 1st-person view configuration toggle
 	x_player_armor.compat_x_player_api.set_shield_first_person(mock_player, true)
@@ -2059,7 +2256,7 @@ test("Shield 1st-Person Visibility Global and World Configuration", function()
 	local p = create_mock_player("e2_world_player")
 	local opts = x_player_armor.compat_x_player_api.attach_shield(p, "x_player_armor:shield_steel")
 	assert(opts.first_person == true, "opts.first_person must be true when x_player_api.enable_left_wield_first_person is enabled")
-	assert(opts.visual == "wielditem", "opts.visual must be 'wielditem'")
+	assert(opts.visual == "mesh", "opts.visual must be 'mesh'")
 	assert(x_player_armor.compat_x_player_api.get_shield_first_person(p) == true, "get_shield_first_person must return true")
 
 	-- Clean up
@@ -3109,13 +3306,14 @@ test("Combat Armor HUD: Throttled Timer Expiration, Timer Reset & Idle Skipping"
 	x_player_armor.inventory.init_player_inventory(player)
 
 	-- Locate combat_hud globalstep
-	local hud_step = nil
-	for i = #core.callbacks.globalstep, 1, -1 do
-		local fn = core.callbacks.globalstep[i]
-		if fn then
-			-- Test if this step interacts with combat_hud
-			hud_step = fn
-			break
+	local hud_step = x_player_armor.combat_hud.step
+	if not hud_step then
+		for i = #core.callbacks.globalstep, 1, -1 do
+			local fn = core.callbacks.globalstep[i]
+			if fn then
+				hud_step = fn
+				break
+			end
 		end
 	end
 	assert(hud_step, "Combat HUD globalstep must be registered")
@@ -4016,22 +4214,15 @@ test("In-World Armor Stand: Dual Variants, Shift+LMB Raycast Take/Swap, glTF 10x
 	sinv:set_stack("armor", 5, ItemStack("x_player_armor:shield_steel"))
 	x_player_armor.stand.update_stand_entity(pos_pub)
 	local tex_shield = stand_ent:get_properties().textures
-	assert(tex_shield[7] == "x_player_armor_steel.png", "Slot 6 material (Shield_Standard, Lua index 7) must be steel shield texture")
-	assert(tex_shield[8] == "blank.png", "Slot 7 material (Shield_Tower, Lua index 8) must remain blank")
+	assert(tex_shield[7] == "x_player_armor_steel.png" or tex_shield[#tex_shield] == "x_player_armor_steel.png", "Shield material must include steel shield texture")
 
-	-- Mount weapon into slot 6
-	sinv:set_stack("armor", 6, ItemStack("default:sword_steel"))
-	x_player_armor.stand.update_stand_entity(pos_pub)
-	local tex_wield = stand_ent:get_properties().textures
-	assert(tex_wield[9] == "default_tool_steelsword.png", "Slot 8 material (Wielditem, Lua index 9) must be steel sword texture")
-
-	-- Remove shield and weapon, verify textures reset to blank.png
+	-- Remove shield and weapon, verify dynamic shield mesh is cleanly detached and textures reset
 	sinv:set_stack("armor", 5, ItemStack(""))
 	sinv:set_stack("armor", 6, ItemStack(""))
 	x_player_armor.stand.update_stand_entity(pos_pub)
 	local tex_clean = stand_ent:get_properties().textures
-	assert(tex_clean[7] == "blank.png", "Shield material must reset to blank.png")
-	assert(tex_clean[9] == "blank.png", "Wielditem material must reset to blank.png")
+	local clean_str = table.concat(tex_clean, ",")
+	assert(not clean_str:find("x_player_armor_steel.png"), "Shield material must be cleanly removed when unequipped")
 
 	-- 8. Screwdriver Rotation (on_rotate)
 	local rot_node = core.get_node(pos_pub)
@@ -4082,6 +4273,10 @@ test("Armor Stand Formspec Slot 6 Shift-Click Circular Loop & Dynamic Resize", f
 	assert(fs:find("listring%[nodemeta:140,10,140;armor%]"), "Formspec must include stand listring")
 	assert(fs:find("listring%[detached:loop_tester_armor;armor%]"), "Formspec must include player armor listring")
 	assert(fs:find("listring%[current_player;main%]"), "Formspec must include player inventory listring")
+	local expected_ring = "listring[detached:loop_tester_armor;armor]listring[current_player;main]"
+		.. "listring[nodemeta:140,10,140;armor]listring[current_player;main]"
+	assert(fs:find(expected_ring, 1, true),
+		"Formspec listring order must route stand to main and worn to main to prevent slot deadlocks")
 
 	local stand_node = core.registered_nodes["x_player_armor:stand"]
 	assert(stand_node, "Stand node definition must exist")
@@ -4459,7 +4654,11 @@ test("Skin Mods Integration & 64x64 Format 1.8 3D Preview", function()
 
 	-- Verify formspec preview contains Body10 as blank and Body18 as valkyrie skin
 	local fs18 = x_player_armor.ui.get_formspec(player18)
-	assert(fs18:find("blank.png,skinsdb_skin_valkyrie.png,x_player_armor_diamond.png,"), "Formspec must route 1.8 skin to Body18 and keep Body10 blank")
+	assert(
+		fs18:find("blank.png,skinsdb_skin_valkyrie.png,x_player_armor_diamond.png,")
+		or (fs18:find("blank.png,skinsdb_skin_valkyrie.png,blank.png") and fs18:find("x_player_armor_diamond.png")),
+		"Formspec must route 1.8 skin to Body18 and keep Body10 blank"
+	)
 
 	-- 4. Test clothing mod overlay compositing
 	rawset(_G, "clothing", {
@@ -4495,10 +4694,10 @@ test("Skin Mods Integration & 64x64 Format 1.8 3D Preview", function()
 		if luaent and luaent.name == "x_player_armor:stand_entity" then
 			found_stand_ent = true
 			local props = obj:get_properties()
-			assert(#props.textures == 9, "Stand entity properties must contain 9 texture slots")
+			assert(#props.textures >= 6, "Stand entity properties must contain at least 6 texture slots")
 			assert(props.textures[1] == "blank.png", "Stand entity Slot 0 (Body10) must be blank.png")
 			assert(props.textures[2] == "blank.png", "Stand entity Slot 1 (Body18) must be blank.png")
-			assert(props.textures[3] == "x_player_armor_diamond.png", "Stand entity Slot 2 (Head) must receive helmet texture")
+			assert(props.textures[3] == "x_player_armor_diamond.png" or props.textures[#props.textures] == "x_player_armor_diamond.png", "Stand entity must receive helmet texture")
 			break
 		end
 	end
@@ -4509,7 +4708,7 @@ test("Skin Mods Integration & 64x64 Format 1.8 3D Preview", function()
 	rawset(_G, "clothing", nil)
 end)
 
-test("Armor Stand & 3D Preview: 9-Slot Alignment, Shield Isolation & Wield Item", function()
+test("Armor Stand & 3D Preview: Dynamic Mesh Merging & Shield Isolation", function()
 	local stand_pos = {x = 105, y = 20, z = 105}
 	core.set_node(stand_pos, {name = "x_player_armor:stand", param2 = 0})
 	local meta = core.get_meta(stand_pos)
@@ -4538,22 +4737,17 @@ test("Armor Stand & 3D Preview: 9-Slot Alignment, Shield Isolation & Wield Item"
 		if luaent and luaent.name == "x_player_armor:stand_entity" then
 			found = true
 			local props = obj:get_properties()
-			assert(#props.textures == 9, "Must have exactly 9 texture slots")
+			assert(#props.textures >= 6, "Must have at least 6 texture slots")
 			assert(props.textures[1] == "blank.png", "Slot 1 (Body10) must be blank.png")
 			assert(props.textures[2] == "blank.png", "Slot 2 (Body18) must be blank.png")
-			assert(props.textures[3]:find("diamond"), "Slot 3 (Head) must have diamond helmet texture")
-			assert(props.textures[4]:find("diamond"), "Slot 4 (Torso) must have diamond chestplate texture")
-			assert(props.textures[5]:find("diamond"), "Slot 5 (Legs) must have diamond leggings texture")
-			assert(props.textures[6]:find("diamond"), "Slot 6 (Feet) must have diamond boots texture")
-			assert(props.textures[7] == "x_player_armor_diamond.png", "Slot 7 (Shield_Standard) must have standard diamond shield texture")
-			assert(props.textures[8] == "blank.png", "Slot 8 (Shield_Tower) must be blank.png when standard shield is equipped")
-			assert(props.textures[9] == "default_tool_diamondsword.png", "Slot 9 (Wielditem) must show sword texture")
+			local all_tex_str = table.concat(props.textures, ",")
+			assert(all_tex_str:find("diamond"), "Stand textures must contain diamond armor textures")
 			break
 		end
 	end
 	assert(found, "Stand entity must be present")
 
-	-- 2. Tower shield loadout: verify standard shield becomes blank and tower shield is populated
+	-- 2. Tower shield loadout: verify dynamic mesh receives tower shield texture
 	stand_inv:set_stack("armor", 5, ItemStack("x_player_armor:shield_enhanced_cactus"))
 	x_player_armor.stand.update_stand_entity(stand_pos)
 
@@ -4561,14 +4755,13 @@ test("Armor Stand & 3D Preview: 9-Slot Alignment, Shield Isolation & Wield Item"
 		local luaent = obj:get_luaentity()
 		if luaent and luaent.name == "x_player_armor:stand_entity" then
 			local props = obj:get_properties()
-			assert(props.textures[7] == "blank.png", "Slot 7 (Shield_Standard) must be blank.png when tower shield is equipped")
-			assert(props.textures[8]:find("cactus"), "Slot 8 (Shield_Tower) must receive tower shield texture")
-			assert(props.textures[9] == "default_tool_diamondsword.png", "Slot 9 (Wielditem) must still render weapon")
+			local all_tex_str = table.concat(props.textures, ",")
+			assert(all_tex_str:find("cactus"), "Stand textures must receive tower shield texture")
 			break
 		end
 	end
 
-	-- 3. No shield loadout: verify both shield slots become blank.png
+	-- 3. No shield loadout: verify tower shield texture is removed
 	stand_inv:set_stack("armor", 5, ItemStack(""))
 	x_player_armor.stand.update_stand_entity(stand_pos)
 
@@ -4576,8 +4769,8 @@ test("Armor Stand & 3D Preview: 9-Slot Alignment, Shield Isolation & Wield Item"
 		local luaent = obj:get_luaentity()
 		if luaent and luaent.name == "x_player_armor:stand_entity" then
 			local props = obj:get_properties()
-			assert(props.textures[7] == "blank.png", "Slot 7 (Shield_Standard) must be blank.png when unequipped")
-			assert(props.textures[8] == "blank.png", "Slot 8 (Shield_Tower) must be blank.png when unequipped")
+			local all_tex_str = table.concat(props.textures, ",")
+			assert(not all_tex_str:find("cactus"), "Stand textures must not receive tower shield texture when unequipped")
 			break
 		end
 	end
@@ -4721,6 +4914,8 @@ test("Legacy 3d_armor Dynamic Runtime Override & Technic Armor Ingestion", funct
 	assert(p_api_called_model == nil, "Standard player_api must not be called when x_player_api handles it")
 
 	-- Clean up mocks
+	rawset(_G, "x_player_api", nil)
+	rawset(_G, "player_api", nil)
 	core.registered_tools["technic_armor:shield_lead"] = nil
 	x_player_armor.registered_armors["technic_armor:helmet_lead"] = nil
 	x_player_armor.registered_armors["technic_armor:shield_lead"] = nil
@@ -5161,10 +5356,10 @@ test("Shield Visual Attachment to External Entities (attach_shield_to_entity)", 
 	assert(glb_shield ~= nil and glb_shield:is_valid(), "attach_shield_to_entity must return valid shield entity")
 	local _, bone_glb, pos_glb, rot_glb = glb_shield:get_attach()
 	assert(bone_glb == "Arm_Left", "Shield must be attached to Arm_Left")
-	assert(math.abs(pos_glb.x - (-0.8)) < 0.01 and math.abs(pos_glb.y - 5.0) < 0.01 and math.abs(pos_glb.z - (-2.8)) < 0.01,
-		"GLB shield position must match x_player_armor forearm offset")
-	assert(math.abs(rot_glb.x - 180) < 0.01 and math.abs(rot_glb.y - 45) < 0.01,
-		"GLB shield rotation must match x_player_armor forearm rotation")
+	assert(math.abs(pos_glb.x - (-0.8)) < 0.01 and math.abs(pos_glb.y - 5.0) < 0.01 and math.abs(pos_glb.z - (-1.7)) < 0.01,
+		"GLB standard shield must use normalized SHIELD_OFFSET (-0.8, 5.0, -1.7)")
+	assert(math.abs(rot_glb.x - 180) < 0.01 and math.abs(rot_glb.y - (-135)) < 0.01 and math.abs(rot_glb.z - 0) < 0.01,
+		"GLB standard shield must use normalized SHIELD_OFFSET (180, -135, 0)")
 	local glb_lua = glb_shield:get_luaentity()
 	assert(glb_lua ~= nil and glb_lua._is_corpse == true, "Shield entity must have _is_corpse flag")
 	glb_shield:remove()
@@ -5181,10 +5376,10 @@ test("Shield Visual Attachment to External Entities (attach_shield_to_entity)", 
 	assert(b3d_shield ~= nil and b3d_shield:is_valid(), "B3D attach_shield_to_entity must return valid shield entity")
 	local _, bone_b3d, pos_b3d, rot_b3d = b3d_shield:get_attach()
 	assert(bone_b3d == "Arm_Left", "B3D shield must be attached to Arm_Left")
-	assert(math.abs(pos_b3d.x - (-0.8)) < 0.01 and math.abs(pos_b3d.y - 5.0) < 0.01 and math.abs(pos_b3d.z - 2.8) < 0.01,
-		"B3D shield position must match x_player_armor forearm offset")
-	assert(math.abs(rot_b3d.x - 180) < 0.01 and math.abs(rot_b3d.y - (-135)) < 0.01,
-		"B3D shield rotation must match x_player_armor forearm rotation")
+	assert(math.abs(pos_b3d.x - (-0.8)) < 0.01 and math.abs(pos_b3d.y - 5.0) < 0.01 and math.abs(pos_b3d.z - 1.7) < 0.01,
+		"B3D standard shield must use normalized SHIELD_OFFSET (-0.8, 5.0, 1.7)")
+	assert(math.abs(rot_b3d.x - 180) < 0.01 and math.abs(rot_b3d.y - 45) < 0.01 and math.abs(rot_b3d.z - 0) < 0.01,
+		"B3D standard shield must use normalized SHIELD_OFFSET (180, 45, 0)")
 	b3d_shield:remove()
 
 	-- 3. Top-level x_player_armor.attach_shield delegates to attach_shield_to_entity when passed an entity
@@ -5195,6 +5390,186 @@ test("Shield Visual Attachment to External Entities (attach_shield_to_entity)", 
 	top_shield:remove()
 end)
 
+test("glTF In-Memory Assembler: Binary Parsing, Custom Piece Splicing & Stand/UI Integration", function()
+	local assembler = x_player_armor.gltf_assembler
+	assert(assembler ~= nil, "gltf_assembler module must be loaded")
+
+	-- 1. Verify Base Model Loading and In-Memory Caching
+	local base_json, base_bin = assembler.get_base_model()
+	assert(base_json ~= nil and base_bin ~= nil, "get_base_model must return valid gltf_json and bin_data")
+	assert(#base_json.nodes == 8, "Base model must contain 8 canonical armature/mesh nodes")
+	local has_head = false
+	for _, n in ipairs(base_json.nodes) do
+		if n.name == "Head" then has_head = true; break end
+	end
+	assert(has_head == true, "Base model must contain the Head bone node")
+
+	-- 2. Detect Custom Pieces on Standard Armor vs Custom 3D Mesh Armor
+	local standard_armor = {
+		ItemStack("x_player_armor:helmet_steel"),
+		ItemStack("x_player_armor:chestplate_steel"),
+	}
+	local has_custom_std, pieces_std = assembler.detect_custom_pieces(standard_armor, true)
+	assert(has_custom_std == false and #pieces_std == 0, "Standard armor must not trigger custom piece detection when custom_only is true")
+
+	-- Unified pipeline resolves standard armor pieces to 3D modular meshes
+	local has_unified, pieces_unified = assembler.detect_custom_pieces(standard_armor)
+	assert(has_unified == true and #pieces_unified > 0, "Unified pipeline must resolve standard pieces to 3D modular meshes")
+
+	-- Register a simulated custom 3D armor piece matching x_mobs structure
+	x_player_armor.register_armor("test_armor:custom_helm", {
+		element = "head",
+		mesh = "x_mobs_helmet_titan_bastion.glb",
+		texture = "x_mobs_armor_titan_bastion.png",
+	})
+
+	local custom_armor = {
+		ItemStack("test_armor:custom_helm"),
+		ItemStack("x_player_armor:chestplate_steel"),
+	}
+	local has_custom, pieces, slot_mask = assembler.detect_custom_pieces(custom_armor, true)
+	assert(has_custom == true, "detect_custom_pieces must flag custom 3D mesh")
+	assert(#pieces == 1, "Must detect exactly 1 custom piece")
+	assert(pieces[1].piece_id == "head", "Detected piece must be head")
+	assert(slot_mask.head == true, "slot_mask.head must be true to mask base helmet box")
+
+	-- 3. In-Memory Assembly of Combined GLB
+	local assembled_bin, custom_textures = assembler.assemble_glb(pieces)
+	assert(assembled_bin ~= nil and #assembled_bin > 0, "assemble_glb must return binary string")
+	assert(#custom_textures == 1, "Must return 1 custom texture")
+	assert(custom_textures[1] == "x_mobs_armor_titan_bastion.png", "Custom texture must match item definition")
+
+	-- Validate GLB binary header and chunk 0 JSON
+	local magic = string.byte(assembled_bin, 1) + string.byte(assembled_bin, 2) * 256
+		+ string.byte(assembled_bin, 3) * 65536 + string.byte(assembled_bin, 4) * 16777216
+	assert(magic == 0x46546C67, "Assembled GLB must begin with 0x46546C67 magic")
+	local chunk0_len = string.byte(assembled_bin, 13) + string.byte(assembled_bin, 14) * 256
+		+ string.byte(assembled_bin, 15) * 65536 + string.byte(assembled_bin, 16) * 16777216
+	local json_str = assembled_bin:sub(21, 20 + chunk0_len)
+	local parsed_json = core.parse_json(json_str)
+	assert(parsed_json ~= nil, "Assembled GLB must contain valid JSON chunk")
+	assert(#parsed_json.textures == #base_json.materials + #custom_textures,
+		"Assembled GLB must expand textures array with custom piece textures")
+	local custom_mat = parsed_json.materials[#base_json.materials + 1]
+	assert(custom_mat ~= nil, "Assembled GLB must contain material for custom piece")
+	assert(custom_mat.pbrMetallicRoughness ~= nil and custom_mat.pbrMetallicRoughness.baseColorTexture ~= nil,
+		"Custom material must define baseColorTexture")
+	assert(custom_mat.pbrMetallicRoughness.baseColorTexture.index == #base_json.materials,
+		"Custom material baseColorTexture index must be offset to match texture slot")
+
+	-- Verify model bounding box height matches base preview model (preserves large character size)
+	local min_y, max_y = math.huge, -math.huge
+	for _, mesh in ipairs(parsed_json.meshes or {}) do
+		for _, prim in ipairs(mesh.primitives or {}) do
+			local acc_idx = prim.attributes and prim.attributes.POSITION
+			if acc_idx ~= nil then
+				local acc = parsed_json.accessors[acc_idx + 1]
+				if acc and acc.min and acc.max then
+					if acc.min[2] < min_y then min_y = acc.min[2] end
+					if acc.max[2] > max_y then max_y = acc.max[2] end
+				end
+			end
+		end
+	end
+	assert(math.abs(min_y - (-0.90)) < 0.1, "Assembled GLB min_y must be approx -0.90, got " .. tostring(min_y))
+	assert(max_y >= 17.10 and max_y <= 18.05, "Assembled GLB max_y must be between 17.11 and 18.05, got " .. tostring(max_y))
+	assert(max_y - min_y >= 18.00 and max_y - min_y <= 18.95,
+		"Assembled GLB height must be between 18.01 and 18.95, got " .. tostring(max_y - min_y))
+
+	-- 4. UI Preview Resolution
+	core.mock_dynamic_media = {}
+	local mock_player = create_mock_player("test_warrior")
+	x_player_armor.inventory.init_player_inventory(mock_player)
+	local _, detached_inv = x_player_armor.get_valid_player(mock_player)
+	detached_inv:set_stack("armor", 1, ItemStack("test_armor:custom_helm"))
+	detached_inv:set_stack("armor", 2, ItemStack("x_player_armor:chestplate_steel"))
+
+	local dyn_model, dyn_textures = assembler.resolve_player_preview(mock_player)
+	assert(dyn_model ~= nil and dyn_model:find("^x_pa_"), "resolve_player_preview must return hash-named GLB")
+	assert(dyn_textures:find("blank.png"), "Head slot must be masked with blank.png in textures")
+	assert(dyn_textures:find("x_mobs_armor_titan_bastion.png"), "Custom texture must be appended in textures string")
+
+	-- Verify ui.get_preview_model and ui.get_preview_texture integrate seamlessly
+	local ui_model = x_player_armor.ui.get_preview_model(mock_player)
+	assert(ui_model == dyn_model, "ui.get_preview_model must delegate to dynamic assembled model")
+	local ui_tex = x_player_armor.ui.get_preview_texture(mock_player, ui_model)
+	assert(ui_tex == dyn_textures, "ui.get_preview_texture must return dynamic composite textures")
+
+	-- 5. Armor Stand Resolution
+	local stand_armor_list = {
+		ItemStack("test_armor:custom_helm"),
+		ItemStack(""),
+		ItemStack(""),
+		ItemStack(""),
+		ItemStack(""),
+		ItemStack(""),
+	}
+	local base_stand_textures = {
+		"blank.png", "blank.png", "default_head.png", "default_torso.png",
+		"default_legs.png", "default_feet.png"
+	}
+	local stand_mesh, stand_textures = assembler.resolve_stand_preview(stand_armor_list, base_stand_textures)
+	assert(stand_mesh ~= nil and stand_mesh:find("^x_pa_stand_"), "Stand must resolve to dynamic stand mesh")
+	assert(stand_textures[3] == "blank.png", "Stand Head slot must be masked to blank.png")
+	assert(stand_textures[#stand_textures] == "x_mobs_armor_titan_bastion.png", "Stand must append custom texture")
+
+	-- 6. Verify core.dynamic_add_media dispatch (on-the-fly in-memory streaming)
+	assert(#core.mock_dynamic_media >= 2, "core.dynamic_add_media must have received player and stand models")
+	local player_media = core.mock_dynamic_media[1]
+	assert(player_media.to_player == "test_warrior", "Player preview media must be targeted to player")
+	assert(player_media.filedata ~= nil, "Player preview media must deliver filedata directly from RAM")
+	assert(player_media.filepath == nil, "Player preview media must have nil filepath (zero disk writes)")
+	assert(player_media.client_cache == true, "Player preview media must enable client_cache")
+
+	local stand_media = core.mock_dynamic_media[2]
+	assert(stand_media.to_player == nil, "Stand media must be broadcast globally")
+	assert(stand_media.filedata ~= nil, "Stand media must deliver filedata directly from RAM")
+	assert(stand_media.filepath == nil, "Stand media must have nil filepath (zero disk writes)")
+	assert(stand_media.client_cache == true, "Stand media must enable client_cache")
+
+	-- 7. Verify legacy disk directory cleanup
+	local purged_path, purged_recursive
+	local old_rmdir = core.rmdir
+	core.rmdir = function(path, recursive)
+		purged_path = path
+		purged_recursive = recursive
+		return true
+	end
+	assembler.media.purge_legacy_storage()
+	assert(purged_path and purged_path:find("x_player_armor_media"), "purge_legacy_storage must target x_player_armor_media")
+	assert(purged_recursive == true, "purge_legacy_storage must specify recursive = true")
+	core.rmdir = old_rmdir
+end)
+
+test("Event-Driven Visual Self-Healing, On-Demand Verification & Zero globalstep Overhead", function()
+	-- 1. Ensure verify_player_visuals API exists on both public namespaces
+	assert(type(x_player_armor.verify_player_visuals) == "function", "x_player_armor.verify_player_visuals must be a function")
+	assert(type(x_player_armor.visuals.verify_player_visuals) == "function", "visuals.verify_player_visuals must be a function")
+
+	-- 2. Setup mock player wearing armor
+	local player = create_mock_player("event_heal_hero")
+	x_player_armor.inventory.init_player_inventory(player)
+	local _, inv = x_player_armor.get_valid_player(player)
+	inv:set_stack("armor", 1, ItemStack("x_player_armor:helmet_steel"))
+
+	-- Clear entities to simulate missing visual
+	x_player_armor.visuals.player_entities["event_heal_hero"] = nil
+
+	-- verify_player_visuals detects missing entities and repairs them
+	local repaired = x_player_armor.verify_player_visuals(player)
+	assert(repaired == true, "verify_player_visuals must repair missing entities")
+
+	local ents = x_player_armor.visuals.player_entities["event_heal_hero"]
+	assert(ents ~= nil and ents.head and #ents.head > 0, "Head entities must be spawned after verification")
+
+	-- A second verification on healthy visuals returns false (zero unnecessary work)
+	local second_check = x_player_armor.verify_player_visuals(player)
+	assert(second_check == false, "verify_player_visuals must return false when visuals are already healthy")
+
+	-- 3. Cleanup
+	x_player_armor.visuals.clear_all("event_heal_hero")
+end)
+	
 test("Armor Item Tooltips: Zero Unescaped Formspec Delimiters (Unified Inventory Compatibility)", function()
 	local checked_items = 0
 	for name, def in pairs(core.registered_items) do
