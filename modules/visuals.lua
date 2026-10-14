@@ -2,6 +2,7 @@
 local visuals = {
 	player_entities = {},
 	texture_cache = {},
+	last_death_armor = {},
 }
 
 local constants = x_player_armor.constants
@@ -299,16 +300,10 @@ function visuals.get_item_texture(item_name)
 	if visuals.texture_cache[item_name] then
 		return visuals.texture_cache[item_name]
 	end
-	local resolved_name = core.registered_aliases[item_name] or item_name
-	local def = core.registered_tools[resolved_name] or core.registered_items[resolved_name]
-	local tex = nil
-	if def then
-		tex = def.texture
-		if not tex and def._x_player_armor and def._x_player_armor.texture then
-			tex = def._x_player_armor.texture
-		end
-	end
+	local def = x_player_armor.get_armor_def(item_name)
+	local tex = def and (def.texture or (def._x_player_armor and def._x_player_armor.texture))
 	if not tex then
+		local resolved_name = core.registered_aliases[item_name] or item_name
 		tex = resolved_name:gsub(":", "_") .. ".png"
 	end
 	if tex then
@@ -341,7 +336,7 @@ function visuals.update_player_visuals(player)
 			local item_name = stack:get_name()
 			local tex = visuals.get_item_texture(item_name)
 			if tex then
-				local idef = stack:get_definition() or (x_player_armor.registered_armors and x_player_armor.registered_armors[item_name])
+				local idef = stack:get_definition() or x_player_armor.get_armor_def(item_name)
 				worn_elements[element] = {
 					item = item_name,
 					texture = tex,
@@ -606,7 +601,7 @@ function visuals.verify_player_visuals(player)
 		if not needs_repair then
 			local shield_stack = armor_list[5]
 			if shield_stack and not shield_stack:is_empty() then
-				if x_player_armor.compat_x_player_api and x_player_armor.compat_x_player_api.is_present() then
+				if x_player_armor.compat_x_player_api.is_present() then
 					local cur_item = x_player_armor.compat_x_player_api.get_left_wield_item(player)
 					local x_api = x_player_armor.get_mod_api("x_player_api")
 					local left_ent = x_api and x_api.get_left_wield_entity and x_api.get_left_wield_entity(player)
@@ -686,7 +681,7 @@ function visuals.attach_armor_to_entity(parent, player_or_name, format)
 		for _, item in ipairs(player_or_name) do
 			if type(item) == "string" and item ~= "" then
 				table.insert(armor_stacks, ItemStack(item))
-			elseif type(item) == "userdata" and not item:is_empty() then
+			elseif (type(item) == "userdata" or (type(item) == "table" and item.get_name)) and not item:is_empty() then
 				table.insert(armor_stacks, item)
 			elseif type(item) == "table" and (item.name or item.item) then
 				table.insert(armor_stacks, ItemStack(item.name or item.item))
@@ -718,7 +713,7 @@ function visuals.attach_armor_to_entity(parent, player_or_name, format)
 		end
 
 		-- If inventory was already cleared on death, consult last_death_armor snapshot
-		if #armor_stacks == 0 and pname and visuals.last_death_armor and visuals.last_death_armor[pname] then
+		if #armor_stacks == 0 and pname and visuals.last_death_armor[pname] then
 			for _, st in ipairs(visuals.last_death_armor[pname]) do
 				if st and not st:is_empty() then
 					table.insert(armor_stacks, st)
@@ -741,7 +736,7 @@ function visuals.attach_armor_to_entity(parent, player_or_name, format)
 		if iname and iname ~= "" then
 			local tex = visuals.get_item_texture(iname)
 			if tex then
-				local idef = stack:get_definition() or (x_player_armor.registered_armors and x_player_armor.registered_armors[iname])
+				local idef = stack:get_definition() or x_player_armor.get_armor_def(iname)
 				local element = idef and idef.element
 				if not element then
 					for _, el in ipairs({"head", "torso", "legs", "feet"}) do
@@ -775,32 +770,19 @@ function visuals.attach_armor_to_entity(parent, player_or_name, format)
 	return created
 end
 
----Attaches a shield visual entity to a target parent entity (such as a corpse or mob) with proper forearm transforms.
----@param parent ObjectRef The entity to attach the shield to
+---Resolves the composite attachment options, mesh, textures, and calibrated transforms for a shield item.
+---Single source of truth used for both standalone entity attachment and x_player_api left-wield integration.
 ---@param item_or_stack string|ItemStack Shield item name or stack
----@param format string? Model format ("glb" or "b3d")
----@param custom_opts? XPlayerArmorShieldVisualOpts Optional custom overrides
----@return ObjectRef? entity The attached shield entity or nil
-function visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_opts)
-	if not parent or (parent.is_valid and not parent:is_valid()) then
-		return nil
-	end
-
+---@param custom_opts? XPlayerArmorShieldVisualOpts Optional overrides
+---@return table opts Resolved options table
+function visuals.resolve_shield_visual_opts(item_or_stack, custom_opts)
 	local item_name = (type(item_or_stack) == "userdata" and item_or_stack:get_name())
+		or (type(item_or_stack) == "table" and item_or_stack.get_name and item_or_stack:get_name())
+		or (type(item_or_stack) == "table" and (item_or_stack.name or item_or_stack.item))
 		or (type(item_or_stack) == "string" and item_or_stack:match("%S+"))
 		or ""
-	if item_name == "" then
-		return nil
-	end
-
-	local fmt = format
-	if not fmt or fmt == "" then
-		local p_mesh = (parent.get_properties and parent:get_properties().mesh) or ""
-		fmt = (p_mesh:find("%.glb$") or p_mesh:find("%.gltf$")) and "glb" or "b3d"
-	end
-
 	local item_def = core.registered_items[item_name]
-		or (x_player_armor.registered_armors and x_player_armor.registered_armors[item_name])
+		or x_player_armor.get_armor_def(item_name)
 	local shield_trans = constants.SHIELD_OFFSET or {}
 	local glb_trans = shield_trans.glb or {}
 	local b3d_trans = shield_trans.b3d or {}
@@ -829,9 +811,9 @@ function visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_o
 
 	if is_bone_local and not item_offset and not (custom_opts and (custom_opts.pos or custom_opts.pos_glb)) then
 		pos_glb = {x = 0, y = 0, z = 0}
-		rot_glb = {x = 180, y = 0, z = 0}
+		rot_glb = {x = 0, y = 0, z = 0}
 		pos_b3d = {x = 0, y = 0, z = 0}
-		rot_b3d = {x = 180, y = 180, z = 0}
+		rot_b3d = {x = 0, y = 180, z = 0}
 		scale = (custom_opts and (custom_opts.scale_glb or custom_opts.scale)) or {x = 1, y = 1, z = 1}
 	else
 		pos_glb = (custom_opts and custom_opts.pos_glb)
@@ -839,33 +821,33 @@ function visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_o
 			or (item_offset and item_offset.pos)
 			or (custom_opts and custom_opts.pos)
 			or glb_trans.pos
-			or {x = -0.8, y = 5.0, z = -1.7}
+			or {x = 3.35, y = 11.55, z = -0.2}
 		rot_glb = (custom_opts and custom_opts.rot_glb)
 			or (item_offset and item_offset.glb and item_offset.glb.rot)
 			or (item_offset and item_offset.rot)
 			or (custom_opts and custom_opts.rot)
 			or glb_trans.rot
-			or {x = 180, y = -135, z = 0}
+			or {x = 180, y = 0, z = 0}
 
 		pos_b3d = (custom_opts and custom_opts.pos_b3d)
 			or (item_offset and item_offset.b3d and item_offset.b3d.pos)
 			or (item_offset and item_offset.pos)
 			or (custom_opts and custom_opts.pos)
 			or b3d_trans.pos
-			or {x = -0.8, y = 5.0, z = 1.7}
+			or {x = -0.20, y = 0, z = 0.20}
 		rot_b3d = (custom_opts and custom_opts.rot_b3d)
 			or (item_offset and item_offset.b3d and item_offset.b3d.rot)
 			or (item_offset and item_offset.rot)
 			or (custom_opts and custom_opts.rot)
 			or b3d_trans.rot
-			or {x = 180, y = 45, z = 0}
+			or {x = 0, y = 180, z = 0}
 
 		scale = (custom_opts and (custom_opts.scale_glb or custom_opts.scale))
 			or (item_offset and item_offset.glb and item_offset.glb.scale)
 			or (item_offset and item_offset.scale)
 			or glb_trans.scale
 			or (item_def and item_def.visual_size)
-			or {x = 1.45, y = 1.15, z = 1.15}
+			or {x = 1, y = 1, z = 1}
 	end
 
 	local opts = {
@@ -879,6 +861,9 @@ function visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_o
 		rot_b3d = rot_b3d,
 		scale = scale,
 		visual_size = scale,
+		bone_local = is_bone_local,
+		item_def = item_def,
+		item_name = item_name,
 	}
 
 	if custom_opts then
@@ -887,6 +872,32 @@ function visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_o
 				opts[k] = v
 			end
 		end
+	end
+
+	return opts
+end
+
+---Attaches a shield visual entity to a target parent entity (such as a corpse or mob) with proper forearm transforms.
+---@param parent ObjectRef The entity to attach the shield to
+---@param item_or_stack string|ItemStack Shield item name or stack
+---@param format string? Model format ("glb" or "b3d")
+---@param custom_opts? XPlayerArmorShieldVisualOpts Optional custom overrides
+---@return ObjectRef? entity The attached shield entity or nil
+function visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_opts)
+	if not parent or (parent.is_valid and not parent:is_valid()) then
+		return nil
+	end
+
+	local opts = visuals.resolve_shield_visual_opts(item_or_stack, custom_opts)
+	local item_name = opts.item_name
+	if not item_name or item_name == "" then
+		return nil
+	end
+
+	local fmt = format
+	if not fmt or fmt == "" then
+		local p_mesh = (parent.get_properties and parent:get_properties().mesh) or ""
+		fmt = (p_mesh:find("%.glb$") or p_mesh:find("%.gltf$")) and "glb" or "b3d"
 	end
 
 	local bone = (custom_opts and custom_opts.bone) or "Arm_Left"
@@ -906,21 +917,21 @@ function visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_o
 		if not pos then return nil end
 		local obj = core.add_entity(pos, ent_name)
 		if obj and obj:is_valid() then
-			local v_size = (visual_type == "wielditem") and {x = 0.25, y = 0.25, z = 0.25}
+			local v_size = (opts.visual == "wielditem") and {x = 0.25, y = 0.25, z = 0.25}
 				or (custom_opts and (custom_opts.visual_size or custom_opts.scale))
-				or scale or (item_def and item_def.visual_size) or {x = 1, y = 1, z = 1}
-			local glow = (custom_opts and custom_opts.glow) or (item_def and item_def.glow) or 0
+				or opts.scale or (opts.item_def and opts.item_def.visual_size) or {x = 1, y = 1, z = 1}
+			local glow = (custom_opts and custom_opts.glow) or (opts.item_def and opts.item_def.glow) or 0
 			obj:set_properties({
-				visual = visual_type,
-				mesh = custom_mesh,
-				textures = custom_textures or {item_name},
+				visual = opts.visual,
+				mesh = opts.mesh,
+				textures = opts.textures or {item_name},
 				wield_item = item_name,
 				visual_size = v_size,
 				pointable = false,
 				glow = glow,
 			})
-			local att_pos = (fmt == "glb") and pos_glb or pos_b3d
-			local att_rot = (fmt == "glb") and rot_glb or rot_b3d
+			local att_pos = (fmt == "glb") and opts.pos_glb or opts.pos_b3d
+			local att_rot = (fmt == "glb") and opts.rot_glb or opts.rot_b3d
 			obj:set_attach(parent, bone, att_pos, att_rot, true)
 			ent = obj
 		end
@@ -936,6 +947,82 @@ function visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_o
 
 	return ent
 end
+
+---Attaches a wield item visual entity to a target parent entity (such as an armor stand or corpse) on the right arm.
+---@param parent ObjectRef The entity to attach the wield item to
+---@param item_or_stack string|ItemStack Held item name or stack
+---@param format string? Model format ("glb" or "b3d")
+---@param custom_opts? table Optional custom overrides
+---@return ObjectRef? entity The attached visual entity or nil
+function visuals.attach_wield_item_to_entity(parent, item_or_stack, format, custom_opts)
+	if not parent or (parent.is_valid and not parent:is_valid()) then
+		return nil
+	end
+
+	local item_name = (type(item_or_stack) == "userdata" and item_or_stack:get_name())
+		or (type(item_or_stack) == "table" and item_or_stack.get_name and item_or_stack:get_name())
+		or (type(item_or_stack) == "table" and (item_or_stack.name or item_or_stack.item))
+		or (type(item_or_stack) == "string" and item_or_stack:match("%S+"))
+		or ""
+	if item_name == "" then
+		return nil
+	end
+
+	local fmt = format
+	if not fmt or fmt == "" then
+		local p_mesh = (parent.get_properties and parent:get_properties().mesh) or ""
+		fmt = (p_mesh:find("%.glb$") or p_mesh:find("%.gltf$")) and "glb" or "b3d"
+	end
+
+	local bone = (custom_opts and custom_opts.bone) or "Arm_Right"
+	local ent_name = (custom_opts and custom_opts.entity_name)
+		or "x_player_armor:visual"
+
+	local x_api = x_player_armor.get_mod_api("x_player_api")
+	local ent = nil
+
+	if x_api and type(x_api.attach_wield_item_to_entity) == "function" and (x_api.enable_wield_item ~= false) then
+		ent = x_api.attach_wield_item_to_entity(parent, item_or_stack, fmt, bone, ent_name, true, custom_opts)
+	end
+
+	if not ent then
+		local pos = parent:get_pos()
+		if not pos then return nil end
+		local obj = core.add_entity(pos, ent_name)
+		if obj and obj:is_valid() then
+			local v_size = (custom_opts and (custom_opts.visual_size or custom_opts.scale))
+				or {x = 0.275, y = 0.275, z = 0.275}
+			local glow = (custom_opts and custom_opts.glow) or 0
+			obj:set_properties({
+				visual = "wielditem",
+				wield_item = item_name,
+				visual_size = v_size,
+				pointable = false,
+				glow = glow,
+			})
+			local att_pos = (fmt == "glb") and {x = 0, y = 5.2, z = -3.5} or {x = 0, y = 5.2, z = 3.5}
+			local att_rot = (fmt == "glb") and {x = -90, y = 45, z = -90} or {x = -90, y = 225, z = 90}
+			if custom_opts then
+				att_pos = (fmt == "glb" and (custom_opts.pos_glb or custom_opts.pos))
+					or custom_opts.pos_b3d or custom_opts.pos or att_pos
+				att_rot = (fmt == "glb" and (custom_opts.rot_glb or custom_opts.rot))
+					or custom_opts.rot_b3d or custom_opts.rot or att_rot
+			end
+			obj:set_attach(parent, bone, att_pos, att_rot, true)
+			ent = obj
+		end
+	end
+
+	if ent then
+		local luaent = ent:get_luaentity()
+		if luaent then
+			luaent._intentional_removal = true
+		end
+	end
+
+	return ent
+end
+
 
 core.register_chatcommand("clean_armor_visuals", {
 	params = "",
