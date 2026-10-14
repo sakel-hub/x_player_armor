@@ -491,11 +491,11 @@ function ui.get_formspec(player)
 	return table.concat(fs, "")
 end
 
----Checks if the player's active wielded item or hotbar slot changed, and refreshes UI if needed.
----@param player ObjectRef
----@param skip_refresh? boolean If true, synchronizes internal tracked state without triggering refresh_player_formspec
----@return boolean changed
-function ui.check_wield_change(player, skip_refresh)
+---Checks if the player's active wielded item or hotbar slot changed, and updates combat HUD slot 6 if active.
+---@param player ObjectRef Target player
+---@param skip_refresh? boolean Optional backwards-compatible parameter (formspec refreshing on wield change is obsolete)
+---@return boolean changed True if the player's wielded item or hotbar index changed
+function ui.check_wield_change(player, _skip_refresh)
 	if not player or not player:is_player() then
 		return false
 	end
@@ -512,8 +512,7 @@ function ui.check_wield_change(player, skip_refresh)
 			item = current_item,
 			wear = current_wear,
 		}
-		if not skip_refresh and (current_item ~= "" or current_wear ~= 0) then
-			ui.refresh_player_formspec(player)
+		if current_item ~= "" or current_wear ~= 0 then
 			if x_player_armor.combat_hud.active_players[name] then
 				x_player_armor.combat_hud.trigger(player)
 			end
@@ -526,10 +525,7 @@ function ui.check_wield_change(player, skip_refresh)
 		last_state.index = current_idx
 		last_state.item = current_item
 		last_state.wear = current_wear
-		if not skip_refresh then
-			ui.refresh_player_formspec(player)
-		end
-		-- Reusable hook: Update combat armor HUD in-place if player is actively in combat
+		-- Update combat armor HUD in-place if player is actively in combat
 		if x_player_armor.combat_hud.active_players[name] then
 			x_player_armor.combat_hud.trigger(player)
 		end
@@ -706,9 +702,8 @@ core.register_on_mods_loaded(function()
 	local WIELD_CHECK_INTERVAL = 0.2
 
 	core.register_globalstep(function(dtime)
-		local has_open_ui = ui.has_any_open_armor_ui()
-		local has_combat = next(x_player_armor.combat_hud.active_players) ~= nil
-		if not has_open_ui and not has_combat then
+		-- Idle-skip when no players are in active combat
+		if next(x_player_armor.combat_hud.active_players) == nil then
 			return
 		end
 
@@ -727,8 +722,7 @@ core.register_on_mods_loaded(function()
 		for i = 1, count do
 			local p = players[i]
 			local pname = p:get_player_name()
-			local is_combat = x_player_armor.combat_hud.active_players[pname]
-			if ui.is_armor_ui_open(p) or is_combat then
+			if x_player_armor.combat_hud.active_players[pname] then
 				ui.check_wield_change(p)
 			end
 		end

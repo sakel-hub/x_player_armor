@@ -1884,7 +1884,8 @@ test("Dynamic Wield Item Tracking & Formspec UI Update", function()
 	assert(x_player_armor.ui.player_wield["test_adventurer"].item == "default:sword_mithril",
 		"player_wield state must track active sword item")
 
-	-- 4. Globalstep monitoring: switch to wooden planks
+	-- 4. Globalstep monitoring: switch to wooden planks while in combat
+	x_player_armor.combat_hud.active_players["test_adventurer"] = {timer = 5.0}
 	adventurer:set_wield_index(3)
 	adventurer.wielded_item = ItemStack("default:wood_planks")
 
@@ -1901,6 +1902,7 @@ test("Dynamic Wield Item Tracking & Formspec UI Update", function()
 	ui_step(0.25)
 	assert(x_player_armor.ui.player_wield["test_adventurer"].item == "",
 		"player_wield state must revert to empty when hands are empty")
+	x_player_armor.combat_hud.active_players["test_adventurer"] = nil
 
 	-- 6. sfinv on_enter hook guarantees fresh wield state when tab is opened
 	adventurer:set_wield_index(2)
