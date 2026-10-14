@@ -7,15 +7,18 @@
 	caching with automatic SHA-1 checksum hot-reload invalidation.
 ]]
 
-local math_mod = dofile(core.get_modpath("x_player_armor") .. "/modules/assembler/math.lua")
+local modpath = core.get_modpath("x_player_armor")
+local math_mod = x_player_armor.gltf_assembler.math
 local constants = x_player_armor.constants
 
 ---@class XPlayerArmorAssemblerLoader
 ---@field piece_cache table<string, table> Cached parsed piece models
 ---@field base_model table? Cached parsed base preview model
+---@field math XPlayerArmorAssemblerMath Math submodule reference
 local loader = {
 	piece_cache = {},
 	base_model = nil,
+	math = math_mod,
 }
 
 ---Parses an in-memory or loaded binary .glb file into JSON table and BIN string.
@@ -54,12 +57,19 @@ function loader.parse_glb_content(content)
 	return gltf_json, bin_data
 end
 
+local path_cache = {}
+
 ---Resolves the filesystem path for a 3D model across installed Luanti mods.
 ---@param filename string Model filename (e.g. "x_mobs_helmet_titan_bastion.glb")
 ---@param mod_hint string? Optional originating mod name hint
 ---@return string? full_path
 function loader.find_model_path(filename, mod_hint)
 	if not filename or filename == "" then return nil end
+
+	local cache_key = (mod_hint or "") .. ":" .. filename
+	if path_cache[cache_key] then
+		return path_cache[cache_key]
+	end
 
 	-- Check mod hint first
 	if mod_hint and mod_hint ~= "" then
@@ -69,16 +79,18 @@ function loader.find_model_path(filename, mod_hint)
 			local f = io.open(candidate, "rb")
 			if f then
 				f:close()
+				path_cache[cache_key] = candidate
 				return candidate
 			end
 		end
 	end
 
 	-- Check x_player_armor
-	local self_path = core.get_modpath("x_player_armor") .. "/models/" .. filename
+	local self_path = modpath .. "/models/" .. filename
 	local f_self = io.open(self_path, "rb")
 	if f_self then
 		f_self:close()
+		path_cache[cache_key] = self_path
 		return self_path
 	end
 
@@ -91,6 +103,7 @@ function loader.find_model_path(filename, mod_hint)
 			local f = io.open(candidate, "rb")
 			if f then
 				f:close()
+				path_cache[cache_key] = candidate
 				return candidate
 			end
 		end
@@ -104,6 +117,7 @@ function loader.find_model_path(filename, mod_hint)
 			local f = io.open(candidate, "rb")
 			if f then
 				f:close()
+				path_cache[cache_key] = candidate
 				return candidate
 			end
 		end
@@ -113,11 +127,16 @@ function loader.find_model_path(filename, mod_hint)
 end
 
 ---Retrieves and caches the parsed structure of a modular armor piece .glb model in RAM.
----Performs hot-reload cache invalidation based on file content SHA-1 checksum.
+---Returns directly from RAM cache if already parsed, eliminating synchronous disk I/O.
 ---@param filename string Model filename
 ---@param mod_hint string? Optional originating mod name hint
 ---@return table? gltf_json, string? bin_data, string? file_sha1
 function loader.get_piece_model(filename, mod_hint)
+	local cached = loader.piece_cache[filename]
+	if cached then
+		return cached.json, cached.bin, cached.sha1
+	end
+
 	local filepath = loader.find_model_path(filename, mod_hint)
 	if not filepath then return nil, nil, nil end
 
@@ -127,11 +146,6 @@ function loader.get_piece_model(filename, mod_hint)
 	f:close()
 
 	local file_sha1 = core.sha1(content)
-	local cached = loader.piece_cache[filename]
-	if cached and cached.sha1 == file_sha1 then
-		return cached.json, cached.bin, file_sha1
-	end
-
 	local json_data, bin_data = loader.parse_glb_content(content)
 	if json_data and bin_data then
 		loader.piece_cache[filename] = {
@@ -146,9 +160,14 @@ function loader.get_piece_model(filename, mod_hint)
 end
 
 ---Retrieves and caches the base preview model structure (x_player_armor_preview.glb) in RAM.
+---Returns directly from RAM cache if already parsed, eliminating synchronous disk I/O.
 ---@return table? gltf_json, string? bin_data, string? base_sha1
 function loader.get_base_model()
-	local base_file = (constants.MODELS and constants.MODELS.preview) or "x_player_armor_preview.glb"
+	if loader.base_model then
+		return loader.base_model.json, loader.base_model.bin, loader.base_model.sha1
+	end
+
+	local base_file = constants.MODELS.preview or "x_player_armor_preview.glb"
 	local filepath = loader.find_model_path(base_file, "x_player_armor")
 	if not filepath then return nil, nil, nil end
 
@@ -158,10 +177,6 @@ function loader.get_base_model()
 	f:close()
 
 	local file_sha1 = core.sha1(content)
-	if loader.base_model and loader.base_model.sha1 == file_sha1 then
-		return loader.base_model.json, loader.base_model.bin, file_sha1
-	end
-
 	local json_data, bin_data = loader.parse_glb_content(content)
 	if json_data and bin_data then
 		loader.base_model = {
@@ -175,10 +190,11 @@ function loader.get_base_model()
 	return nil, nil, nil
 end
 
----Clears all in-memory loaded models.
+---Clears all in-memory loaded models and path discovery cache.
 function loader.clear_cache()
 	loader.piece_cache = {}
 	loader.base_model = nil
+	path_cache = {}
 end
 
 return loader

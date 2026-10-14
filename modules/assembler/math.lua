@@ -15,34 +15,103 @@ local str_pack = rawget(string, "pack")
 local str_unpack = rawget(string, "unpack")
 local has_string_pack = (type(str_pack) == "function" and type(str_unpack) == "function")
 
----Reads a 32-bit unsigned integer (little-endian) from a binary string.
----@param str string Binary string
----@param offset number 1-indexed byte offset
----@return number val Unsigned 32-bit integer
-function math_mod.read_uint32(str, offset)
-	if has_string_pack then
-		local ok, val = pcall(str_unpack, "<I4", str, offset)
-		if ok then return val end
+if has_string_pack then
+	---Reads a 32-bit unsigned integer (little-endian) from a binary string.
+	---@param str string Binary string
+	---@param offset number 1-indexed byte offset
+	---@return number val Unsigned 32-bit integer
+	function math_mod.read_uint32(str, offset)
+		return str_unpack("<I4", str, offset)
 	end
-	local b1, b2, b3, b4 = string.byte(str, offset, offset + 3)
-	if not b1 or not b2 or not b3 or not b4 then return 0 end
-	return b1 + b2 * 256 + b3 * 65536 + b4 * 16777216
-end
 
----Packs a 32-bit unsigned integer (little-endian) into a 4-byte string.
----@param val number Unsigned 32-bit integer
----@return string packed 4-byte binary string
-function math_mod.write_uint32(val)
-	if has_string_pack then
-		local ok, packed = pcall(str_pack, "<I4", math.floor(val))
-		if ok then return packed end
+	---Packs a 32-bit unsigned integer (little-endian) into a 4-byte string.
+	---@param val number Unsigned 32-bit integer
+	---@return string packed 4-byte binary string
+	function math_mod.write_uint32(val)
+		return str_pack("<I4", math.floor(val))
 	end
-	val = math.floor(val)
-	local b1 = val % 256
-	local b2 = math.floor(val / 256) % 256
-	local b3 = math.floor(val / 65536) % 256
-	local b4 = math.floor(val / 16777216) % 256
-	return string.char(b1, b2, b3, b4)
+
+	---Reads a 32-bit little-endian IEEE-754 float from a binary string.
+	---@param str string Binary string
+	---@param offset number 1-indexed byte offset
+	---@return number val Floating-point value
+	function math_mod.read_float32(str, offset)
+		return str_unpack("<f", str, offset)
+	end
+
+	---Packs a 32-bit little-endian IEEE-754 float into a 4-byte string.
+	---@param val number Floating-point value
+	---@return string packed 4-byte binary string
+	function math_mod.write_float32(val)
+		return str_pack("<f", val)
+	end
+else
+	---Reads a 32-bit unsigned integer (little-endian) from a binary string.
+	---@param str string Binary string
+	---@param offset number 1-indexed byte offset
+	---@return number val Unsigned 32-bit integer
+	function math_mod.read_uint32(str, offset)
+		local b1, b2, b3, b4 = string.byte(str, offset, offset + 3)
+		if not b1 or not b2 or not b3 or not b4 then return 0 end
+		return b1 + b2 * 256 + b3 * 65536 + b4 * 16777216
+	end
+
+	---Packs a 32-bit unsigned integer (little-endian) into a 4-byte string.
+	---@param val number Unsigned 32-bit integer
+	---@return string packed 4-byte binary string
+	function math_mod.write_uint32(val)
+		val = math.floor(val)
+		local b1 = val % 256
+		local b2 = math.floor(val / 256) % 256
+		local b3 = math.floor(val / 65536) % 256
+		local b4 = math.floor(val / 16777216) % 256
+		return string.char(b1, b2, b3, b4)
+	end
+
+	---Reads a 32-bit little-endian IEEE-754 float from a binary string.
+	---@param str string Binary string
+	---@param offset number 1-indexed byte offset
+	---@return number val Floating-point value
+	function math_mod.read_float32(str, offset)
+		local b1, b2, b3, b4 = string.byte(str, offset, offset + 3)
+		if not b1 or not b2 or not b3 or not b4 then return 0 end
+		local sign = (b4 >= 128) and -1 or 1
+		local expo = (b4 % 128) * 2 + math.floor(b3 / 128)
+		local mant = ((b3 % 128) * 256 + b2) * 256 + b1
+		if expo == 255 then
+			return (mant == 0) and (sign * math.huge) or 0 / 0
+		elseif expo == 0 then
+			if mant == 0 then return sign * 0 end
+			return sign * math.ldexp(mant / 8388608, -126)
+		end
+		return sign * math.ldexp(1 + mant / 8388608, expo - 127)
+	end
+
+	---Packs a 32-bit little-endian IEEE-754 float into a 4-byte string.
+	---@param val number Floating-point value
+	---@return string packed 4-byte binary string
+	function math_mod.write_float32(val)
+		if val == 0 then return "\0\0\0\0" end
+		local sign = 0
+		if val < 0 then
+			sign = 128
+			val = -val
+		end
+		local mant, expo = math.frexp(val)
+		expo = expo + 126
+		if expo >= 255 then
+			return string.char(0, 0, 128, sign + 127)
+		elseif expo <= 0 then
+			mant = math.floor(mant * math.ldexp(1, 24 + expo) + 0.5)
+			return string.char(mant % 256, math.floor(mant / 256) % 256, math.floor(mant / 65536) % 128, sign)
+		end
+		mant = math.floor((mant * 2 - 1) * 8388608 + 0.5)
+		local b1 = mant % 256
+		local b2 = math.floor(mant / 256) % 256
+		local b3 = (math.floor(mant / 65536) % 128) + (expo % 2) * 128
+		local b4 = math.floor(expo / 2) + sign
+		return string.char(b1, b2, b3, b4)
+	end
 end
 
 ---Pads a binary string to a 4-byte boundary using the specified padding character.
@@ -77,59 +146,6 @@ function math_mod.euler_to_quat(rot)
 	return {qx, qy, qz, qw}
 end
 
----Reads a 32-bit little-endian IEEE-754 float from a binary string.
----@param str string Binary string
----@param offset number 1-indexed byte offset
----@return number val Floating-point value
-function math_mod.read_float32(str, offset)
-	if has_string_pack then
-		local ok, val = pcall(str_unpack, "<f", str, offset)
-		if ok then return val end
-	end
-	local b1, b2, b3, b4 = string.byte(str, offset, offset + 3)
-	if not b1 or not b2 or not b3 or not b4 then return 0 end
-	local sign = (b4 >= 128) and -1 or 1
-	local expo = (b4 % 128) * 2 + math.floor(b3 / 128)
-	local mant = ((b3 % 128) * 256 + b2) * 256 + b1
-	if expo == 255 then
-		return (mant == 0) and (sign * math.huge) or 0 / 0
-	elseif expo == 0 then
-		if mant == 0 then return sign * 0 end
-		return sign * math.ldexp(mant / 8388608, -126)
-	end
-	return sign * math.ldexp(1 + mant / 8388608, expo - 127)
-end
-
----Packs a 32-bit little-endian IEEE-754 float into a 4-byte string.
----@param val number Floating-point value
----@return string packed 4-byte binary string
-function math_mod.write_float32(val)
-	if has_string_pack then
-		local ok, packed = pcall(str_pack, "<f", val)
-		if ok then return packed end
-	end
-	if val == 0 then return "\0\0\0\0" end
-	local sign = 0
-	if val < 0 then
-		sign = 128
-		val = -val
-	end
-	local mant, expo = math.frexp(val)
-	expo = expo + 126
-	if expo >= 255 then
-		return string.char(0, 0, 128, sign + 127)
-	elseif expo <= 0 then
-		mant = math.floor(mant * math.ldexp(1, 24 + expo) + 0.5)
-		return string.char(mant % 256, math.floor(mant / 256) % 256, math.floor(mant / 65536) % 128, sign)
-	end
-	mant = math.floor((mant * 2 - 1) * 8388608 + 0.5)
-	local b1 = mant % 256
-	local b2 = math.floor(mant / 256) % 256
-	local b3 = (math.floor(mant / 65536) % 128) + (expo % 2) * 128
-	local b4 = math.floor(expo / 2) + sign
-	return string.char(b1, b2, b3, b4)
-end
-
 ---Multiplies two 4x4 transformation matrices A and B.
 ---@param a number[][] 4x4 Left matrix
 ---@param b number[][] 4x4 Right matrix
@@ -157,7 +173,10 @@ end
 ---@return number[][] mat4 4x4 Transformation matrix
 function math_mod.trs_to_mat4(t, q, s)
 	q = q or {0, 0, 0, 1}
-	local qx, qy, qz, qw = q[1] or 0, q[2] or 0, q[3] or 0, q[4] or 1
+	local qx = (type(q) == "table" and (q[1] or q.x)) or 0
+	local qy = (type(q) == "table" and (q[2] or q.y)) or 0
+	local qz = (type(q) == "table" and (q[3] or q.z)) or 0
+	local qw = (type(q) == "table" and (q[4] or q.w)) or 1
 	local n = math.sqrt(qx * qx + qy * qy + qz * qz + qw * qw)
 	if n > 0 then
 		qx, qy, qz, qw = qx / n, qy / n, qz / n, qw / n

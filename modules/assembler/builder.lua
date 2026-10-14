@@ -7,43 +7,14 @@
 	glTF 2.0 / GLB binary in RAM with zero disk I/O and zero child entity overhead.
 ]]
 
-local math_mod = dofile(core.get_modpath("x_player_armor") .. "/modules/assembler/math.lua")
-local loader_mod = dofile(core.get_modpath("x_player_armor") .. "/modules/assembler/loader.lua")
-local constants = x_player_armor.constants
+local math_mod = x_player_armor.gltf_assembler.math
+local loader_mod = x_player_armor.gltf_assembler.loader
 
 ---@class XPlayerArmorAssemblerBuilder
-local builder = {}
-
-local BONE_NAME_MAP = {
-	head = "Head",
-	torso = "Body",
-	sleeve_l = "Arm_Left",
-	sleeve_r = "Arm_Right",
-	legs_l = "Leg_Left",
-	legs_r = "Leg_Right",
-	feet_l = "Leg_Left",
-	feet_r = "Leg_Right",
-	shield = "Arm_Left",
-	shield_tower = "Arm_Left",
+local builder = {
+	math = math_mod,
+	loader = loader_mod,
 }
-
--- Standard fallback bone node indices in x_player_armor_preview.glb:
--- Node 1 = Arm_Left, Node 2 = Arm_Right, Node 3 = Head, Node 4 = Leg_Left, Node 5 = Leg_Right, Node 6 = Body
-local BONE_NODE_MAP = {
-	head = 4,      -- 1-indexed in Lua (Node 3 in glTF: Head)
-	torso = 7,     -- 1-indexed in Lua (Node 6 in glTF: Body)
-	sleeve_l = 2,  -- 1-indexed in Lua (Node 1 in glTF: Arm_Left)
-	sleeve_r = 3,  -- 1-indexed in Lua (Node 2 in glTF: Arm_Right)
-	legs_l = 5,    -- 1-indexed in Lua (Node 4 in glTF: Leg_Left)
-	legs_r = 6,    -- 1-indexed in Lua (Node 5 in glTF: Leg_Right)
-	feet_l = 5,    -- 1-indexed in Lua (Node 4 in glTF: Leg_Left)
-	feet_r = 6,    -- 1-indexed in Lua (Node 5 in glTF: Leg_Right)
-	shield = 2,    -- 1-indexed in Lua (Node 1 in glTF: Arm_Left)
-	shield_tower = 2,
-}
-
-builder.BONE_NAME_MAP = BONE_NAME_MAP
-builder.BONE_NODE_MAP = BONE_NODE_MAP
 
 ---Resolves the texture names for a single piece model.
 ---@param piece table Piece definition table
@@ -89,57 +60,81 @@ function builder.assemble_glb(pieces_to_attach)
 	local comb_bin = math_mod.pad_4bytes(base_bin_raw, "\0")
 	local material_textures = {}
 
-	-- Compute bone world matrices for character rig
-	local bone_world_matrices = math_mod.compute_node_world_matrices(comb_json.nodes)
-	-- Build bone name to node index map dynamically from comb_json.nodes
-	local bone_name_map = {}
+	-- Resolve Armature root node index in base model
 	local armature_node_idx = 8
 	for idx, node in ipairs(comb_json.nodes or {}) do
 		if node.name == "Armature" then
 			armature_node_idx = idx
-		elseif node.name then
-			bone_name_map[node.name] = idx
+			break
 		end
 	end
+
+	-- Precompute bone world matrices and bone name lookup for attaching prop items (e.g. shields)
+	local base_world_mats = math_mod.compute_node_world_matrices(comb_json.nodes)
+	local bone_node_map = {}
+	for idx, node in ipairs(comb_json.nodes or {}) do
+		if node.name then
+			bone_node_map[node.name] = idx
+		end
+	end
+
+	local read_f32 = math_mod.read_float32
+	local write_f32 = math_mod.write_float32
+	local math_sqrt = math.sqrt
 
 	for _, piece in ipairs(pieces_to_attach) do
 		local p_json, p_bin = loader_mod.get_piece_model(piece.model_file, piece.mod_hint)
 		if p_json and p_bin and p_json.meshes and #p_json.meshes > 0 then
-			local target_bone = BONE_NAME_MAP[piece.piece_id] or BONE_NAME_MAP[piece.element]
-			local bone_idx = (target_bone and bone_name_map[target_bone])
-				or BONE_NODE_MAP[piece.piece_id] or BONE_NODE_MAP[piece.element] or 4
-			local default_trans = constants.ATTACH_TRANSFORMS and constants.ATTACH_TRANSFORMS.glb
-				and (constants.ATTACH_TRANSFORMS.glb[piece.piece_id] or constants.ATTACH_TRANSFORMS.glb[piece.element])
-
-			local custom_trans = piece.item_def and piece.item_def.transforms and (
-				(piece.item_def.transforms.glb and piece.item_def.transforms.glb[piece.piece_id])
-				or piece.item_def.transforms[piece.piece_id]
+			local idef = piece.item_def or (piece.item_name and x_player_armor.get_armor_def(piece.item_name))
+			local custom_trans = idef and (
+				(idef.transforms and (
+					(idef.transforms.glb and idef.transforms.glb[piece.piece_id])
+					or idef.transforms[piece.piece_id]
+				))
+				or (piece.element == "shield" and (
+					(idef.shield_offset and idef.shield_offset.glb)
+					or idef.shield_offset
+				))
 			)
 
-			local pos = (custom_trans and custom_trans.pos) or (default_trans and default_trans.pos) or {x = 0, y = 0, z = 0}
-			local rot_deg = (custom_trans and custom_trans.rot) or (default_trans and default_trans.rot) or {x = 0, y = 0, z = 0}
-			local scale = (custom_trans and custom_trans.scale)
-				or (piece.item_def and piece.item_def.visual_size)
-				or (default_trans and default_trans.scale)
-
-			-- Shield specific transforms:
-			-- All origin-centered shields (standard modular, tower, and custom x_mobs shields)
-			-- use the calibrated forward stand attachment transform.
-			if piece.element == "shield" then
-				local shield_trans = constants.ATTACH_TRANSFORMS and constants.ATTACH_TRANSFORMS.glb and constants.ATTACH_TRANSFORMS.glb.shield or {
-					pos = {x = -0.9, y = 5.0, z = 1.4},
-					rot = {x = 0, y = 50, z = 165},
-					scale = {x = 1.45, y = 1.15, z = 1.15},
-				}
-				pos = (custom_trans and custom_trans.pos) or shield_trans.pos or pos
-				rot_deg = (custom_trans and custom_trans.rot) or shield_trans.rot or rot_deg
-				scale = (custom_trans and custom_trans.scale) or shield_trans.scale or scale
+			-- Detect native unified master character model export (Blender File -> Export -> glTF 2.0 with "Selected Objects")
+			local p_node = nil
+			for _, node in ipairs(p_json.nodes or {}) do
+				if node.mesh ~= nil then
+					p_node = node
+					break
+				end
+			end
+			if not p_node and p_json.nodes then
+				p_node = p_json.nodes[1]
 			end
 
-			local quat = math_mod.euler_to_quat(rot_deg)
-			local bone_world_mat = bone_world_matrices[bone_idx] or math_mod.trs_to_mat4()
-			local piece_local_mat = math_mod.trs_to_mat4(pos, quat, scale)
-			local world_mat = math_mod.mat4_mul(bone_world_mat, piece_local_mat)
+			-- Unified character model: extract node scene transform directly from glTF node
+			local node_pos = p_node and p_node.translation
+			local node_quat = p_node and p_node.rotation
+			local node_scale = p_node and p_node.scale
+
+			local node_mat = math_mod.trs_to_mat4(node_pos, node_quat, node_scale)
+
+			local world_mat
+			if custom_trans then
+				local c_pos = custom_trans.pos or {x = 0, y = 0, z = 0}
+				local c_rot = custom_trans.rot or {x = 0, y = 0, z = 0}
+				local c_scale = custom_trans.scale or {x = 1, y = 1, z = 1}
+				local c_quat = math_mod.euler_to_quat(c_rot)
+				local custom_mat = math_mod.trs_to_mat4(c_pos, c_quat, c_scale)
+				if custom_trans.bone_local or (idef and idef.bone_local) then
+					local bone_name = custom_trans.bone or "Arm_Left"
+					local bone_idx = bone_node_map[bone_name]
+					local bone_mat = (bone_idx and base_world_mats[bone_idx]) or math_mod.trs_to_mat4()
+					local bone_attach_mat = math_mod.mat4_mul(bone_mat, custom_mat)
+					world_mat = math_mod.mat4_mul(bone_attach_mat, node_mat)
+				else
+					world_mat = math_mod.mat4_mul(custom_mat, node_mat)
+				end
+			else
+				world_mat = node_mat
+			end
 
 			-- Pre-extract matrix registers for high-performance JIT execution
 			local m11, m12, m13, m14 = world_mat[1][1], world_mat[1][2], world_mat[1][3], world_mat[1][4]
@@ -171,9 +166,9 @@ function builder.assemble_glb(pieces_to_attach)
 
 									for i = 0, count - 1 do
 										local v_offset = start_offset + i * 12
-										local vx = math_mod.read_float32(p_bin, v_offset)
-										local vy = math_mod.read_float32(p_bin, v_offset + 4)
-										local vz = math_mod.read_float32(p_bin, v_offset + 8)
+										local vx = read_f32(p_bin, v_offset)
+										local vy = read_f32(p_bin, v_offset + 4)
+										local vz = read_f32(p_bin, v_offset + 8)
 
 										local wx = m11 * vx + m12 * vy + m13 * vz + m14
 										local wy = m21 * vx + m22 * vy + m23 * vz + m24
@@ -186,9 +181,9 @@ function builder.assemble_glb(pieces_to_attach)
 										if wz < min_z then min_z = wz end
 										if wz > max_z then max_z = wz end
 
-										chunks[c + 1] = math_mod.write_float32(wx)
-										chunks[c + 2] = math_mod.write_float32(wy)
-										chunks[c + 3] = math_mod.write_float32(wz)
+										chunks[c + 1] = write_f32(wx)
+										chunks[c + 2] = write_f32(wy)
+										chunks[c + 3] = write_f32(wz)
 										c = c + 3
 									end
 
@@ -217,22 +212,22 @@ function builder.assemble_glb(pieces_to_attach)
 
 									for i = 0, count - 1 do
 										local v_offset = start_offset + i * 12
-										local nx = math_mod.read_float32(p_bin, v_offset)
-										local ny = math_mod.read_float32(p_bin, v_offset + 4)
-										local nz = math_mod.read_float32(p_bin, v_offset + 8)
+										local nx = read_f32(p_bin, v_offset)
+										local ny = read_f32(p_bin, v_offset + 4)
+										local nz = read_f32(p_bin, v_offset + 8)
 
 										local wnx = m11 * nx + m12 * ny + m13 * nz
 										local wny = m21 * nx + m22 * ny + m23 * nz
 										local wnz = m31 * nx + m32 * ny + m33 * nz
 
-										local len = math.sqrt(wnx * wnx + wny * wny + wnz * wnz)
+										local len = math_sqrt(wnx * wnx + wny * wny + wnz * wnz)
 										if len > 0 then
 											wnx, wny, wnz = wnx / len, wny / len, wnz / len
 										end
 
-										chunks[c + 1] = math_mod.write_float32(wnx)
-										chunks[c + 2] = math_mod.write_float32(wny)
-										chunks[c + 3] = math_mod.write_float32(wnz)
+										chunks[c + 1] = write_f32(wnx)
+										chunks[c + 2] = write_f32(wny)
+										chunks[c + 3] = write_f32(wnz)
 										c = c + 3
 									end
 
@@ -308,11 +303,17 @@ function builder.assemble_glb(pieces_to_attach)
 					else
 						pbr.baseColorTexture = {index = tex_offset}
 					end
+					new_mat.alphaMode = "MASK"
+					new_mat.alphaCutoff = 0.5
+					new_mat.doubleSided = true
 					table.insert(comb_json.materials, new_mat)
 				end
 			else
 				table.insert(comb_json.materials, {
 					name = piece.piece_id,
+					alphaMode = "MASK",
+					alphaCutoff = 0.5,
+					doubleSided = true,
 					pbrMetallicRoughness = {
 						baseColorTexture = {index = tex_offset}
 					}
