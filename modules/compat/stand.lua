@@ -9,7 +9,7 @@ local stand_compat = {
 	---@param player? ObjectRef
 	---@return string
 	get_armor_formspec = function(pos, player)
-		if player and x_player_armor.stand and x_player_armor.stand.get_stand_formspec then
+		if player then
 			return x_player_armor.stand.get_stand_formspec(pos, player)
 		end
 		return ""

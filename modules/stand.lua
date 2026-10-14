@@ -1,10 +1,12 @@
 ---@class XPlayerArmorStand
+---@field attached_entities table<number, ObjectRef[]> Map of node position hashes to attached visual entities
 local stand = {
 	callbacks = {
 		on_equip = {},
 		on_take = {},
 		on_swap = {},
 	},
+	attached_entities = {},
 }
 
 local S = core.get_translator("x_player_armor")
@@ -56,10 +58,10 @@ function stand.schedule_restore(pos)
 	end
 end
 
-local STAND_ENTITY_OFFSET = vector.new(0, -0.41, 0)
+local STAND_ENTITY_OFFSET = vector.new(0, -0.4375, 0)
 stand.STAND_ENTITY_OFFSET = STAND_ENTITY_OFFSET
 
--- Visual mannequin entity for armor stands (Single-entity preview mesh)
+-- Visual mannequin entity for armor stands (Invisible skeletal armature for attachments)
 core.register_entity("x_player_armor:stand_entity", {
 	initial_properties = {
 		visual = "mesh",
@@ -140,6 +142,26 @@ local function get_stand_shield(pos)
 	return nil
 end
 
+---Cleans up any attached visual entities for the stand at pos.
+---@param pos vector Node position
+function stand.cleanup_attached_entities(pos)
+	local pos_hash = hash_pos(pos)
+	local attached = stand.attached_entities[pos_hash]
+	if attached then
+		for _, ent in ipairs(attached) do
+			if ent and (not ent.is_valid or ent:is_valid()) then
+				local luaent = ent:get_luaentity()
+				if luaent then
+					luaent._intentional_removal = true
+				end
+				ent:set_detach()
+				ent:remove()
+			end
+		end
+		stand.attached_entities[pos_hash] = nil
+	end
+end
+
 ---Updates the mannequin textures and attached equipment on the stand entity.
 ---@param pos vector
 update_stand_entity = function(pos)
@@ -154,32 +176,7 @@ update_stand_entity = function(pos)
 	local node = core.get_node(pos)
 	local dir = core.facedir_to_dir(node.param2 or 0)
 	local yaw = (core.dir_to_yaw(dir) + math.pi) % (2 * math.pi)
-
-	-- Material array for x_player_armor_preview.glb (6 base slots):
-	-- Slot 0: Body10 (blank.png; stand 3D node already has wooden arms built in)
-	-- Slot 1: Body18 (blank.png)
-	-- Slot 2: Head (list[1])
-	-- Slot 3: Torso (list[2])
-	-- Slot 4: Legs (list[3])
-	-- Slot 5: Feet (list[4])
-
-	local textures = x_player_armor.gltf_assembler.resolve_base_preview_textures(list, nil)
-
-	local stand_mesh = constants.MODELS.stand_entity
-	local dyn_mesh, dyn_textures = x_player_armor.gltf_assembler.resolve_stand_preview(list, textures)
-	if dyn_mesh and dyn_textures then
-		if x_player_armor.gltf_assembler.is_media_ready(dyn_mesh) then
-			stand_mesh = dyn_mesh
-			textures = dyn_textures
-		else
-			x_player_armor.gltf_assembler.when_media_ready(dyn_mesh, function()
-				local cur_node = core.get_node(pos)
-				if cur_node.name == "x_player_armor:stand" or cur_node.name == "x_player_armor:locked_stand" then
-					update_stand_entity(pos)
-				end
-			end)
-		end
-	end
+	local pos_hash = hash_pos(pos)
 
 	local ent_pos = vector.add(pos, STAND_ENTITY_OFFSET)
 	local obj = get_stand_entity(pos)
@@ -197,11 +194,65 @@ update_stand_entity = function(pos)
 		end
 		obj:set_yaw(yaw)
 		obj:set_properties({
-			mesh = stand_mesh,
-			textures = textures,
+			mesh = constants.MODELS.stand_entity,
+			textures = {
+				"blank.png",
+				"blank.png",
+				"blank.png",
+				"blank.png",
+				"blank.png",
+				"blank.png",
+			},
 			backface_culling = false,
 		})
 	end
+
+	-- Clean up previous attached visual pieces
+	stand.cleanup_attached_entities(pos)
+
+	if obj and obj.get_children then
+		local children = obj:get_children()
+		if children then
+			for _, child in ipairs(children) do
+				if child and (not child.is_valid or child:is_valid()) then
+					local clua = child:get_luaentity()
+					if clua and (clua.name == "x_player_armor:visual" or clua.name == "x_player_armor:stand_shield" or clua.name == "x_player_api:wield_item") then
+						clua._intentional_removal = true
+						child:set_detach()
+						child:remove()
+					end
+				end
+			end
+		end
+	end
+
+	-- Attach 3D armor pieces directly to the stand mannequin bones
+	local attached = {}
+	if obj and obj:is_valid() then
+		local armor_visuals = x_player_armor.visuals.attach_armor_to_entity(obj, list, "glb")
+		if armor_visuals then
+			for _, v in ipairs(armor_visuals) do
+				table.insert(attached, v)
+			end
+		end
+
+		local shield_stack = list[5]
+		if shield_stack and not shield_stack:is_empty() then
+			local shield_visual = x_player_armor.visuals.attach_shield_to_entity(obj, shield_stack, "glb")
+			if shield_visual then
+				table.insert(attached, shield_visual)
+			end
+		end
+
+		local wield_stack = list[6]
+		if wield_stack and not wield_stack:is_empty() then
+			local wield_visual = x_player_armor.visuals.attach_wield_item_to_entity(obj, wield_stack, "glb")
+			if wield_visual then
+				table.insert(attached, wield_visual)
+			end
+		end
+	end
+	stand.attached_entities[pos_hash] = attached
 
 	-- Clean up obsolete standalone shield entities if present
 	local old_shield = get_stand_shield(pos)
@@ -591,9 +642,8 @@ function stand.swap_armor(pos, player, is_locked)
 	update_stand_entity(pos)
 
 	-- Sound feedback
-	local sounds = constants.SOUNDS
-	if sounds and sounds.equip then
-		core.sound_play(sounds.equip, {pos = pos, gain = 0.8, max_hear_distance = 16.0})
+	if constants.ENABLE_SOUNDS and constants.SOUNDS.equip then
+		core.sound_play(constants.SOUNDS.equip, {pos = pos, gain = 0.8, max_hear_distance = 16.0})
 	end
 
 	stand.run_callbacks("on_swap", pos, player)
@@ -737,9 +787,8 @@ function stand.take_all_armor(pos, player, is_locked)
 
 	if changed then
 		update_stand_entity(pos)
-		local sounds = constants.SOUNDS
-		if sounds and sounds.unequip then
-			core.sound_play(sounds.unequip, {pos = pos, gain = 0.8, max_hear_distance = 16.0})
+		if constants.ENABLE_SOUNDS and constants.SOUNDS.unequip then
+			core.sound_play(constants.SOUNDS.unequip, {pos = pos, gain = 0.8, max_hear_distance = 16.0})
 		end
 		core.show_formspec(name, "x_player_armor:stand_" .. pos.x .. "_" .. pos.y .. "_" .. pos.z, stand.get_stand_formspec(pos, player))
 	end
@@ -805,6 +854,7 @@ local function register_stand_node(subname, def)
 		mesh = constants.MODELS.stand,
 		visual_scale = 1.0, -- glTF 10 units = 1 node standard
 		tiles = {def.texture},
+		use_texture_alpha = "clip",
 		inventory_image = def.inventory_image or def.texture,
 		wield_image = def.wield_image or def.inventory_image or def.texture,
 		paramtype = "light",
@@ -853,6 +903,8 @@ local function register_stand_node(subname, def)
 		end,
 
 		on_destruct = function(pos)
+			stand.cleanup_attached_entities(pos)
+
 			local obj = get_stand_entity(pos)
 			if obj and obj:is_valid() then
 				local luaent = obj:get_luaentity()
