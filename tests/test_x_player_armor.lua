@@ -107,11 +107,17 @@ function core.get_worldpath()
 	return mod_dir .. "/tests/mock_world"
 end
 
-function core.mkdir(_path)
+function core.mkdir(path)
+	os.execute("mkdir -p \"" .. path .. "\" 2>/dev/null")
 	return true
 end
 
-function core.rmdir(_path, _recursive)
+function core.rmdir(path, recursive)
+	if recursive then
+		os.execute("rm -rf \"" .. path .. "\" 2>/dev/null")
+	else
+		os.execute("rm -f \"" .. path .. "\" 2>/dev/null")
+	end
 	return true
 end
 
@@ -123,8 +129,19 @@ function core.safe_file_write(path, data)
 	return true
 end
 
-function core.get_dir_list(_path, _is_dir)
-	return {}
+function core.get_dir_list(path, is_dir)
+	local cmd = is_dir and ("find \"" .. path .. "\" -mindepth 1 -maxdepth 1 -type d 2>/dev/null") or ("find \"" .. path .. "\" -mindepth 1 -maxdepth 1 -type f 2>/dev/null")
+	local p = io.popen(cmd)
+	if not p then return {} end
+	local res = {}
+	for line in p:lines() do
+		local fname = line:match("([^/]+)$")
+		if fname then
+			table.insert(res, fname)
+		end
+	end
+	p:close()
+	return res
 end
 
 function core.sha1(str)
@@ -683,6 +700,15 @@ function core.add_entity(pos, name)
 		if not self.attachment then return nil end
 		return self.attachment.parent, self.attachment.bone, self.attachment.pos, self.attachment.rot, self.attachment.forced_visible
 	end
+	function ent:get_children()
+		local children = {}
+		for _, e in ipairs(core.entities) do
+			if e and e.valid and e.attachment and e.attachment.parent == self then
+				table.insert(children, e)
+			end
+		end
+		return children
+	end
 	function ent:get_luaentity()
 		return self.luaentity
 	end
@@ -1159,7 +1185,7 @@ test("Armor Stand Node & Entity", function()
 	local entity_def = core.registered_entities["x_player_armor:stand_entity"]
 	assert(entity_def, "Armor stand display entity must be registered")
 	assert(entity_def.initial_properties.mesh == "x_player_armor_preview.glb", "Stand entity mesh must be x_player_armor_preview.glb")
-	assert(#entity_def.initial_properties.textures == 6, "Stand entity must have 6 texture slots for preview mesh")
+	assert(entity_def.initial_properties.textures[1] == "blank.png", "Stand entity texture must be blank.png")
 	assert(entity_def.on_step == nil, "Stand entity on_step must be nil")
 end)
 
@@ -1268,21 +1294,28 @@ test("Dual-Format Armor Attachments & Visuals Reconciliation", function()
 	assert(constants.ATTACH_TRANSFORMS.glb, "constants.ATTACH_TRANSFORMS.glb must exist")
 	assert(constants.ATTACH_TRANSFORMS.b3d, "constants.ATTACH_TRANSFORMS.b3d must exist")
 
-	-- Verify GLB transforms: Head/Torso rot.y = 0 (faces forward in glb), Limbs rot.x = 180, rot.y = 0
+	-- Verify GLB transforms: Native unified Blender transforms (compensated for bone rest translations & limb 180 flips)
 	local glb = constants.ATTACH_TRANSFORMS.glb
-	assert(glb.head.rot.y == 0, "GLB head rot.y must be 0 to face forward")
-	assert(glb.torso.rot.y == 0, "GLB torso rot.y must be 0 to face forward")
-	assert(glb.sleeve_l.rot.x == 180 and glb.sleeve_l.rot.y == 0, "GLB sleeve_l rot must be (180, 0, 0)")
-	assert(glb.legs_l.rot.x == 180 and glb.legs_l.rot.y == 0, "GLB legs_l rot must be (180, 0, 0)")
-	assert(glb.feet_l.rot.x == 180 and glb.feet_l.rot.y == 0, "GLB feet_l rot must be (180, 0, 0)")
+	assert(glb.head.pos.y == -12.6 and glb.head.rot.x == 0 and glb.head.rot.y == 0, "GLB head pos.y must be -12.6 and rot (0, 0, 0)")
+	assert(glb.torso.pos.y == -6.3 and glb.torso.rot.x == 0 and glb.torso.rot.y == 0, "GLB torso pos.y must be -6.3 and rot (0, 0, 0)")
+	assert(glb.sleeve_l.pos.x == 3.15 and glb.sleeve_l.pos.y == 11.55 and glb.sleeve_l.rot.x == 180, "GLB sleeve_l pos=(3.15, 11.55, 0), rot.x=180")
+	assert(glb.sleeve_r.pos.x == -3.15 and glb.sleeve_r.pos.y == 11.55 and glb.sleeve_r.rot.x == 180, "GLB sleeve_r pos=(-3.15, 11.55, 0), rot.x=180")
+	assert(glb.legs_l.pos.x == 1.05 and glb.legs_l.pos.y == 6.3 and glb.legs_l.rot.x == 180, "GLB legs_l pos=(1.05, 6.3, 0), rot.x=180")
+	assert(glb.legs_r.pos.x == -1.05 and glb.legs_r.pos.y == 6.3 and glb.legs_r.rot.x == 180, "GLB legs_r pos=(-1.05, 6.3, 0), rot.x=180")
+	assert(glb.feet_l.pos.x == 1.05 and glb.feet_l.pos.y == 6.3 and glb.feet_l.rot.x == 180, "GLB feet_l pos=(1.05, 6.3, 0), rot.x=180")
+	assert(glb.feet_r.pos.x == -1.05 and glb.feet_r.pos.y == 6.3 and glb.feet_r.rot.x == 180, "GLB feet_r pos=(-1.05, 6.3, 0), rot.x=180")
+	assert(glb.shield.rot.x == 180 and glb.shield.rot.y == 0 and glb.shield.rot.z == 0, "GLB shield rot must be (180, 0, 0)")
+	assert(glb.shield.pos.x == 3.35 and glb.shield.pos.y == 11.55 and glb.shield.pos.z == -0.2, "GLB shield pos must be (3.35, 11.55, -0.2)")
 
-	-- Verify B3D transforms: Head/Torso rot.y = 180 (counteracting Body bone yaw), Limbs rot = (180, 180, 0)
+	-- Verify B3D transforms: Unified rot = (0, 180, 0)
 	local b3d = constants.ATTACH_TRANSFORMS.b3d
-	assert(b3d.head.rot.y == 180, "B3D head rot.y must be 180")
-	assert(b3d.torso.rot.y == 180, "B3D torso rot.y must be 180")
-	assert(b3d.sleeve_l.rot.x == 180 and b3d.sleeve_l.rot.y == 180, "B3D sleeve_l rot must be (180, 180, 0)")
-	assert(b3d.legs_l.rot.x == 180 and b3d.legs_l.rot.y == 180, "B3D legs_l rot must be (180, 180, 0)")
-	assert(b3d.feet_l.rot.x == 180 and b3d.feet_l.rot.y == 180, "B3D feet_l rot must be (180, 180, 0)")
+	assert(b3d.head.rot.x == 0 and b3d.head.rot.y == 180 and b3d.head.rot.z == 0, "B3D head rot must be (0, 180, 0)")
+	assert(b3d.torso.rot.x == 0 and b3d.torso.rot.y == 180 and b3d.torso.rot.z == 0, "B3D torso rot must be (0, 180, 0)")
+	assert(b3d.sleeve_l.rot.x == 0 and b3d.sleeve_l.rot.y == 180 and b3d.sleeve_l.rot.z == 0, "B3D sleeve_l rot must be (0, 180, 0)")
+	assert(b3d.legs_l.rot.x == 0 and b3d.legs_l.rot.y == 180 and b3d.legs_l.rot.z == 0, "B3D legs_l rot must be (0, 180, 0)")
+	assert(b3d.feet_l.rot.x == 0 and b3d.feet_l.rot.y == 180 and b3d.feet_l.rot.z == 0, "B3D feet_l rot must be (0, 180, 0)")
+	assert(b3d.shield.rot.x == 0 and b3d.shield.rot.y == 180 and b3d.shield.rot.z == 0, "B3D shield rot must be (0, 180, 0)")
+	assert(b3d.shield.pos.x == -0.20 and b3d.shield.pos.y == 0 and b3d.shield.pos.z == 0.20, "B3D shield pos must be (-0.20, 0, 0.20)")
 
 	-- Test Visuals update on native B3D player
 	local hero = create_mock_player("visual_tester")
@@ -1383,19 +1416,31 @@ test("SkinsDB 1.8 3D Rig Attachment Transforms & Torso Scaling Calibration", fun
 	assert(s_b3d.sleeve_l.scale.x == 1.06, "Sleeve L scale X must be 1.06 to cover sleeve overlay")
 	assert(s_b3d.sleeve_r.scale and s_b3d.sleeve_r.scale.y == 1.08, "Sleeve R scale Y must be 1.08")
 	assert(s_b3d.sleeve_r.scale.x == 1.06, "Sleeve R scale X must be 1.06 to cover sleeve overlay")
+	assert(s_b3d.feet_l.scale and s_b3d.feet_l.scale.y == 1.20, "Feet L scale Y must be 1.20 to calibrate skinsdb leg length")
+	assert(s_b3d.feet_l.scale.x == 1.14, "Feet L scale X must be 1.14")
+	assert(s_b3d.feet_l.pos and s_b3d.feet_l.pos.y == -0.55, "Feet L pos Y in B3D must be -0.55 to envelope foot sole")
+
+	local s_glb = constants.ATTACH_TRANSFORMS.skinsdb_glb
+	assert(s_glb.feet_l.scale and s_glb.feet_l.scale.y == 1.20, "Feet L GLB scale Y must be 1.20")
+	assert(s_glb.feet_l.scale.x == 1.14, "Feet L GLB scale X must be 1.14")
+	assert(s_glb.feet_l.pos and s_glb.feet_l.pos.y == 6.95, "Feet L GLB pos Y must be 6.95 to cancel 6.75 bone and envelope foot sole")
 
 	-- 1. Standard player with character.b3d
 	local norm_hero = create_mock_player("norm_player")
 	x_player_armor.inventory.init_player_inventory(norm_hero)
 	local _, n_inv = x_player_armor.get_valid_player(norm_hero)
 	n_inv:set_stack("armor", 2, ItemStack("x_player_armor:chestplate_steel"))
+	n_inv:set_stack("armor", 4, ItemStack("x_player_armor:boots_steel"))
 	x_player_armor.visuals.update_player_visuals(norm_hero)
 
 	local n_ents = x_player_armor.visuals.player_entities["norm_player"]
 	assert(n_ents and n_ents.torso, "Torso entities must be spawned for standard player")
+	assert(n_ents and n_ents.feet, "Feet entities must be spawned for standard player")
 	-- Normal character.b3d player uses default 1.0 scaling
 	local n_torso_props = n_ents.torso[1]:get_properties()
 	assert(n_torso_props.visual_size.y == 1, "Standard player torso visual_size.y must remain 1.0")
+	local n_feet_props = n_ents.feet[1]:get_properties()
+	assert(n_feet_props.visual_size.y == 1, "Standard player feet visual_size.y must remain 1.0")
 
 	-- 2. Player with skinsdb_3d_armor_character_5.b3d model
 	local skin_hero = create_mock_player("skin_player")
@@ -1403,10 +1448,12 @@ test("SkinsDB 1.8 3D Rig Attachment Transforms & Torso Scaling Calibration", fun
 	x_player_armor.inventory.init_player_inventory(skin_hero)
 	local _, s_inv = x_player_armor.get_valid_player(skin_hero)
 	s_inv:set_stack("armor", 2, ItemStack("x_player_armor:chestplate_steel"))
+	s_inv:set_stack("armor", 4, ItemStack("x_player_armor:boots_steel"))
 	x_player_armor.visuals.update_player_visuals(skin_hero)
 
 	local s_ents = x_player_armor.visuals.player_entities["skin_player"]
 	assert(s_ents and s_ents.torso, "Torso entities must be spawned for skinsdb player")
+	assert(s_ents and s_ents.feet, "Feet entities must be spawned for skinsdb player")
 	local s_torso_props = s_ents.torso[1]:get_properties()
 	assert(s_torso_props.visual_size.y == 1.08, "Skinsdb player torso visual_size.y must be scaled to 1.08")
 	assert(s_torso_props.visual_size.x == 1.05, "Skinsdb player torso visual_size.x must be scaled to 1.05")
@@ -1416,6 +1463,13 @@ test("SkinsDB 1.8 3D Rig Attachment Transforms & Torso Scaling Calibration", fun
 	assert(s_sleeve_l_props.visual_size.y == 1.08, "Skinsdb player sleeve_l visual_size.y must be 1.08")
 	assert(s_sleeve_l_props.visual_size.x == 1.06, "Skinsdb player sleeve_l visual_size.x must be 1.06")
 
+	-- Check boots on skinsdb player
+	local s_boot_l = s_ents.feet[1]
+	local s_boot_l_props = s_boot_l:get_properties()
+	assert(s_boot_l_props.visual_size.y == 1.20, "Skinsdb player boot_l visual_size.y must be scaled to 1.20")
+	assert(s_boot_l_props.visual_size.x == 1.14, "Skinsdb player boot_l visual_size.x must be scaled to 1.14")
+	assert(s_boot_l.attachment.pos.y == -0.55, "Skinsdb player boot_l pos.y must be -0.55 to prevent sole clipping")
+
 	-- 3. Dynamic Model Transition: switching normal player to skinsdb player model
 	norm_hero:set_properties({mesh = "skinsdb_3d_armor_character_5.b3d"})
 	x_player_armor.visuals.update_player_visuals(norm_hero)
@@ -1423,6 +1477,8 @@ test("SkinsDB 1.8 3D Rig Attachment Transforms & Torso Scaling Calibration", fun
 	assert(transitioned_ents and transitioned_ents.torso, "Torso entities must exist after transition")
 	local trans_torso_props = transitioned_ents.torso[1]:get_properties()
 	assert(trans_torso_props.visual_size.y == 1.08, "Transitioned player torso must automatically respawn with 1.08 scale")
+	local trans_boot_l_props = transitioned_ents.feet[1]:get_properties()
+	assert(trans_boot_l_props.visual_size.y == 1.20, "Transitioned player boot must automatically respawn with 1.20 scale")
 
 	-- Clean up
 	x_player_armor.visuals.clear_all("norm_player")
@@ -2132,29 +2188,29 @@ test("Shield Left-Hand Attachment via x_player_api Subsystem", function()
 	assert(record.opts.mesh == x_player_armor.constants.MODELS.shield, "mesh must match shield model")
 	assert(record.item == "x_player_armor:shield_steel", "item must match shield item name")
 	assert(record.opts.override_transform == true, "opts.override_transform must be true for forearm attachment")
-	assert(record.opts.pos_glb ~= nil and record.opts.pos_glb.x == -0.8 and record.opts.pos_glb.y == 5.0 and record.opts.pos_glb.z == -1.7,
-		"opts.pos_glb must match normalized SHIELD_OFFSET (-0.8, 5.0, -1.7)")
-	assert(record.opts.rot_glb ~= nil and record.opts.rot_glb.x == 180 and record.opts.rot_glb.y == -135 and record.opts.rot_glb.z == 0,
-		"opts.rot_glb must match normalized SHIELD_OFFSET (180, -135, 0)")
-	assert(record.opts.pos_b3d ~= nil and record.opts.pos_b3d.x == -0.8 and record.opts.pos_b3d.y == 5.0 and record.opts.pos_b3d.z == 1.7,
-		"opts.pos_b3d must match normalized SHIELD_OFFSET (-0.8, 5.0, 1.7)")
-	assert(record.opts.rot_b3d ~= nil and record.opts.rot_b3d.x == 180 and record.opts.rot_b3d.y == 45 and record.opts.rot_b3d.z == 0,
-		"opts.rot_b3d must match normalized SHIELD_OFFSET (180, 45, 0)")
+	assert(record.opts.pos_glb ~= nil and record.opts.pos_glb.x == 3.35 and record.opts.pos_glb.y == 11.55 and record.opts.pos_glb.z == -0.2,
+		"opts.pos_glb must match calibrated SHIELD_OFFSET (3.35, 11.55, -0.2)")
+	assert(record.opts.rot_glb ~= nil and record.opts.rot_glb.x == 180 and record.opts.rot_glb.y == 0 and record.opts.rot_glb.z == 0,
+		"opts.rot_glb must match calibrated SHIELD_OFFSET (180, 0, 0)")
+	assert(record.opts.pos_b3d ~= nil and record.opts.pos_b3d.x == -0.20 and record.opts.pos_b3d.y == 0 and record.opts.pos_b3d.z == 0.20,
+		"opts.pos_b3d must match calibrated SHIELD_OFFSET (-0.20, 0, 0.20)")
+	assert(record.opts.rot_b3d ~= nil and record.opts.rot_b3d.x == 0 and record.opts.rot_b3d.y == 180 and record.opts.rot_b3d.z == 0,
+		"opts.rot_b3d must match calibrated SHIELD_OFFSET (0, 180, 0)")
 
 	-- 1c. Explicit bone_local mesh backward compatibility
 	x_player_armor.compat_x_player_api.attach_shield(mock_player, "x_player_armor:shield_steel", {bone_local = true})
 	local bl_record = attached_items["shield_hero"]
-	assert(bl_record.opts.pos_glb.y == 0 and bl_record.opts.rot_glb.x == 180, "bone_local shield must use legacy (0,0,0) / (180,0,0)")
+	assert(bl_record.opts.pos_glb.y == 0 and bl_record.opts.rot_glb.x == 0, "bone_local shield must use unified (0,0,0) / (0,0,0)")
 
 	-- 1b. Shield offset API getters and setters
 	local def_glb_offset = x_player_armor.get_shield_offset("glb")
-	assert(def_glb_offset.pos.x == -0.8, "get_shield_offset('glb') pos.x must be -0.8")
-	assert(def_glb_offset.pos.y == 5.0, "get_shield_offset('glb') pos.y must be 5.0")
-	assert(def_glb_offset.pos.z == -1.7, "get_shield_offset('glb') pos.z must be -1.7")
+	assert(def_glb_offset.pos.x == 3.35, "get_shield_offset('glb') pos.x must be 3.35")
+	assert(def_glb_offset.pos.y == 11.55, "get_shield_offset('glb') pos.y must be 11.55")
+	assert(def_glb_offset.pos.z == -0.2, "get_shield_offset('glb') pos.z must be -0.2")
 	assert(def_glb_offset.rot.x == 180, "get_shield_offset('glb') rot.x must be 180")
-	assert(def_glb_offset.rot.y == -135, "get_shield_offset('glb') rot.y must be -135")
+	assert(def_glb_offset.rot.y == 0, "get_shield_offset('glb') rot.y must be 0")
 	assert(def_glb_offset.rot.z == 0, "get_shield_offset('glb') rot.z must be 0")
-	assert(def_glb_offset.scale ~= nil and math.abs(def_glb_offset.scale.x - 1.45) < 0.01, "get_shield_offset('glb') scale.x must be 1.45")
+	assert(def_glb_offset.scale ~= nil and math.abs(def_glb_offset.scale.x - 1.0) < 0.01, "get_shield_offset('glb') scale.x must be 1.0")
 
 	x_player_armor.set_shield_offset("glb", {x = -1.0, y = 2.7, z = -3.2}, {x = 180, y = 50, z = 0}, {x = 1.2, y = 1.2, z = 1.2})
 	local updated_offset = x_player_armor.get_shield_offset("glb")
@@ -2162,7 +2218,7 @@ test("Shield Left-Hand Attachment via x_player_api Subsystem", function()
 	assert(updated_offset.rot.y == 50, "Updated rot y must be 50")
 	assert(updated_offset.scale.x == 1.2, "Updated scale x must be 1.2")
 	-- Reset to default
-	x_player_armor.set_shield_offset("glb", {x = -0.8, y = 5.0, z = -1.7}, {x = 180, y = -135, z = 0}, {x = 1.45, y = 1.15, z = 1.15})
+	x_player_armor.set_shield_offset("glb", {x = 3.35, y = 11.55, z = -0.2}, {x = 180, y = 0, z = 0}, {x = 1.0, y = 1.0, z = 1.0})
 
 	-- 2. 1st-person view configuration toggle
 	x_player_armor.compat_x_player_api.set_shield_first_person(mock_player, true)
@@ -4205,24 +4261,32 @@ test("In-World Armor Stand: Dual Variants, Shift+LMB Raycast Take/Swap, glTF 10x
 	assert(p_owner:get_wielded_item():get_name() == "default:sword_steel", "Player must wield steel sword after swap")
 	assert(sinv:get_stack("armor", 6):get_name() == "default:sword_diamond", "Stand must hold diamond sword in slot 6 after swap")
 
-	-- 7. Shield & Weapon Mounting in Single-Entity Preview Mesh
+	-- 7. Shield & Weapon Mounting via Modular Bone Attachment
 	local stand_ent = x_player_armor.stand.get_stand_entity(pos_pub)
 	assert(stand_ent ~= nil, "Stand entity must exist")
-	assert(x_player_armor.stand.get_stand_shield(pos_pub) == nil, "Standalone child shield entity must not exist (single entity architecture)")
 
 	-- Mount shield into slot 5
 	sinv:set_stack("armor", 5, ItemStack("x_player_armor:shield_steel"))
 	x_player_armor.stand.update_stand_entity(pos_pub)
-	local tex_shield = stand_ent:get_properties().textures
-	assert(tex_shield[7] == "x_player_armor_steel.png" or tex_shield[#tex_shield] == "x_player_armor_steel.png", "Shield material must include steel shield texture")
+	local pos_pub_hash = core.hash_node_position(pos_pub)
+	local pub_attached = x_player_armor.stand.attached_entities[pos_pub_hash]
+	assert(pub_attached ~= nil and #pub_attached >= 1, "Stand must have attached visual child entity for shield")
+	local shield_found = false
+	for _, ent in ipairs(pub_attached) do
+		local props = ent:get_properties()
+		if props.textures and props.textures[1] and props.textures[1]:find("steel") then
+			shield_found = true
+			break
+		end
+	end
+	assert(shield_found == true, "Attached shield entity must have steel texture")
 
-	-- Remove shield and weapon, verify dynamic shield mesh is cleanly detached and textures reset
+	-- Remove shield and weapon, verify attached visual pieces are cleanly detached
 	sinv:set_stack("armor", 5, ItemStack(""))
 	sinv:set_stack("armor", 6, ItemStack(""))
 	x_player_armor.stand.update_stand_entity(pos_pub)
-	local tex_clean = stand_ent:get_properties().textures
-	local clean_str = table.concat(tex_clean, ",")
-	assert(not clean_str:find("x_player_armor_steel.png"), "Shield material must be cleanly removed when unequipped")
+	pub_attached = x_player_armor.stand.attached_entities[pos_pub_hash]
+	assert(pub_attached == nil or #pub_attached == 0, "Attached visual entities must be empty when armor unequipped")
 
 	-- 8. Screwdriver Rotation (on_rotate)
 	local rot_node = core.get_node(pos_pub)
@@ -4360,13 +4424,13 @@ test("Armor Stand Enhancements: Backface Culling, Orientation, Raycast, Shift+LM
 	assert(ent ~= nil, "Stand entity must exist")
 	local props = ent:get_properties()
 	assert(props.backface_culling == false, "Stand entity must have backface_culling set to false")
-	assert(props.textures[1] == "blank.png", "Stand entity must use blank.png for Material 1 (arms are in node mesh)")
+	assert(props.textures[1] == "blank.png", "Stand entity must use blank.png to keep skeletal armature invisible")
 
 	-- Reset stand items
 	sinv:set_stack("armor", 1, ItemStack(""))
 	sinv:set_stack("armor", 6, ItemStack(""))
 	x_player_armor.stand.update_stand_entity(pos)
-	assert(ent:get_properties().textures[1] == "blank.png", "Stand entity must retain blank.png for Material 1 when empty")
+	assert(ent:get_properties().textures[1] == "blank.png", "Stand entity must retain blank.png when empty")
 
 	-- 2. Yaw Calculation: Stand Mannequin Faces Front Towards Player
 	local stand_node = core.registered_nodes["x_player_armor:stand"]
@@ -4694,14 +4758,18 @@ test("Skin Mods Integration & 64x64 Format 1.8 3D Preview", function()
 		if luaent and luaent.name == "x_player_armor:stand_entity" then
 			found_stand_ent = true
 			local props = obj:get_properties()
-			assert(#props.textures >= 6, "Stand entity properties must contain at least 6 texture slots")
-			assert(props.textures[1] == "blank.png", "Stand entity Slot 0 (Body10) must be blank.png")
-			assert(props.textures[2] == "blank.png", "Stand entity Slot 1 (Body18) must be blank.png")
-			assert(props.textures[3] == "x_player_armor_diamond.png" or props.textures[#props.textures] == "x_player_armor_diamond.png", "Stand entity must receive helmet texture")
+			assert(props.mesh == "x_player_armor_preview.glb", "Stand entity mesh must be x_player_armor_preview.glb")
+			assert(props.textures[1] == "blank.png", "Stand entity texture must be blank.png")
 			break
 		end
 	end
 	assert(found_stand_ent == true, "Stand entity must be spawned and verified")
+	local stand_pos_hash = core.hash_node_position(stand_pos)
+	local stand_attached = x_player_armor.stand.attached_entities[stand_pos_hash]
+	assert(stand_attached ~= nil and #stand_attached >= 1, "Stand must have attached child visual piece")
+	local helmet_props = stand_attached[1]:get_properties()
+	assert(helmet_props.mesh == "x_player_armor_helmet.glb", "Attached piece must be helmet glb")
+	assert(helmet_props.textures[1] == "x_player_armor_diamond.png", "Attached piece must have diamond texture")
 
 	-- Cleanup mocks
 	rawset(_G, "skins", nil)
@@ -4730,50 +4798,38 @@ test("Armor Stand & 3D Preview: Dynamic Mesh Merging & Shield Isolation", functi
 	stand_inv:set_stack("armor", 6, ItemStack("default:sword_diamond"))
 	x_player_armor.stand.update_stand_entity(stand_pos)
 
-	local objs = core.get_objects_inside_radius(stand_pos, 0.8)
-	local found = false
-	for _, obj in ipairs(objs) do
-		local luaent = obj:get_luaentity()
-		if luaent and luaent.name == "x_player_armor:stand_entity" then
-			found = true
-			local props = obj:get_properties()
-			assert(#props.textures >= 6, "Must have at least 6 texture slots")
-			assert(props.textures[1] == "blank.png", "Slot 1 (Body10) must be blank.png")
-			assert(props.textures[2] == "blank.png", "Slot 2 (Body18) must be blank.png")
-			local all_tex_str = table.concat(props.textures, ",")
-			assert(all_tex_str:find("diamond"), "Stand textures must contain diamond armor textures")
-			break
-		end
-	end
-	assert(found, "Stand entity must be present")
+	local pos_hash = core.hash_node_position(stand_pos)
+	local attached = x_player_armor.stand.attached_entities[pos_hash]
+	assert(attached ~= nil and #attached >= 5, "Stand must have all armor pieces and shield attached")
 
-	-- 2. Tower shield loadout: verify dynamic mesh receives tower shield texture
+	-- 2. Tower shield loadout: verify dynamic shield visual updates to tower shield
 	stand_inv:set_stack("armor", 5, ItemStack("x_player_armor:shield_enhanced_cactus"))
 	x_player_armor.stand.update_stand_entity(stand_pos)
-
-	for _, obj in ipairs(objs) do
-		local luaent = obj:get_luaentity()
-		if luaent and luaent.name == "x_player_armor:stand_entity" then
-			local props = obj:get_properties()
-			local all_tex_str = table.concat(props.textures, ",")
-			assert(all_tex_str:find("cactus"), "Stand textures must receive tower shield texture")
+	attached = x_player_armor.stand.attached_entities[pos_hash]
+	assert(#attached >= 5, "Stand must retain armor pieces with tower shield")
+	local has_tower = false
+	for _, ent in ipairs(attached) do
+		local props = ent:get_properties()
+		if props.textures and props.textures[1] and props.textures[1]:find("cactus") then
+			has_tower = true
 			break
 		end
 	end
+	assert(has_tower == true, "Stand must have attached cactus tower shield")
 
-	-- 3. No shield loadout: verify tower shield texture is removed
+	-- 3. No shield loadout: verify shield visual is removed
 	stand_inv:set_stack("armor", 5, ItemStack(""))
 	x_player_armor.stand.update_stand_entity(stand_pos)
-
-	for _, obj in ipairs(objs) do
-		local luaent = obj:get_luaentity()
-		if luaent and luaent.name == "x_player_armor:stand_entity" then
-			local props = obj:get_properties()
-			local all_tex_str = table.concat(props.textures, ",")
-			assert(not all_tex_str:find("cactus"), "Stand textures must not receive tower shield texture when unequipped")
+	attached = x_player_armor.stand.attached_entities[pos_hash]
+	local has_shield = false
+	for _, ent in ipairs(attached) do
+		local props = ent:get_properties()
+		if props.textures and props.textures[1] and props.textures[1]:find("cactus") then
+			has_shield = true
 			break
 		end
 	end
+	assert(has_shield == false, "Stand must not have shield attached when unequipped")
 
 	-- 4. Verify glTF preview model structure directly from disk
 	local modpath = core.get_modpath("x_player_armor")
@@ -5356,10 +5412,10 @@ test("Shield Visual Attachment to External Entities (attach_shield_to_entity)", 
 	assert(glb_shield ~= nil and glb_shield:is_valid(), "attach_shield_to_entity must return valid shield entity")
 	local _, bone_glb, pos_glb, rot_glb = glb_shield:get_attach()
 	assert(bone_glb == "Arm_Left", "Shield must be attached to Arm_Left")
-	assert(math.abs(pos_glb.x - (-0.8)) < 0.01 and math.abs(pos_glb.y - 5.0) < 0.01 and math.abs(pos_glb.z - (-1.7)) < 0.01,
-		"GLB standard shield must use normalized SHIELD_OFFSET (-0.8, 5.0, -1.7)")
-	assert(math.abs(rot_glb.x - 180) < 0.01 and math.abs(rot_glb.y - (-135)) < 0.01 and math.abs(rot_glb.z - 0) < 0.01,
-		"GLB standard shield must use normalized SHIELD_OFFSET (180, -135, 0)")
+	assert(math.abs(pos_glb.x - 3.35) < 0.01 and math.abs(pos_glb.y - 11.55) < 0.01 and math.abs(pos_glb.z - (-0.2)) < 0.01,
+		"GLB standard shield must use calibrated SHIELD_OFFSET (3.35, 11.55, -0.2)")
+	assert(math.abs(rot_glb.x - 180) < 0.01 and math.abs(rot_glb.y - 0) < 0.01 and math.abs(rot_glb.z - 0) < 0.01,
+		"GLB standard shield must use calibrated SHIELD_OFFSET (180, 0, 0)")
 	local glb_lua = glb_shield:get_luaentity()
 	assert(glb_lua ~= nil and glb_lua._is_corpse == true, "Shield entity must have _is_corpse flag")
 	glb_shield:remove()
@@ -5376,10 +5432,10 @@ test("Shield Visual Attachment to External Entities (attach_shield_to_entity)", 
 	assert(b3d_shield ~= nil and b3d_shield:is_valid(), "B3D attach_shield_to_entity must return valid shield entity")
 	local _, bone_b3d, pos_b3d, rot_b3d = b3d_shield:get_attach()
 	assert(bone_b3d == "Arm_Left", "B3D shield must be attached to Arm_Left")
-	assert(math.abs(pos_b3d.x - (-0.8)) < 0.01 and math.abs(pos_b3d.y - 5.0) < 0.01 and math.abs(pos_b3d.z - 1.7) < 0.01,
-		"B3D standard shield must use normalized SHIELD_OFFSET (-0.8, 5.0, 1.7)")
-	assert(math.abs(rot_b3d.x - 180) < 0.01 and math.abs(rot_b3d.y - 45) < 0.01 and math.abs(rot_b3d.z - 0) < 0.01,
-		"B3D standard shield must use normalized SHIELD_OFFSET (180, 45, 0)")
+	assert(math.abs(pos_b3d.x - (-0.20)) < 0.01 and math.abs(pos_b3d.y - 0) < 0.01 and math.abs(pos_b3d.z - 0.20) < 0.01,
+		"B3D standard shield must use calibrated SHIELD_OFFSET (-0.20, 0, 0.20)")
+	assert(math.abs(rot_b3d.x - 0) < 0.01 and math.abs(rot_b3d.y - 180) < 0.01 and math.abs(rot_b3d.z - 0) < 0.01,
+		"B3D standard shield must use calibrated SHIELD_OFFSET (0, 180, 0)")
 	b3d_shield:remove()
 
 	-- 3. Top-level x_player_armor.attach_shield delegates to attach_shield_to_entity when passed an entity
@@ -5495,7 +5551,7 @@ test("glTF In-Memory Assembler: Binary Parsing, Custom Piece Splicing & Stand/UI
 	local ui_tex = x_player_armor.ui.get_preview_texture(mock_player, ui_model)
 	assert(ui_tex == dyn_textures, "ui.get_preview_texture must return dynamic composite textures")
 
-	-- 5. Armor Stand Resolution
+	-- 5. Armor Stand Resolution (Canonical static mannequin)
 	local stand_armor_list = {
 		ItemStack("test_armor:custom_helm"),
 		ItemStack(""),
@@ -5509,25 +5565,37 @@ test("glTF In-Memory Assembler: Binary Parsing, Custom Piece Splicing & Stand/UI
 		"default_legs.png", "default_feet.png"
 	}
 	local stand_mesh, stand_textures = assembler.resolve_stand_preview(stand_armor_list, base_stand_textures)
-	assert(stand_mesh ~= nil and stand_mesh:find("^x_pa_stand_"), "Stand must resolve to dynamic stand mesh")
-	assert(stand_textures[3] == "blank.png", "Stand Head slot must be masked to blank.png")
-	assert(stand_textures[#stand_textures] == "x_mobs_armor_titan_bastion.png", "Stand must append custom texture")
+	assert(stand_mesh == "x_player_armor_stand.glb", "Stand must resolve to canonical static mannequin mesh")
+	assert(stand_textures[1] == "blank.png", "Stand must preserve base textures")
 
-	-- 6. Verify core.dynamic_add_media dispatch (on-the-fly in-memory streaming)
-	assert(#core.mock_dynamic_media >= 2, "core.dynamic_add_media must have received player and stand models")
+	-- 6. Verify core.dynamic_add_media dispatch (bounded disk cache & zero-rebuild)
+	assert(#core.mock_dynamic_media >= 1, "core.dynamic_add_media must have received player model")
 	local player_media = core.mock_dynamic_media[1]
 	assert(player_media.to_player == "test_warrior", "Player preview media must be targeted to player")
-	assert(player_media.filedata ~= nil, "Player preview media must deliver filedata directly from RAM")
-	assert(player_media.filepath == nil, "Player preview media must have nil filepath (zero disk writes)")
+	assert(player_media.filepath ~= nil or player_media.filedata ~= nil, "Player preview media must deliver valid data")
 	assert(player_media.client_cache == true, "Player preview media must enable client_cache")
 
-	local stand_media = core.mock_dynamic_media[2]
-	assert(stand_media.to_player == nil, "Stand media must be broadcast globally")
-	assert(stand_media.filedata ~= nil, "Stand media must deliver filedata directly from RAM")
-	assert(stand_media.filepath == nil, "Stand media must have nil filepath (zero disk writes)")
-	assert(stand_media.client_cache == true, "Stand media must enable client_cache")
+	-- 7. Zero-rebuild disk cache verification (L2 cache hit)
+	local cached_path = assembler.media.get_cached_filepath(dyn_model)
+	assert(cached_path ~= nil, "Assembled GLB must be persisted in world cache directory")
+	-- Clear RAM cache to force L2 disk cache retrieval
+	assembler.cache = {}
+	local dyn_model_hit, _ = assembler.resolve_player_preview(mock_player)
+	assert(dyn_model_hit == dyn_model, "L2 cache hit must return identical model filename")
+	assert(assembler.cache[dyn_model:gsub("%.glb$", "")].filepath == cached_path, "L2 cache hit must reuse on-disk filepath without reassembly")
 
-	-- 7. Verify legacy disk directory cleanup
+	-- 8. Verify LRU disk cache bounds and pruning
+	local old_max = assembler.media.MAX_CACHE_FILES
+	assembler.media.MAX_CACHE_FILES = 2
+	local cdir = assembler.media.get_cache_dir()
+	assembler.media.save_cached_file("dummy_1.glb", "dummy_content_1")
+	assembler.media.save_cached_file("dummy_2.glb", "dummy_content_2")
+	assembler.media.save_cached_file("dummy_3.glb", "dummy_content_3")
+	local remaining_files = core.get_dir_list(cdir, false)
+	assert(#remaining_files <= 2, "LRU pruning must constrain cache files to MAX_CACHE_FILES")
+	assembler.media.MAX_CACHE_FILES = old_max
+
+	-- 9. Verify legacy disk directory cleanup
 	local purged_path, purged_recursive
 	local old_rmdir = core.rmdir
 	core.rmdir = function(path, recursive)
@@ -5569,7 +5637,7 @@ test("Event-Driven Visual Self-Healing, On-Demand Verification & Zero globalstep
 	-- 3. Cleanup
 	x_player_armor.visuals.clear_all("event_heal_hero")
 end)
-	
+
 test("Armor Item Tooltips: Zero Unescaped Formspec Delimiters (Unified Inventory Compatibility)", function()
 	local checked_items = 0
 	for name, def in pairs(core.registered_items) do
@@ -5584,9 +5652,327 @@ test("Armor Item Tooltips: Zero Unescaped Formspec Delimiters (Unified Inventory
 	assert(checked_items >= 40, "Must check all registered x_player_armor items")
 end)
 
+test("Shield Visual Transform Calibration & DRY Resolution (resolve_shield_visual_opts)", function()
+	-- 1. Verify API exists on both namespaces
+	assert(type(x_player_armor.resolve_shield_visual_opts) == "function", "x_player_armor.resolve_shield_visual_opts must be a function")
+	assert(type(x_player_armor.visuals.resolve_shield_visual_opts) == "function", "visuals.resolve_shield_visual_opts must be a function")
+
+	-- 2. Verify standard modular shield resolution
+	local opts_std = x_player_armor.resolve_shield_visual_opts("x_player_armor:shield_steel")
+	assert(opts_std ~= nil, "resolve_shield_visual_opts must return options table")
+	assert(opts_std.visual == "mesh", "Modular shield must use mesh visual")
+	assert(opts_std.mesh == "x_player_armor_shield.glb", "Standard shield mesh must be x_player_armor_shield.glb")
+	assert(opts_std.pos_glb and opts_std.pos_glb.x == 3.35 and opts_std.pos_glb.y == 11.55 and opts_std.pos_glb.z == -0.2,
+		"pos_glb must be calibrated (3.35, 11.55, -0.2)")
+	assert(opts_std.pos_b3d and opts_std.pos_b3d.x == -0.20 and opts_std.pos_b3d.y == 0 and opts_std.pos_b3d.z == 0.20,
+		"pos_b3d must be calibrated (-0.20, 0, 0.20)")
+
+	-- 3. Verify tower shield resolution
+	local opts_tower = x_player_armor.resolve_shield_visual_opts("x_player_armor:shield_enhanced_wood")
+	assert(opts_tower ~= nil, "Tower shield opts must be resolved")
+	assert(opts_tower.mesh == "x_player_armor_shield_tower.glb", "Tower shield mesh must be x_player_armor_shield_tower.glb")
+
+	-- 4. Verify custom opts overrides are respected
+	local opts_override = x_player_armor.resolve_shield_visual_opts("x_player_armor:shield_steel", {
+		pos_glb = {x = 1.0, y = 2.0, z = 3.0},
+		visual = "wielditem",
+	})
+	assert(opts_override.visual == "wielditem", "Custom visual override must be preserved")
+	assert(opts_override.pos_glb.x == 1.0 and opts_override.pos_glb.y == 2.0 and opts_override.pos_glb.z == 3.0,
+		"Custom pos_glb override must be preserved")
+end)
+
+test("Multiplayer Performance: RAM Caching Zero-IO Invariant & Disconnect Media Cleanup", function()
+	local assembler = x_player_armor.gltf_assembler
+	local loader = assembler.loader
+	local media = assembler.media
+
+	-- 1. Verify RAM Caching Zero-IO Invariant: base model and pieces hit RAM cache directly
+	local j1, b1, s1 = loader.get_base_model()
+	assert(j1 ~= nil and b1 ~= nil and s1 ~= nil, "Base model must load")
+	local j2, b2, s2 = loader.get_base_model()
+	assert(j1 == j2 and b1 == b2 and s1 == s2, "Subsequent get_base_model must return cached reference without disk I/O")
+
+	-- 2. Verify media and player active model cleanup on disconnect
+	local mock_player = create_mock_player("departing_hero")
+	x_player_armor.inventory.init_player_inventory(mock_player)
+	local _, inv = x_player_armor.get_valid_player(mock_player)
+	inv:set_stack("armor", 1, ItemStack("test_armor:custom_helm"))
+
+	-- Resolve dynamic preview, which sets player_active_models and delivered_players
+	local dyn_model, _ = assembler.resolve_player_preview(mock_player)
+	assert(dyn_model ~= nil, "Player preview model must be resolved")
+	assert(assembler.player_active_models["departing_hero"] == dyn_model, "Player model must be registered in player_active_models")
+
+	-- Dispatch leaveplayer callback
+	local leave_callbacks = core.registered_on_leaveplayers or {}
+	for i = 1, #leave_callbacks do
+		leave_callbacks[i](mock_player)
+	end
+
+	-- Verify active model and media records are purged
+	assert(assembler.player_active_models["departing_hero"] == nil, "Active model must be purged from memory on player disconnect")
+	assert(media.is_media_ready(dyn_model, "departing_hero") == false, "Player-targeted ready state must be cleared on disconnect")
+end)
+
+test("glTF In-Memory Assembler: Native Unified Blender Model Export & Material Normalization", function()
+	local assembler = x_player_armor.gltf_assembler
+
+	-- Register test boots with natively exported crystal aegis boots
+	x_player_armor.register_armor("test_armor:crystal_boots", {
+		element = "feet",
+		models = {
+			feet_l = "x_mobs_boot_l_crystal_aegis.glb",
+			feet_r = "x_mobs_boot_r_crystal_aegis.glb",
+		},
+		texture = "x_mobs_armor_crystal_aegis.png",
+	})
+
+	local custom_armor = {
+		ItemStack("x_player_armor:helmet_steel"),
+		ItemStack("x_player_armor:chestplate_steel"),
+		ItemStack("x_player_armor:leggings_steel"),
+		ItemStack("test_armor:crystal_boots"),
+	}
+
+	local has_custom, pieces, slot_mask = assembler.detect_custom_pieces(custom_armor, true)
+	assert(has_custom == true, "detect_custom_pieces must flag crystal boots")
+	assert(#pieces == 2, "Must detect exactly 2 pieces (feet_l and feet_r)")
+	assert(slot_mask.feet == true, "slot_mask.feet must be true")
+
+	local assembled_bin, custom_textures = assembler.assemble_glb(pieces)
+	assert(assembled_bin ~= nil and #assembled_bin > 0, "assemble_glb must assemble native pieces")
+	assert(#custom_textures == 2, "Must return textures for feet_l and feet_r")
+
+	local chunk0_len = string.byte(assembled_bin, 13) + string.byte(assembled_bin, 14) * 256
+		+ string.byte(assembled_bin, 15) * 65536 + string.byte(assembled_bin, 16) * 16777216
+	local json_str = assembled_bin:sub(21, 20 + chunk0_len)
+	local parsed_json = core.parse_json(json_str)
+	assert(parsed_json ~= nil, "Assembled GLB must contain valid JSON")
+
+	-- Validate material normalization: alphaMode=MASK, alphaCutoff=0.5, doubleSided=true
+	local base_mat_count = 6
+	for m_idx = base_mat_count + 1, #parsed_json.materials do
+		local mat = parsed_json.materials[m_idx]
+		assert(mat.alphaMode == "MASK", "Custom piece material must have alphaMode = MASK")
+		assert(mat.alphaCutoff == 0.5, "Custom piece material must have alphaCutoff = 0.5")
+		assert(mat.doubleSided == true, "Custom piece material must have doubleSided = true")
+	end
+
+	-- Validate that boot vertices are placed at character foot coordinates (world Y in [-0.15, 4.25])
+	-- and NOT in the torso (Y in [6, 12])
+	local custom_node_l = parsed_json.nodes[#parsed_json.nodes - 1]
+	local custom_node_r = parsed_json.nodes[#parsed_json.nodes]
+	assert(custom_node_l.name == "Custom_feet_l", "Last nodes must be Custom_feet_l")
+	assert(custom_node_r.name == "Custom_feet_r", "Last nodes must be Custom_feet_r")
+
+	local mesh_l = parsed_json.meshes[custom_node_l.mesh + 1]
+	local pos_acc_l = parsed_json.accessors[mesh_l.primitives[1].attributes.POSITION + 1]
+	assert(pos_acc_l.min[2] >= -0.15 and pos_acc_l.min[2] <= 0.05,
+		"Left boot min Y must be at foot sole level (~ -0.08), got " .. tostring(pos_acc_l.min[2]))
+	assert(pos_acc_l.max[2] >= 3.90 and pos_acc_l.max[2] <= 4.25,
+		"Left boot max Y must be at calf level (~ 4.10), got " .. tostring(pos_acc_l.max[2]))
+	assert(pos_acc_l.min[1] < 0, "Left boot must be on the left side (negative X)")
+end)
+
+test("glTF In-Memory Assembler: Shield Prop Attachment Transform & Forearm Positioning", function()
+	local assembler = x_player_armor.gltf_assembler
+
+	local shield_piece = {
+		piece_id = "shield",
+		element = "shield",
+		model_file = "x_player_armor_shield.glb",
+		item_name = "x_player_armor:shield_steel",
+		texture = "x_player_armor_shield_steel.png",
+	}
+
+	local assembled_bin, custom_textures = assembler.assemble_glb({shield_piece})
+	assert(assembled_bin ~= nil and #assembled_bin > 0, "assemble_glb must assemble shield piece")
+	assert(#custom_textures == 1, "Must return texture for shield")
+
+	local chunk0_len = string.byte(assembled_bin, 13) + string.byte(assembled_bin, 14) * 256
+		+ string.byte(assembled_bin, 15) * 65536 + string.byte(assembled_bin, 16) * 16777216
+	local json_str = assembled_bin:sub(21, 20 + chunk0_len)
+	local parsed_json = core.parse_json(json_str)
+	assert(parsed_json ~= nil, "Assembled GLB must contain valid JSON")
+
+	-- Validate that shield node is named Custom_shield
+	local shield_node = parsed_json.nodes[#parsed_json.nodes]
+	assert(shield_node.name == "Custom_shield", "Last node must be Custom_shield")
+
+	-- Validate transformed position accessor:
+	-- Shield must be positioned at character forearm height (Y in [3.0, 10.5]), NOT at character feet (Y around [-3.5, 3.5])
+	local mesh = parsed_json.meshes[shield_node.mesh + 1]
+	local pos_acc = parsed_json.accessors[mesh.primitives[1].attributes.POSITION + 1]
+	assert(pos_acc.min[2] >= 3.0, "Shield min Y must be at or above forearm height (>= 3.0), got " .. tostring(pos_acc.min[2]))
+	assert(pos_acc.max[2] <= 10.8, "Shield max Y must be at or below upper arm height (<= 10.8), got " .. tostring(pos_acc.max[2]))
+	assert(pos_acc.max[1] < 0, "Shield must be positioned on the character's left arm (negative X)")
+
+	-- Cross-mod parity check: Also verify x_mobs boss shield assembly (x_mobs_shield_resonant_prism.glb)
+	local x_mobs_shield = {
+		piece_id = "shield",
+		element = "shield",
+		model_file = "x_mobs_shield_resonant_prism.glb",
+		item_name = "x_mobs:shield_resonant_prism",
+		texture = "x_mobs_armor_crystal_aegis.png",
+	}
+	local xm_bin, xm_tex = assembler.assemble_glb({x_mobs_shield})
+	assert(xm_bin ~= nil and #xm_bin > 0, "assemble_glb must assemble x_mobs shield piece")
+	assert(#xm_tex == 1, "Must return texture for x_mobs shield")
+
+	local xm_c0_len = string.byte(xm_bin, 13) + string.byte(xm_bin, 14) * 256
+		+ string.byte(xm_bin, 15) * 65536 + string.byte(xm_bin, 16) * 16777216
+	local xm_json = core.parse_json(xm_bin:sub(21, 20 + xm_c0_len))
+	assert(xm_json ~= nil, "Assembled x_mobs GLB must contain valid JSON")
+	local xm_node = xm_json.nodes[#xm_json.nodes]
+	local xm_mesh = xm_json.meshes[xm_node.mesh + 1]
+	local xm_pos_acc = xm_json.accessors[xm_mesh.primitives[1].attributes.POSITION + 1]
+	assert(xm_pos_acc.min[2] >= 3.0, "x_mobs shield min Y must be at forearm height (>= 3.0), got " .. tostring(xm_pos_acc.min[2]))
+	assert(xm_pos_acc.max[2] <= 10.8, "x_mobs shield max Y must be at or below upper arm (<= 10.8), got " .. tostring(xm_pos_acc.max[2]))
+	assert(xm_pos_acc.max[1] < 0, "x_mobs shield must be positioned on character's left arm (negative X)")
+end)
+
+test("Armor Stand: Slot 6 Wield Item Attachment & Dynamic Update / Cleanup", function()
+	local pub_def = core.registered_nodes["x_player_armor:stand"]
+	local pos = {x = 100, y = 5, z = 100}
+	core.set_node(pos, {name = "x_player_armor:stand", param2 = 0})
+	pub_def.on_construct(pos)
+
+	local player = create_mock_player("stand_wield_hero")
+	pub_def.after_place_node(pos, player)
+
+	local stand_ent = x_player_armor.stand.get_stand_entity(pos)
+	assert(stand_ent ~= nil and stand_ent:is_valid(), "Stand entity must exist")
+
+	local meta = core.get_meta(pos)
+	local inv = meta:get_inventory()
+	local pos_hash = core.hash_node_position(pos)
+
+	-- 1. Put sword in slot 6 and update stand entity
+	local test_sword = ItemStack("default:sword_steel")
+	inv:set_stack("armor", 6, test_sword)
+	x_player_armor.stand.update_stand_entity(pos)
+
+	local attached = x_player_armor.stand.attached_entities[pos_hash]
+	assert(attached ~= nil and #attached >= 1, "Stand must have attached entity for wield item")
+
+	local wield_ent = nil
+	for _, e in ipairs(attached) do
+		local props = e:get_properties()
+		if props.visual == "wielditem" then
+			wield_ent = e
+			break
+		end
+	end
+	assert(wield_ent ~= nil, "Attached list must contain wielditem entity")
+	assert(wield_ent:is_valid() == true, "Wield item entity must be valid")
+	local props = wield_ent:get_properties()
+	assert(props.wield_item == "default:sword_steel", "Wield item property must match slot 6 item")
+
+	-- Verify attachment parent and bone
+	local p_parent, p_bone, p_pos, p_rot = wield_ent:get_attach()
+	assert(p_parent == stand_ent, "Wield item must attach to stand entity")
+	assert(p_bone == "Arm_Right", "Wield item must attach to Arm_Right bone")
+	assert(p_pos ~= nil and p_rot ~= nil, "Wield item must have attachment pos and rot")
+
+	-- 2. Clear slot 6 and verify cleanup
+	inv:set_stack("armor", 6, ItemStack(""))
+	x_player_armor.stand.update_stand_entity(pos)
+
+	assert(wield_ent:is_valid() == false, "Wield item entity must be removed when slot 6 is cleared")
+	local attached_after = x_player_armor.stand.attached_entities[pos_hash]
+	assert(attached_after == nil or #attached_after == 0, "Attached list must be empty after slot 6 cleared")
+
+	-- 3. Direct API verification: x_player_armor.visuals.attach_wield_item_to_entity and api.lua
+	local direct_ent = x_player_armor.visuals.attach_wield_item_to_entity(stand_ent, "default:sword_steel", "glb")
+	assert(direct_ent ~= nil and direct_ent:is_valid(), "attach_wield_item_to_entity must return valid entity")
+	local _, d_bone, d_pos, _ = direct_ent:get_attach()
+	assert(d_bone == "Arm_Right", "Direct attachment must target Arm_Right")
+	assert(d_pos.y == 5.2, "GLB default Y offset must be 5.2")
+	direct_ent:remove()
+
+	local api_ent = x_player_armor.attach_wield_item_to_entity(stand_ent, "default:sword_steel", "glb")
+	assert(api_ent ~= nil and api_ent:is_valid(), "api.attach_wield_item_to_entity must return valid entity")
+	api_ent:remove()
+end)
+
+test("glTF Assembler: Pipeline Consistency, PREVIEW_SLOTS, and Zero-Wield Fallback Resolution", function()
+	local constants_mod = x_player_armor.constants
+	local assembler_mod = x_player_armor.gltf_assembler
+
+	-- 1. PREVIEW_SLOTS verification: Must strictly define canonical 6-slot material layout (0..5)
+	assert(constants_mod.PREVIEW_SLOTS.body == 0, "PREVIEW_SLOTS.body must be 0")
+	assert(constants_mod.PREVIEW_SLOTS.body10 == 0, "PREVIEW_SLOTS.body10 must be 0")
+	assert(constants_mod.PREVIEW_SLOTS.body18 == 1, "PREVIEW_SLOTS.body18 must be 1")
+	assert(constants_mod.PREVIEW_SLOTS.head == 2, "PREVIEW_SLOTS.head must be 2")
+	assert(constants_mod.PREVIEW_SLOTS.torso == 3, "PREVIEW_SLOTS.torso must be 3")
+	assert(constants_mod.PREVIEW_SLOTS.legs == 4, "PREVIEW_SLOTS.legs must be 4")
+	assert(constants_mod.PREVIEW_SLOTS.feet == 5, "PREVIEW_SLOTS.feet must be 5")
+	assert(constants_mod.PREVIEW_SLOTS.shield == nil, "PREVIEW_SLOTS.shield must be nil (modular piece index 6+)")
+	assert(constants_mod.PREVIEW_SLOTS.wield == nil, "PREVIEW_SLOTS.wield must be nil (no wield mesh in preview)")
+
+	-- 2. Base preview textures resolution without wield_tex parameter
+	local armor_list = {
+		ItemStack("x_player_armor:helmet_steel"),
+		ItemStack("x_player_armor:chestplate_steel"),
+		ItemStack("x_player_armor:leggings_steel"),
+		ItemStack("x_player_armor:boots_steel"),
+	}
+	local skin_info = {
+		body10 = "character_skin10.png",
+		body18 = "character_skin18.png",
+	}
+	local base_texs = assembler_mod.resolve_base_preview_textures(armor_list, skin_info)
+	assert(#base_texs == 6, "resolve_base_preview_textures must return exactly 6 material slots")
+	assert(base_texs[1] == "character_skin10.png", "Slot 1 must be body10")
+	assert(base_texs[2] == "character_skin18.png", "Slot 2 must be body18")
+	assert(base_texs[3]:find("steel"), "Slot 3 must be steel armor texture")
+	assert(base_texs[4]:find("steel"), "Slot 4 must be steel armor texture")
+	assert(base_texs[5]:find("steel"), "Slot 5 must be steel armor texture")
+	assert(base_texs[6]:find("steel"), "Slot 6 must be steel armor texture")
+
+	-- 3. Unified resolve_preview API
+	-- Stand preview
+	local stand_model, stand_texs = assembler_mod.resolve_preview(armor_list, {is_stand = true})
+	assert(stand_model == constants_mod.MODELS.stand, "resolve_preview for stand must return canonical stand model")
+	assert(type(stand_texs) == "table" and #stand_texs >= 1, "Stand textures must be a table")
+
+	-- Player preview fallback without opts.wield_tex
+	local p_model, p_texs = assembler_mod.resolve_preview(armor_list, {base_textures = base_texs})
+	assert(p_model == constants_mod.MODELS.preview, "resolve_preview fallback must return canonical preview model")
+	assert(type(p_texs) == "string", "resolve_preview fallback must return comma-delimited textures string")
+	local parts = {}
+	for part in string.gmatch(p_texs, "([^,]+)") do
+		table.insert(parts, part)
+	end
+	assert(#parts == 6, "resolve_preview fallback must contain exactly 6 material texture parts")
+
+	-- 4. Media cache prune cleanup: prunes both disk entry and internal maps
+	local media_mod = x_player_armor.gltf_assembler.media
+	local dummy_file = "x_pa_test_dummy.glb"
+	media_mod.delivered_players[dummy_file] = {["dummy_hero"] = true}
+	media_mod.player_ready_media[dummy_file] = {["dummy_hero"] = true}
+	media_mod.cache_index[dummy_file] = 1
+
+	-- Artificially simulate low MAX_CACHE_FILES to trigger prune
+	local old_max = media_mod.MAX_CACHE_FILES
+	media_mod.MAX_CACHE_FILES = 0
+	local old_dir_list = core.get_dir_list
+	core.get_dir_list = function(_dir, _is_dir) return {dummy_file} end
+	media_mod.prune_cache()
+	core.get_dir_list = old_dir_list
+	media_mod.MAX_CACHE_FILES = old_max
+
+	assert(media_mod.delivered_players[dummy_file] == nil, "prune_cache must clear delivered_players for pruned file")
+	assert(media_mod.player_ready_media[dummy_file] == nil, "prune_cache must clear player_ready_media for pruned file")
+	assert(media_mod.cache_index[dummy_file] == nil, "prune_cache must clear cache_index for pruned file")
+end)
+
 print(string.format("\n=========================================="))
 print(string.format("  ALL %d UNIT TESTS PASSED SUCCESSFULLY!  ", passed))
 print(string.format("=========================================="))
+
+core.rmdir(core.get_worldpath(), true)
 
 
 

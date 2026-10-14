@@ -388,9 +388,7 @@ Sound effects triggered during armor lifecycle and combat events.
 
 ### `XPlayerArmorAssemblerBuilder`
 
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `BONE_NODE_MAP` | `{ head = 4, torso = 7, sleeve_l = 2, sleeve_r = 3, legs_l = 5, ... }` |  |
+Subsystem responsible for merging glTF buffers, nodes, meshes, accessors, materials, and normalizations into a unified in-memory `.glb`.
 
 ### `XPlayerArmorAssemblerMedia`
 
@@ -1116,6 +1114,25 @@ x_player_armor.attach_shield_to_entity(parent: ObjectRef, item_or_stack: (string
 
 ---
 
+#### `x_player_armor.attach_wield_item_to_entity(parent, item_or_stack, format, custom_opts)`
+
+Attaches a wield item visual entity to a target parent entity (such as an armor stand or corpse) on the right arm (`Arm_Right`).
+
+```lua
+x_player_armor.attach_wield_item_to_entity(parent: ObjectRef, item_or_stack: (string|ItemStack), format: string?, custom_opts: table?) -> ObjectRef?
+```
+
+**Parameters:**
+- `parent` (`ObjectRef`) — The entity to attach the wield item to
+- `item_or_stack` (`(string|ItemStack)`) — Held item name or stack
+- `format` (`string?`) — Model format ("glb" or "b3d")
+- `custom_opts` (`table?`) — Optional custom overrides (bone, pos, rot, visual_size, etc.)
+
+**Returns:**
+- `entity` (`ObjectRef?`) — The attached visual entity or nil
+
+---
+
 #### `x_player_armor.update_shield(player, item_or_stack, custom_opts)`
 
 Updates or modifies an attached off-hand shield entity via x_player_api.
@@ -1242,7 +1259,7 @@ x_player_armor.resolve_preview(armor_list: (ItemStack|table)[], opts: table?) ->
 
 **Parameters:**
 - `armor_list` (`(ItemStack|table)[]`) — Equipped items array
-- `opts` (`table?`) — Options: { player = ObjectRef, is_stand = boolean, base_textures = string[], wield_tex = string }
+- `opts` (`table?`) — Options: { player = ObjectRef, is_stand = boolean, base_textures = string[] }
 
 **Returns:**
 - `model_name` (`string`) — Resolved model filename and texture specification
