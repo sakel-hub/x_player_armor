@@ -18,6 +18,7 @@ local default_x_player_api = {
 	get_api = function() return nil end,
 	attach_shield = function() return nil end,
 	attach_shield_to_entity = function() return nil end,
+	attach_wield_item_to_entity = function() return nil end,
 	update_shield = function() return nil end,
 	remove_shield = function() end,
 	set_shield_first_person = function() end,
@@ -70,7 +71,7 @@ function api.get_mod_api(modname)
 	if type(mod) == "table" then
 		return mod
 	end
-	if core.get_modpath and core.get_modpath(modname) then
+	if core.get_modpath(modname) then
 		mod = rawget(_G, modname)
 		if type(mod) == "table" then
 			return mod
@@ -109,7 +110,7 @@ function api.get_fire_nodes()
 	if global_armor and global_armor.fire_nodes then
 		return global_armor.fire_nodes
 	end
-	return api.constants and api.constants.FIRE_NODES or {}
+	return api.constants.FIRE_NODES or {}
 end
 
 ---Checks whether damage reciprocation (thorns) is globally configured or active.
@@ -362,14 +363,14 @@ end
 function api.get_legacy_replacement(name)
 	if not name or type(name) ~= "string" then return nil end
 	local clean_name = name:gsub("^:", "")
-	if api.legacy_replacements and api.legacy_replacements[clean_name] then
+	if api.legacy_replacements[clean_name] then
 		return api.legacy_replacements[clean_name]
 	end
 	-- Pattern fallback for standard 3d_armor pieces: 3d_armor:<piece>_<material>
 	local piece, mat = clean_name:match("^3d_armor:(%w+)_(%w+)$")
 	if piece and mat then
 		local candidate = "x_player_armor:" .. piece .. "_" .. mat
-		if api.registered_armors and api.registered_armors[candidate] then
+		if api.registered_armors[candidate] then
 			return candidate
 		end
 	end
@@ -377,7 +378,7 @@ function api.get_legacy_replacement(name)
 	local s_mat = clean_name:match("^shields:shield_(%w+)$")
 	if s_mat then
 		local candidate = "x_player_armor:shield_" .. s_mat
-		if api.registered_armors and api.registered_armors[candidate] then
+		if api.registered_armors[candidate] then
 			return candidate
 		end
 	end
@@ -385,7 +386,7 @@ function api.get_legacy_replacement(name)
 	local es_mat = clean_name:match("^shields:shield_enhanced_(%w+)$")
 	if es_mat then
 		local candidate = "x_player_armor:shield_enhanced_" .. es_mat
-		if api.registered_armors and api.registered_armors[candidate] then
+		if api.registered_armors[candidate] then
 			return candidate
 		end
 	end
@@ -418,16 +419,13 @@ function api.register_armor(name, def)
 	-- Intercept registration of superseded legacy armor and cleanup duplicate
 	local replacement = api.get_legacy_replacement(name)
 	if replacement then
-		local ov = rawget(api, "override") or (api.compat and api.compat.override)
+		local ov = rawget(api, "compat_override") or (api.compat and api.compat.override)
 		if ov and ov.cleanup_legacy_item then
 			ov.cleanup_legacy_item(name, replacement)
+		elseif api.utils and api.utils.force_alias then
+			api.utils.force_alias(name, replacement)
 		else
-			local force_alias = x_player_armor.force_alias or (api.utils and api.utils.force_alias)
-			if force_alias then
-				force_alias(name, replacement)
-			else
-				core.register_alias_force(name, replacement)
-			end
+			core.register_alias_force(name, replacement)
 		end
 		return
 	end
@@ -582,11 +580,11 @@ function api.register_armor(name, def)
 	-- Normalize 3D model meshes and transforms (single source of truth: mesh, textures, shield_offset)
 	def.mesh = def.mesh or def.model
 	if not def.mesh and def.element == "shield" then
-		local c_models = constants.MODELS or (x_player_armor.constants and x_player_armor.constants.MODELS)
+		local c_models = x_player_armor.constants.MODELS
 		if def.tower_shield or (def.groups and def.groups.armor_shield_tower and def.groups.armor_shield_tower > 0) then
-			def.mesh = c_models and c_models.shield_tower or "x_player_armor_shield_tower.glb"
+			def.mesh = c_models.shield_tower
 		else
-			def.mesh = c_models and c_models.shield or "x_player_armor_shield.glb"
+			def.mesh = c_models.shield
 		end
 	end
 	def.model = def.mesh
@@ -725,9 +723,9 @@ function api.get_shield_offset(format)
 		tbl = consts.SHIELD_OFFSET.glb
 	end
 	return tbl or {
-		pos = {x = -0.8, y = 5.0, z = -1.7},
-		rot = {x = 180, y = -135, z = 0},
-		scale = {x = 1.45, y = 1.15, z = 1.15},
+		pos = {x = 3.15, y = 11.55, z = 0},
+		rot = {x = 180, y = 0, z = 0},
+		scale = {x = 1.0, y = 1.0, z = 1.0},
 	}
 end
 
@@ -911,7 +909,7 @@ end
 
 ---Unified preview resolution entry point for both player formspec and in-world armor stand.
 ---@param armor_list (ItemStack|table)[] Equipped items array
----@param opts? table Options: { player = ObjectRef, is_stand = boolean, base_textures = string[], wield_tex = string }
+---@param opts? table Options: { player = ObjectRef, is_stand = boolean, base_textures = string[] }
 ---@return string model_name, string|string[] textures Resolved model filename and texture specification
 function api.resolve_preview(armor_list, opts)
 	return api.gltf_assembler.resolve_preview(armor_list, opts)
@@ -1079,6 +1077,24 @@ end
 ---@return ObjectRef? entity The attached shield entity or nil
 function api.attach_shield_to_entity(parent, item_or_stack, format, custom_opts)
 	return api.visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_opts)
+end
+
+---Attaches a wield item visual entity to an external entity (such as an armor stand or corpse) on Arm_Right.
+---@param parent ObjectRef The entity to attach the wield item to
+---@param item_or_stack string|ItemStack Held item name or ItemStack
+---@param format string? Model format ("glb" or "b3d")
+---@param custom_opts? table Optional custom overrides
+---@return ObjectRef? entity The attached visual entity or nil
+function api.attach_wield_item_to_entity(parent, item_or_stack, format, custom_opts)
+	return api.visuals.attach_wield_item_to_entity(parent, item_or_stack, format, custom_opts)
+end
+
+---Resolves the composite attachment options, mesh, textures, and calibrated transforms for a shield item.
+---@param item_or_stack string|ItemStack Shield item name or stack
+---@param custom_opts? XPlayerArmorShieldVisualOpts Optional custom overrides
+---@return table opts Resolved options table
+function api.resolve_shield_visual_opts(item_or_stack, custom_opts)
+	return api.visuals.resolve_shield_visual_opts(item_or_stack, custom_opts)
 end
 
 ---Updates or modifies an attached off-hand shield entity via x_player_api.

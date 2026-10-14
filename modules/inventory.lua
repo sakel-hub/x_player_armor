@@ -82,7 +82,7 @@ local function get_item_sound(stack, sound_type, default_sound)
 		return default_sound
 	end
 	local iname = stack:get_name()
-	local def = stack:get_definition() or (x_player_armor.registered_armors and x_player_armor.registered_armors[iname])
+	local def = stack:get_definition() or x_player_armor.get_armor_def(iname)
 	if def then
 		if def.sounds and def.sounds[sound_type] then
 			return def.sounds[sound_type]
@@ -384,17 +384,14 @@ function inventory.handle_player_death(player)
 	if not list then return end
 
 	-- Snapshot worn armor before dropping/clearing for downstream corpse visual attachments
-	if name and x_player_armor.visuals then
-		local snapshot = {}
-		for i = 1, #list do
-			local stack = list[i]
-			if stack and not stack:is_empty() then
-				table.insert(snapshot, ItemStack(stack))
-			end
+	local snapshot = {}
+	for i = 1, #list do
+		local stack = list[i]
+		if stack and not stack:is_empty() then
+			table.insert(snapshot, ItemStack(stack))
 		end
-		x_player_armor.visuals.last_death_armor = x_player_armor.visuals.last_death_armor or {}
-		x_player_armor.visuals.last_death_armor[name] = snapshot
 	end
+	x_player_armor.visuals.last_death_armor[name] = snapshot
 
 	local pos = player:get_pos()
 	local bones_installed = core.get_modpath("bones") ~= nil

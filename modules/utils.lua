@@ -115,7 +115,7 @@ utils.UI_COLORS = {
 ---@param modern_name string Replacement modern item name
 function utils.force_alias(legacy_name, modern_name)
 	if not legacy_name or not modern_name or legacy_name == modern_name then return end
-	if core.registered_items and (core.registered_items[legacy_name] or (core.registered_nodes and core.registered_nodes[legacy_name])) then
+	if core.registered_items[legacy_name] or core.registered_nodes[legacy_name] then
 		if core.register_alias_force then
 			core.register_alias_force(legacy_name, modern_name)
 		else

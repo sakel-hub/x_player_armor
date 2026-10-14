@@ -111,7 +111,7 @@ function combat.damage_item(player, index, stack, uses)
 	if is_broken then
 		-- Item broken
 		if pos then
-			local broken_def = core.registered_items[item_name] or (x_player_armor.registered_armors and x_player_armor.registered_armors[item_name])
+			local broken_def = x_player_armor.get_armor_def(item_name)
 			play_break_sound(pos, item_name, broken_def)
 			combat.spawn_armor_break_particles(pos, item_name, player)
 		end

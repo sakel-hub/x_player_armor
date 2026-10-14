@@ -99,7 +99,7 @@ function x_api_compat.on_equip(player, item_name)
 	if not x_api then
 		return
 	end
-	local item_def = core.registered_items[item_name] or (x_player_armor.registered_armors and x_player_armor.registered_armors[item_name])
+	local item_def = x_player_armor.get_armor_def(item_name)
 	local custom_sound = item_def and (item_def.sound_equip or (item_def.sounds and item_def.sounds.equip))
 	if custom_sound and custom_sound ~= "" then
 		core.sound_play(custom_sound, {pos = player:get_pos(), gain = 0.8, max_hear_distance = 16.0})
@@ -133,107 +133,14 @@ function x_api_compat.attach_shield(player, item_or_stack, custom_opts)
 	end
 
 	local first_person = x_api_compat.get_shield_first_person(player)
-	local constants = x_player_armor.constants or {}
-	local shield_trans = constants.SHIELD_OFFSET or {}
-	local glb_trans = shield_trans.glb or {}
-	local b3d_trans = shield_trans.b3d or {}
-
-	-- Resolve item-level custom transforms if specified
-	local item_name = (type(item_or_stack) == "userdata" and item_or_stack:get_name())
-		or (type(item_or_stack) == "string" and item_or_stack:match("%S+"))
-		or ""
-	local item_def = core.registered_items[item_name]
-		or (x_player_armor.registered_armors and x_player_armor.registered_armors[item_name])
-	local item_offset = item_def and (item_def.shield_offset or item_def.shield_transform)
-
-	local custom_mesh = (custom_opts and custom_opts.mesh)
-		or (item_def and (item_def.mesh or item_def.model))
-
-	local item_tex = (item_name ~= "" and x_player_armor.visuals.get_item_texture(item_name))
-		or (item_def and (item_def.texture or item_def.inventory_image))
-
-	local custom_textures = (custom_opts and custom_opts.textures)
-		or (item_def and (item_def.textures or (item_def.texture and {item_def.texture})))
-		or (item_tex and {item_tex})
-
-	local visual_type = (custom_opts and custom_opts.visual) or (custom_mesh and "mesh") or "wielditem"
-
-	local is_bone_local = (custom_opts and custom_opts.bone_local)
-		or (item_def and item_def.bone_local)
-
-	local pos_glb
-	local rot_glb
-	local pos_b3d
-	local rot_b3d
-	local scale
-
-	if is_bone_local and not item_offset and not (custom_opts and (custom_opts.pos or custom_opts.pos_glb)) then
-		pos_glb = {x = 0, y = 0, z = 0}
-		rot_glb = {x = 180, y = 0, z = 0}
-		pos_b3d = {x = 0, y = 0, z = 0}
-		rot_b3d = {x = 180, y = 180, z = 0}
-		scale = (custom_opts and (custom_opts.scale_glb or custom_opts.scale)) or {x = 1, y = 1, z = 1}
-	else
-		pos_glb = (custom_opts and custom_opts.pos_glb)
-			or (item_offset and item_offset.glb and item_offset.glb.pos)
-			or (item_offset and item_offset.pos)
-			or (custom_opts and custom_opts.pos)
-			or glb_trans.pos
-			or {x = -0.8, y = 5.0, z = -1.7}
-		rot_glb = (custom_opts and custom_opts.rot_glb)
-			or (item_offset and item_offset.glb and item_offset.glb.rot)
-			or (item_offset and item_offset.rot)
-			or (custom_opts and custom_opts.rot)
-			or glb_trans.rot
-			or {x = 180, y = -135, z = 0}
-
-		pos_b3d = (custom_opts and custom_opts.pos_b3d)
-			or (item_offset and item_offset.b3d and item_offset.b3d.pos)
-			or (item_offset and item_offset.pos)
-			or (custom_opts and custom_opts.pos)
-			or b3d_trans.pos
-			or {x = -0.8, y = 5.0, z = 1.7}
-		rot_b3d = (custom_opts and custom_opts.rot_b3d)
-			or (item_offset and item_offset.b3d and item_offset.b3d.rot)
-			or (item_offset and item_offset.rot)
-			or (custom_opts and custom_opts.rot)
-			or b3d_trans.rot
-			or {x = 180, y = 45, z = 0}
-
-		scale = (custom_opts and (custom_opts.scale_glb or custom_opts.scale))
-			or (item_offset and item_offset.glb and item_offset.glb.scale)
-			or (item_offset and item_offset.scale)
-			or glb_trans.scale
-			or (item_def and item_def.visual_size)
-			or {x = 1.45, y = 1.15, z = 1.15}
-	end
+	local opts = x_player_armor.visuals.resolve_shield_visual_opts(item_or_stack, custom_opts)
 
 	local is_pure_b3d = (x_api.is_pure_native_b3d_active and x_api.is_pure_native_b3d_active(player)) or false
 	local fp_visible = (custom_opts and custom_opts.first_person ~= nil)
 		and (custom_opts.first_person == true)
 		or ((first_person ~= false) and not is_pure_b3d)
 
-	local opts = {
-		visual = visual_type,
-		mesh = custom_mesh,
-		textures = custom_textures,
-		first_person = fp_visible,
-		override_transform = true,
-		pos_glb = pos_glb,
-		rot_glb = rot_glb,
-		pos_b3d = pos_b3d,
-		rot_b3d = rot_b3d,
-		scale = scale,
-		visual_size = scale,
-	}
-
-	if custom_opts then
-		for k, v in pairs(custom_opts) do
-			if opts[k] == nil then
-				opts[k] = v
-			end
-		end
-	end
+	opts.first_person = fp_visible
 
 	return x_api.attach_left_wield_item(player, item_or_stack, opts)
 end

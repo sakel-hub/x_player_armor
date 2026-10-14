@@ -171,7 +171,7 @@ local function get_proportional_geometry(player)
 		hud_scale = win.real_hud_scaling or win.hud_scaling
 	end
 
-	local user_scale = (x_player_armor.constants and x_player_armor.constants.SHIELD_HUD_SCALE) or 1.0
+	local user_scale = x_player_armor.constants.SHIELD_HUD_SCALE or 1.0
 	local target_ox = math.max(24, math.floor(48 * (win_w / 1920) + 0.5))
 
 	-- Target and clamp width to ~45% of viewport width
@@ -365,7 +365,7 @@ function shield_hud.show(player, immediate)
 	end
 
 	-- Resolve configured debounce delay
-	local delay = (x_player_armor.constants and x_player_armor.constants.SHIELD_HUD_DELAY) or 0.35
+	local delay = x_player_armor.constants.SHIELD_HUD_DELAY or 0.35
 	local is_immediate = (immediate == true) or (immediate == 0) or (delay <= 0)
 
 	if not is_immediate then
@@ -517,8 +517,7 @@ function shield_hud.init()
 	-- Standalone fallback for environments without x_player_api:
 	-- Only register globalstep if x_player_api is NOT present after all mods have loaded.
 	core.register_on_mods_loaded(function()
-		if (x_player_armor.compat_x_player_api and x_player_armor.compat_x_player_api.is_present())
-				or core.get_modpath("x_player_api") ~= nil then
+		if x_player_armor.compat_x_player_api.is_present() then
 			-- With x_player_api, HUD is 100% event-driven via register_on_state_change (zero globalsteps)
 			return
 		end

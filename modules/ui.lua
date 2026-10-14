@@ -62,7 +62,7 @@ function ui.get_item_wield_texture(stack)
 		return "blank.png"
 	end
 	local def = stack:get_definition() or core.registered_items[item_name]
-	if not def and core.registered_aliases and core.registered_aliases[item_name] then
+	if not def and core.registered_aliases[item_name] then
 		def = core.registered_items[core.registered_aliases[item_name]]
 	end
 	if not def then
@@ -123,22 +123,23 @@ end
 ---Builds the composite preview texture for the 3D formspec model.
 ---For 6-material meshes (e.g. x_player_armor_preview.glb): returns "body10,body18,head,torso,legs,feet"
 ---@param player ObjectRef
----@param _preview_model? string Optional preview model override (unused, maintained for compatibility)
+---@param preview_model? string Optional preview model override
 ---@return string composite_texture
-function ui.get_preview_texture(player, _preview_model)
+function ui.get_preview_texture(player, preview_model)
 	if player then
 		local name = player:get_player_name()
-		local dyn_model, dyn_textures = x_player_armor.gltf_assembler.resolve_player_preview(player)
-		if dyn_model and dyn_textures and x_player_armor.gltf_assembler.is_media_ready(dyn_model, name) then
-			return dyn_textures
+		if not preview_model or preview_model ~= x_player_armor.constants.MODELS.preview then
+			local dyn_model, dyn_textures = x_player_armor.gltf_assembler.resolve_player_preview(player)
+			if dyn_model and dyn_textures and x_player_armor.gltf_assembler.is_media_ready(dyn_model, name) then
+				return dyn_textures
+			end
 		end
 	end
 
 	local _, inv = x_player_armor.get_valid_player(player)
 	local armor_list = inv and inv:get_list("armor")
 	local skin_info = x_player_armor.skins.resolve_player_skin(player)
-	local wield_tex = ui.get_wield_texture(player)
-	local base_texs = x_player_armor.gltf_assembler.resolve_base_preview_textures(armor_list, skin_info, wield_tex)
+	local base_texs = x_player_armor.gltf_assembler.resolve_base_preview_textures(armor_list, skin_info)
 	return table.concat(base_texs, ",")
 end
 
@@ -706,7 +707,7 @@ core.register_on_mods_loaded(function()
 
 	core.register_globalstep(function(dtime)
 		local has_open_ui = ui.has_any_open_armor_ui()
-		local has_combat = x_player_armor.combat_hud and next(x_player_armor.combat_hud.active_players) ~= nil
+		local has_combat = next(x_player_armor.combat_hud.active_players) ~= nil
 		if not has_open_ui and not has_combat then
 			return
 		end
@@ -726,7 +727,7 @@ core.register_on_mods_loaded(function()
 		for i = 1, count do
 			local p = players[i]
 			local pname = p:get_player_name()
-			local is_combat = x_player_armor.combat_hud and x_player_armor.combat_hud.active_players[pname]
+			local is_combat = x_player_armor.combat_hud.active_players[pname]
 			if ui.is_armor_ui_open(p) or is_combat then
 				ui.check_wield_change(p)
 			end
