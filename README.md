@@ -23,8 +23,8 @@ A modern, high-performance player armor and shield mod for Luanti. Built on an a
 - **Active Shield Defense & Arrow Deflection**: Hold right-click with an equipped shield to raise your guard. Blocking absorbs frontal melee attacks, deflects flying arrows with bounce physics, protects your worn armor from taking wear, and shows a first-person shield indicator. Features a dedicated API allowing third-party projectile and ranged combat mods to easily hook into arrow deflection.
 - **Dynamic Combat HUD**: During battle, a sleek on-screen armor HUD appears automatically to show your gear's real-time durability so you always know when an item needs repair without opening your inventory.
 - **Sound Effects & Particle Sparks**: Enjoy distinct audio effects and particle sparks when equipping gear, absorbing strikes, blocking attacks, deflecting arrows, or shattering broken armor.
-- **Interactive Armor Stands**: Display your favorite armor sets in your base. Right-click to open a visual wardrobe manager, or simply Shift + Left Click with any item in hand to swap your equipped armor and held weapon with the stand in one click.
-- **3D Inventory Preview**: Rotate and inspect your character in real-time 3D right inside your inventory screen (`sfinv`, `unified_inventory`, or `i3`). Features full dual-format support for classic 64x32 skins and modern 64x64 dual-layer skins with 3D outer layers (hat, jacket, sleeves, pants) from `skinsdb`, `clothing`, and other skin mods.
+- **Interactive Armor Stands**: Display your favorite gear in your base or armory. Armor stands proudly showcase your worn armor pieces, your held weapon in the right hand, and your shield in the left hand. Right-click to open an interactive visual wardrobe, or simply Shift + Punch with any item in hand (or empty hand) to swap your equipped suit and weapon with the stand in one quick action.
+- **Dynamic 3D Inventory Preview**: Rotate and inspect your character in real-time 3D right inside your inventory screen (`sfinv`, `unified_inventory`, or `i3`). When equipping custom 3D armor pieces or shields, a pure-Lua in-memory mesh assembler seamlessly merges them into a unified preview with zero server lag or disk churn. Features full dual-format support for classic 64x32 skins and modern 64x64 dual-layer skins with 3D outer layers (hat, jacket, sleeves, pants) from `skinsdb`, `clothing`, and other skin mods.
 - **Matching Set Bonus**: Wearing a full 4-piece or 5-piece matching armor suit grants an automatic **+10% defense bonus**.
 - **Lag-Free Multiplayer Performance**: Uses static, optimized visual entities with zero Lua tick overhead (`on_step = nil`). Bone tracking is offloaded directly to the Luanti engine's C++ scene graph, keeping multiplayer servers running at a solid 20 TPS with zero entity lag.
 - **Full Drop-in Compatibility**: Works out-of-the-box with mods that expect classic `3d_armor`, `shields`, or `3d_armor_stand` APIs, and automatically migrates older saved inventories.
@@ -57,7 +57,7 @@ A modern, high-performance player armor and shield mod for Luanti. Built on an a
 - **Keeps Your Look Intact**: Wear helmets, chestplates, leggings, and boots without turning your character skin into a flattened texture. All modern 3D skin layers (hats, jackets, sleeves) stay crisp and visible.
 - **Active Shield Blocking & Arrow Deflection**: Raise your shield to mitigate frontal damage, deflect arrows with realistic bounce physics, absorb wear directly onto the shield, and view your shield in first-person. Third-party mods can easily tap into the deflection API.
 - **Real-Time Battle HUD**: Never get surprised by broken gear in the middle of a dungeon. Color-coded health bars and audio warnings keep you informed at a glance.
-- **One-Click Wardrobe Stands**: Shift-click an armor stand with any item in hand to instantly swap your armor suit and held weapon, or right-click to open a friendly visual wardrobe.
+- **One-Click Wardrobe Stands**: Shift-click an armor stand with any item in hand to instantly swap your armor suit and held weapon, or right-click to open a friendly visual wardrobe displaying your armor, weapon, and shield.
 - **Effortless Switch**: Safe and simple to install on existing worlds—your armor items and crafting recipes carry over automatically.
 
 ---
@@ -250,7 +250,7 @@ For complete class definitions, parameter types, callbacks, and subsystem method
 The mod includes full developer scripts, testing harnesses, and Luanti static analysis:
 
 ```bash
-# Run the 73-assertion automated unit test suite
+# Run the 83-assertion automated unit test suite
 npm test
 
 # Run Luanti static analysis (Luacheck)

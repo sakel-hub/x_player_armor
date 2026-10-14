@@ -20,7 +20,7 @@ Media & Asset Attribution Manifest
 
 ### 3D Models
 
-#### 1. Character Armor & Preview Models (CC BY-SA 3.0)
+#### 1. Character Armor, Shield & Preview Models (CC BY-SA 3.0)
 glTF 2.0 Binary (.glb) models in models/:
 - `models/x_player_armor_helmet.glb`
 - `models/x_player_armor_chestplate.glb`
@@ -31,6 +31,7 @@ glTF 2.0 Binary (.glb) models in models/:
 - `models/x_player_armor_boot_l.glb`
 - `models/x_player_armor_boot_r.glb`
 - `models/x_player_armor_shield.glb`
+- `models/x_player_armor_shield_tower.glb`
 - `models/x_player_armor_preview.glb`
 Rigged, UV-mapped, and exported for Luanti by SaKeL under CC BY-SA 3.0.
 Base geometric references derived from Stuart Jones, MirceaKitsune, and Jordach (CC BY-SA 3.0).
@@ -38,6 +39,10 @@ Base geometric references derived from Stuart Jones, MirceaKitsune, and Jordach 
 #### 2. Armor Stand Model (CC-BY 4.0)
 - `models/x_player_armor_stand.glb`
 Modeled, rigged, and exported for Luanti by SaKeL under CC-BY 4.0.
+
+#### 3. Master Blender Source Files (CC BY-SA 3.0 / CC-BY 4.0)
+- `assets/x_player_armor_character.blend`: Unified character armature and mesh source file containing all modular armor pieces, preview rig, and shields (standard and tower variants). Authored by SaKeL (CC BY-SA 3.0).
+- `assets/x_player_armor_poster.blend`: Promotional scene and rendering setup. Authored by SaKeL (CC-BY 4.0).
 
 ### Textures & Visual Assets
 All armor and shield texture sheets, inventory sprites, UI textures, and VFX particle sheets (CC-BY 4.0):
@@ -56,20 +61,7 @@ Authored, colored, and optimized by SaKeL (CC-BY 4.0):
 - `textures/x_player_armor_steel.png`
 - `textures/x_player_armor_wood.png`
 
-#### 2. Alternative Texture Sheets Archive
-Authored by SaKeL (CC-BY 4.0):
-- `assets/textures_alt/x_player_armor_admin.png`
-- `assets/textures_alt/x_player_armor_bronze.png`
-- `assets/textures_alt/x_player_armor_cactus.png`
-- `assets/textures_alt/x_player_armor_crystal.png`
-- `assets/textures_alt/x_player_armor_diamond.png`
-- `assets/textures_alt/x_player_armor_gold.png`
-- `assets/textures_alt/x_player_armor_mithril.png`
-- `assets/textures_alt/x_player_armor_nether.png`
-- `assets/textures_alt/x_player_armor_steel.png`
-- `assets/textures_alt/x_player_armor_wood.png`
-
-#### 3. Dedicated 2D Pixel-Art Inventory Sprites (16x16 Pixel Art)
+#### 2. Dedicated 2D Pixel-Art Inventory Sprites (16x16 Pixel Art)
 Hand-drawn pixel art sprites by SaKeL (CC-BY 4.0):
 - Helmets:
   - `textures/x_player_armor_inv_helmet_admin.png`
@@ -130,12 +122,12 @@ Hand-drawn pixel art sprites by SaKeL (CC-BY 4.0):
   - `textures/x_player_armor_inv_shield_enhanced_cactus.png`
   - `textures/x_player_armor_inv_shield_enhanced_wood.png`
 
-#### 4. In-World Enhanced Shield Textures
+#### 3. In-World Enhanced Shield Textures
 Authored by SaKeL (CC-BY 4.0):
 - `textures/x_player_armor_shield_enhanced_cactus.png`
 - `textures/x_player_armor_shield_enhanced_wood.png`
 
-#### 5. Armor Stand & UI Textures
+#### 4. Armor Stand & UI Textures
 Authored and arranged by SaKeL (CC-BY 4.0):
 - Stand Node Textures: `textures/x_player_armor_stand_shared.png`, `textures/x_player_armor_stand_locked.png`
 - Stand Inventory Icons: `textures/x_player_armor_stand_inv.png`, `textures/x_player_armor_stand_locked_inv.png`
@@ -143,7 +135,7 @@ Authored and arranged by SaKeL (CC-BY 4.0):
 - Navigation & Hotbar Icons: `textures/x_player_armor_icon.png`, `textures/x_player_armor_inventory_plus.png`
 - Baseline Preview Character Skin: `textures/x_player_armor_character.png`
 
-#### 6. Combat VFX Particle Sheet & Media
+#### 5. Combat VFX Particle Sheet & Media
 Authored by SaKeL (CC-BY 4.0 / CC0 1.0):
 - Combat Particle Sheet: `textures/x_player_armor_particles.png` (8 animation frames: healing sparkles, protective wards, shield impact deflect, and shatter shards)
 - Showcase Media: `screenshot.png` (In-game promotional showcase screenshot)

@@ -804,7 +804,8 @@ end
 ---Returns the detached armor inventory and player name if valid.
 ---@nodiscard
 ---@param player ObjectRef Target player
----@return string? name, InvRef? inv Validated player name and detached armor inventory reference, or nil, nil
+---@return string? name Validated player name, or nil if invalid
+---@return InvRef? inv Detached armor inventory reference, or nil if invalid
 function api.get_valid_player(player)
 	if not player or not player:is_player() then
 		return nil, nil
@@ -909,8 +910,9 @@ end
 
 ---Unified preview resolution entry point for both player formspec and in-world armor stand.
 ---@param armor_list (ItemStack|table)[] Equipped items array
----@param opts? table Options: { player = ObjectRef, is_stand = boolean, base_textures = string[] }
----@return string model_name, string|string[] textures Resolved model filename and texture specification
+---@param opts? table Options table: { player = ObjectRef, is_stand = boolean, base_textures = string[] }
+---@return string model_name Resolved 3D model asset filename (e.g. "x_player_armor_preview.glb" or dynamic mesh)
+---@return string|string[] textures Resolved texture specification or texture list
 function api.resolve_preview(armor_list, opts)
 	return api.gltf_assembler.resolve_preview(armor_list, opts)
 end
@@ -933,14 +935,17 @@ end
 ---Scans an armor inventory list and detects 3D mesh pieces to attach to the preview armature.
 ---@param armor_list (ItemStack|table)[] Armor inventory list
 ---@param custom_only boolean? If true, only detects explicitly defined custom 3D models (excluding standard fallbacks)
----@return boolean has_custom, table[] pieces_to_attach, table<string, boolean> slot_mask
+---@return boolean has_custom True if at least one custom piece requires dynamic assembly
+---@return table[] pieces_to_attach Array of piece descriptors for assembler
+---@return table<string, boolean> slot_mask Map of covered slots
 function api.detect_custom_pieces(armor_list, custom_only)
 	return api.gltf_assembler.detect_custom_pieces(armor_list, custom_only)
 end
 
 ---Builds a spec-compliant .glb binary string combining base preview model and custom pieces in RAM.
 ---@param pieces_to_attach table[] Array of piece descriptor tables
----@return string? glb_binary, string[] material_textures
+---@return string? glb_binary Assembled glTF 2.0 binary string or nil on error
+---@return string[] material_textures Array of material texture names for the combined model
 function api.assemble_glb(pieces_to_attach)
 	return api.gltf_assembler.assemble_glb(pieces_to_attach)
 end
@@ -971,14 +976,14 @@ function api.show_shield_block_hud(player, immediate)
 end
 
 ---Hides the 2D shield block HUD indicator from the target player.
----@param player ObjectRef
+---@param player ObjectRef Target player to hide the shield blocking indicator from
 function api.hide_shield_block_hud(player)
 	api.shield_hud.hide(player)
 end
 
 ---Retrieves the active shield block HUD element ID for a player if one exists.
----@param player ObjectRef
----@return number? hud_id
+---@param player ObjectRef Target player
+---@return number? hud_id Active shield blocking HUD element ID, or nil if none is displayed
 function api.get_shield_block_hud(player)
 	if not player or not player:is_player() then return nil end
 	return api.shield_hud.active_huds[player:get_player_name()]
@@ -987,14 +992,17 @@ end
 ---Evaluates whether a player is capable of blocking with an equipped shield.
 ---@nodiscard
 ---@param player ObjectRef Target player
----@return boolean can_block
+---@return boolean can_block True if the player has an equipped shield ready to block
 function api.can_block(player)
 	return api.combat.can_block(player)
 end
 
 ---Checks whether a player is actively holding a shield block stance.
 ---@param player ObjectRef Target player
----@return boolean is_blocking, ItemStack? shield_stack, number? slot_idx, string? mat_key
+---@return boolean is_blocking True if the player is actively holding block stance
+---@return ItemStack? shield_stack Active equipped shield ItemStack or nil
+---@return number? slot_idx Armor inventory slot index (5 or 6) or nil
+---@return string? mat_key Material identifier string (e.g. "steel", "diamond") or nil
 function api.is_blocking(player)
 	return api.combat.is_blocking(player)
 end
@@ -1025,7 +1033,7 @@ end
 
 ---Displays or updates the combat armor HUD overlay on the target player.
 ---@param player ObjectRef Target player to display the combat HUD on
----@return number? hud_id Active combat HUD element ID, or nil
+---@return number? hud_id Active combat HUD element ID, or nil if inactive
 function api.trigger_combat_hud(player)
 	if not api.combat_hud then return nil end
 	return api.combat_hud.trigger(player)
@@ -1083,8 +1091,8 @@ end
 ---@param parent ObjectRef The entity to attach the wield item to
 ---@param item_or_stack string|ItemStack Held item name or ItemStack
 ---@param format string? Model format ("glb" or "b3d")
----@param custom_opts? table Optional custom overrides
----@return ObjectRef? entity The attached visual entity or nil
+---@param custom_opts? table Optional custom transform and visual overrides
+---@return ObjectRef? entity The attached visual entity or nil on failure
 function api.attach_wield_item_to_entity(parent, item_or_stack, format, custom_opts)
 	return api.visuals.attach_wield_item_to_entity(parent, item_or_stack, format, custom_opts)
 end
@@ -1092,7 +1100,7 @@ end
 ---Resolves the composite attachment options, mesh, textures, and calibrated transforms for a shield item.
 ---@param item_or_stack string|ItemStack Shield item name or stack
 ---@param custom_opts? XPlayerArmorShieldVisualOpts Optional custom overrides
----@return table opts Resolved options table
+---@return table opts Resolved options table containing visual, mesh, textures, and bone transforms
 function api.resolve_shield_visual_opts(item_or_stack, custom_opts)
 	return api.visuals.resolve_shield_visual_opts(item_or_stack, custom_opts)
 end
@@ -1173,7 +1181,7 @@ end
 ---Resolves the player's active skin and produces the canonical dual-slot texture pair.
 ---@nodiscard
 ---@param player ObjectRef Target player
----@return SkinResolution resolution
+---@return SkinResolution resolution Resolved skin textures (base skin and 3D outfit layer)
 function api.resolve_player_skin(player)
 	return api.skins.resolve_player_skin(player)
 end
@@ -1181,7 +1189,7 @@ end
 ---Retrieves skin information for a player.
 ---@nodiscard
 ---@param player ObjectRef Target player
----@return SkinResolution resolution
+---@return SkinResolution resolution Resolved skin textures (base skin and 3D outfit layer)
 function api.get_skin_info(player)
 	return api.skins.get_skin_info(player)
 end

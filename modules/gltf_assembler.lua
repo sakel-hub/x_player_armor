@@ -54,7 +54,9 @@ setmetatable(assembler, {
 ---Scans an armor inventory list and detects 3D mesh pieces to attach to the preview armature.
 ---@param armor_list (ItemStack|table)[] Armor inventory list
 ---@param custom_only boolean? If true, only detects explicitly defined custom 3D models (excluding standard fallbacks)
----@return boolean has_custom, table[] pieces_to_attach, table<string, boolean> slot_mask
+---@return boolean has_custom True if at least one custom piece requires dynamic assembly
+---@return table[] pieces_to_attach Array of piece descriptors for assembler
+---@return table<string, boolean> slot_mask Map of covered slots
 function assembler.detect_custom_pieces(armor_list, custom_only)
 	local pieces_to_attach = {}
 	local slot_mask = {}
@@ -279,15 +281,17 @@ end
 ---Kept for backward compatibility.
 ---@param _armor_list (ItemStack|table)[] Stand armor inventory list
 ---@param base_textures? string[] Standard stand textures array
----@return string model_name, string[] textures_array
+---@return string model_name Resolved 3D model asset filename
+---@return string[] textures_array Resolved texture filenames array
 function assembler.resolve_stand_preview(_armor_list, base_textures)
 	return constants.MODELS.stand, base_textures or {"x_player_armor_stand_shared.png"}
 end
 
 ---Unified preview resolution entry point for both player formspec and in-world armor stand.
 ---@param armor_list (ItemStack|table)[] Equipped items array
----@param opts? table Options: { player = ObjectRef, is_stand = boolean, base_textures = string[] }
----@return string model_name, string|string[] textures Resolved model filename and texture specification
+---@param opts? table Options table: { player = ObjectRef, is_stand = boolean, base_textures = string[] }
+---@return string model_name Resolved 3D model asset filename (e.g. "x_player_armor_preview.glb" or dynamic mesh)
+---@return string|string[] textures Resolved texture specification or texture list
 function assembler.resolve_preview(armor_list, opts)
 	opts = opts or {}
 	if opts.is_stand then

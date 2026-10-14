@@ -362,13 +362,8 @@ Sound effects triggered during armor lifecycle and combat events.
 | `builder` | `XPlayerArmorAssemblerBuilder` | Binary glTF mesh transformation and chunk assembly |
 | `media` | `XPlayerArmorAssemblerMedia` | Dynamic media delivery pipeline and client readiness |
 | `cache` | `table<string,{ bin: string, textures: string[] }>` | Combined GLB cache in RAM |
-| `piece_cache` | `table<string,table>` | Parsed piece models cache |
-| `base_model` | `table?` | Parsed base preview model cache |
-| `delivered_media` | `table<string,boolean>` | Map of media files sent to dynamic_add_media |
-| `client_ready_media` | `table<string,boolean>` | Map of media files acknowledged as ready on client |
-| `ready_callbacks` | `table<string,fun()[]>` | Pending client readiness callbacks |
 | `player_active_models` | `table<string,string>` | Map of player names to currently active GLB models |
-| `get_base_model` | `any` | Backward-compatible delegations to sub-modules |
+| `get_base_model` | `any` | Backward-compatible delegations to sub-modules (single source of truth) |
 | `get_piece_model` | `any` |  |
 | `assemble_glb` | `any` |  |
 | `deliver_media` | `any` |  |
@@ -385,10 +380,14 @@ Sound effects triggered during armor lifecycle and combat events.
 | :--- | :--- | :--- |
 | `piece_cache` | `table<string,table>` | Cached parsed piece models |
 | `base_model` | `table?` | Cached parsed base preview model |
+| `math` | `XPlayerArmorAssemblerMath` | Math submodule reference |
 
 ### `XPlayerArmorAssemblerBuilder`
 
-Subsystem responsible for merging glTF buffers, nodes, meshes, accessors, materials, and normalizations into a unified in-memory `.glb`.
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `math` | `XPlayerArmorAssemblerMath` |  |
+| `loader` | `XPlayerArmorAssemblerLoader` |  |
 
 ### `XPlayerArmorAssemblerMedia`
 
@@ -399,6 +398,8 @@ Subsystem responsible for merging glTF buffers, nodes, meshes, accessors, materi
 | `client_ready_media` | `table<string,boolean>` | Map of media filenames acknowledged as ready on client |
 | `player_ready_media` | `table<string,table<string,boolean>>` | Map of media filenames to tables of players acknowledging readiness |
 | `ready_callbacks` | `table<string,fun()[]>` | Map of media filenames to pending readiness callbacks |
+| `cache_index` | `table<string,number>` | LRU access timestamps for disk cache management |
+| `MAX_CACHE_FILES` | `number` | Maximum number of cached models retained on disk |
 
 ---
 
@@ -712,8 +713,8 @@ x_player_armor.get_valid_player(player: ObjectRef) -> string?, InvRef?
 - `player` (`ObjectRef`) — Target player
 
 **Returns:**
-- `name` (`string?`) — Validated player name and detached armor inventory reference, or nil, nil
-- `inv` (`InvRef?`) — Validated player name and detached armor inventory reference, or nil, nil
+- `name` (`string?`) — Validated player name, or nil if invalid
+- `inv` (`InvRef?`) — Detached armor inventory reference, or nil if invalid
 
 ---
 
@@ -841,7 +842,7 @@ x_player_armor.can_block(player: ObjectRef) -> boolean
 - `player` (`ObjectRef`) — Target player
 
 **Returns:**
-- `can_block` (`boolean`)
+- `can_block` (`boolean`) — True if the player has an equipped shield ready to block
 
 ---
 
@@ -857,10 +858,10 @@ x_player_armor.is_blocking(player: ObjectRef) -> boolean, ItemStack?, number?, s
 - `player` (`ObjectRef`) — Target player
 
 **Returns:**
-- `is_blocking` (`boolean`)
-- `shield_stack` (`ItemStack?`)
-- `slot_idx` (`number?`)
-- `mat_key` (`string?`)
+- `is_blocking` (`boolean`) — True if the player is actively holding block stance
+- `shield_stack` (`ItemStack?`) — Active equipped shield ItemStack or nil
+- `slot_idx` (`number?`) — Armor inventory slot index (5 or 6) or nil
+- `mat_key` (`string?`) — Material identifier string (e.g. "steel", "diamond") or nil
 
 ---
 
@@ -1058,6 +1059,23 @@ x_player_armor.schedule_player_visual_restore(player_name: string) -> nil
 
 ---
 
+#### `x_player_armor.verify_player_visuals(player)`
+
+Verifies that all worn armor items have valid, visible, attached visual entities.
+Performs an on-demand repair if any worn piece is missing or detached.
+
+```lua
+x_player_armor.verify_player_visuals(player: ObjectRef) -> boolean
+```
+
+**Parameters:**
+- `player` (`ObjectRef`) — Target player
+
+**Returns:**
+- `repaired` (`boolean`) — True if visuals were repaired, false if already healthy
+
+---
+
 #### `x_player_armor.attach_armor_to_entity(parent, player_or_name, format)`
 
 Attaches modular armor visual entities to an arbitrary parent entity (such as a deathstats corpse).
@@ -1116,7 +1134,7 @@ x_player_armor.attach_shield_to_entity(parent: ObjectRef, item_or_stack: (string
 
 #### `x_player_armor.attach_wield_item_to_entity(parent, item_or_stack, format, custom_opts)`
 
-Attaches a wield item visual entity to a target parent entity (such as an armor stand or corpse) on the right arm (`Arm_Right`).
+Attaches a wield item visual entity to an external entity (such as an armor stand or corpse) on Arm_Right.
 
 ```lua
 x_player_armor.attach_wield_item_to_entity(parent: ObjectRef, item_or_stack: (string|ItemStack), format: string?, custom_opts: table?) -> ObjectRef?
@@ -1124,12 +1142,29 @@ x_player_armor.attach_wield_item_to_entity(parent: ObjectRef, item_or_stack: (st
 
 **Parameters:**
 - `parent` (`ObjectRef`) — The entity to attach the wield item to
-- `item_or_stack` (`(string|ItemStack)`) — Held item name or stack
+- `item_or_stack` (`(string|ItemStack)`) — Held item name or ItemStack
 - `format` (`string?`) — Model format ("glb" or "b3d")
-- `custom_opts` (`table?`) — Optional custom overrides (bone, pos, rot, visual_size, etc.)
+- `custom_opts` (`table?`) — Optional custom transform and visual overrides
 
 **Returns:**
-- `entity` (`ObjectRef?`) — The attached visual entity or nil
+- `entity` (`ObjectRef?`) — The attached visual entity or nil on failure
+
+---
+
+#### `x_player_armor.resolve_shield_visual_opts(item_or_stack, custom_opts)`
+
+Resolves the composite attachment options, mesh, textures, and calibrated transforms for a shield item.
+
+```lua
+x_player_armor.resolve_shield_visual_opts(item_or_stack: (string|ItemStack), custom_opts: XPlayerArmorShieldVisualOpts?) -> table
+```
+
+**Parameters:**
+- `item_or_stack` (`(string|ItemStack)`) — Shield item name or stack
+- `custom_opts` (`XPlayerArmorShieldVisualOpts?`) — Optional custom overrides
+
+**Returns:**
+- `opts` (`table`) — Resolved options table containing visual, mesh, textures, and bone transforms
 
 ---
 
@@ -1225,7 +1260,7 @@ x_player_armor.resolve_player_skin(player: ObjectRef) -> SkinResolution
 - `player` (`ObjectRef`) — Target player
 
 **Returns:**
-- `resolution` (`SkinResolution`)
+- `resolution` (`SkinResolution`) — Resolved skin textures (base skin and 3D outfit layer)
 
 ---
 
@@ -1241,7 +1276,7 @@ x_player_armor.get_skin_info(player: ObjectRef) -> SkinResolution
 - `player` (`ObjectRef`) — Target player
 
 **Returns:**
-- `resolution` (`SkinResolution`)
+- `resolution` (`SkinResolution`) — Resolved skin textures (base skin and 3D outfit layer)
 
 ---
 
@@ -1259,11 +1294,11 @@ x_player_armor.resolve_preview(armor_list: (ItemStack|table)[], opts: table?) ->
 
 **Parameters:**
 - `armor_list` (`(ItemStack|table)[]`) — Equipped items array
-- `opts` (`table?`) — Options: { player = ObjectRef, is_stand = boolean, base_textures = string[] }
+- `opts` (`table?`) — Options table: { player = ObjectRef, is_stand = boolean, base_textures = string[] }
 
 **Returns:**
-- `model_name` (`string`) — Resolved model filename and texture specification
-- `textures` (`(string|string[])`) — Resolved model filename and texture specification
+- `model_name` (`string`) — Resolved 3D model asset filename (e.g. "x_player_armor_preview.glb" or dynamic mesh)
+- `textures` (`(string|string[])`) — Resolved texture specification or texture list
 
 ---
 
@@ -1280,9 +1315,9 @@ x_player_armor.detect_custom_pieces(armor_list: (ItemStack|table)[], custom_only
 - `custom_only` (`boolean?`) — If true, only detects explicitly defined custom 3D models (excluding standard fallbacks)
 
 **Returns:**
-- `has_custom` (`boolean`)
-- `pieces_to_attach` (`table[]`)
-- `slot_mask` (`table<string,boolean>`)
+- `has_custom` (`boolean`) — True if at least one custom piece requires dynamic assembly
+- `pieces_to_attach` (`table[]`) — Array of piece descriptors for assembler
+- `slot_mask` (`table<string,boolean>`) — Map of covered slots
 
 ---
 
@@ -1298,8 +1333,8 @@ x_player_armor.assemble_glb(pieces_to_attach: table[]) -> string?, string[]
 - `pieces_to_attach` (`table[]`) — Array of piece descriptor tables
 
 **Returns:**
-- `glb_binary` (`string?`)
-- `material_textures` (`string[]`)
+- `glb_binary` (`string?`) — Assembled glTF 2.0 binary string or nil on error
+- `material_textures` (`string[]`) — Array of material texture names for the combined model
 
 ---
 
@@ -1462,7 +1497,7 @@ x_player_armor.hide_shield_block_hud(player: ObjectRef) -> nil
 ```
 
 **Parameters:**
-- `player` (`ObjectRef`)
+- `player` (`ObjectRef`) — Target player to hide the shield blocking indicator from
 
 **Returns:**
 - (`nil`)
@@ -1478,10 +1513,10 @@ x_player_armor.get_shield_block_hud(player: ObjectRef) -> number?
 ```
 
 **Parameters:**
-- `player` (`ObjectRef`)
+- `player` (`ObjectRef`) — Target player
 
 **Returns:**
-- `hud_id` (`number?`)
+- `hud_id` (`number?`) — Active shield blocking HUD element ID, or nil if none is displayed
 
 ---
 
@@ -1497,7 +1532,7 @@ x_player_armor.trigger_combat_hud(player: ObjectRef) -> number?
 - `player` (`ObjectRef`) — Target player to display the combat HUD on
 
 **Returns:**
-- `hud_id` (`number?`) — Active combat HUD element ID, or nil
+- `hud_id` (`number?`) — Active combat HUD element ID, or nil if inactive
 
 ---
 
