@@ -103,8 +103,14 @@ function core.dynamic_add_media(opts, callback)
 	return true
 end
 
+local mock_world_dir = mod_dir .. "/tests/mock_world"
+if os.execute("mkdir -p \"" .. mock_world_dir .. "\" 2>/dev/null") ~= 0
+		and os.execute("mkdir -p \"" .. mock_world_dir .. "\" 2>/dev/null") ~= true then
+	mock_world_dir = "/tmp/x_player_armor_mock_world"
+end
+
 function core.get_worldpath()
-	return mod_dir .. "/tests/mock_world"
+	return mock_world_dir
 end
 
 function core.mkdir(path)
@@ -1313,11 +1319,11 @@ test("Dual-Format Armor Attachments & Visuals Reconciliation", function()
 	local b3d = constants.ATTACH_TRANSFORMS.b3d
 	assert(b3d.head.rot.x == 0 and b3d.head.rot.y == 180 and b3d.head.rot.z == 0, "B3D head rot must be (0, 180, 0)")
 	assert(b3d.torso.rot.x == 0 and b3d.torso.rot.y == 180 and b3d.torso.rot.z == 0, "B3D torso rot must be (0, 180, 0)")
-	assert(b3d.sleeve_l.rot.x == 0 and b3d.sleeve_l.rot.y == 180 and b3d.sleeve_l.rot.z == 0, "B3D sleeve_l rot must be (0, 180, 0)")
-	assert(b3d.legs_l.rot.x == 0 and b3d.legs_l.rot.y == 180 and b3d.legs_l.rot.z == 0, "B3D legs_l rot must be (0, 180, 0)")
-	assert(b3d.feet_l.rot.x == 0 and b3d.feet_l.rot.y == 180 and b3d.feet_l.rot.z == 0, "B3D feet_l rot must be (0, 180, 0)")
+	assert(b3d.sleeve_l.rot.x == 180 and b3d.sleeve_l.rot.y == 180 and b3d.sleeve_l.rot.z == 0, "B3D sleeve_l rot must be (180, 180, 0)")
+	assert(b3d.legs_l.rot.x == 180 and b3d.legs_l.rot.y == 180 and b3d.legs_l.rot.z == 0, "B3D legs_l rot must be (180, 180, 0)")
+	assert(b3d.feet_l.rot.x == 180 and b3d.feet_l.rot.y == 180 and b3d.feet_l.rot.z == 0, "B3D feet_l rot must be (180, 180, 0)")
 	assert(b3d.shield.rot.x == -171.4 and b3d.shield.rot.y == -109.5 and b3d.shield.rot.z == -1.7, "B3D shield rot must be (-171.4, -109.5, -1.7)")
-	assert(b3d.shield.pos.x == -0.95 and b3d.shield.pos.y == 4.44 and b3d.shield.pos.z == 1.48, "B3D shield pos must be (-0.95, 4.44, 1.48)")
+	assert(b3d.shield.pos.x == 0.95 and b3d.shield.pos.y == 4.44 and b3d.shield.pos.z == 1.48, "B3D shield pos must be (0.95, 4.44, 1.48)")
 
 	-- Test Visuals update on native B3D player
 	local hero = create_mock_player("visual_tester")
@@ -2196,8 +2202,8 @@ test("Shield Left-Hand Attachment via x_player_api Subsystem", function()
 		"opts.pos_glb must match calibrated SHIELD_OFFSET (-0.95, 4.44, -1.48)")
 	assert(record.opts.rot_glb ~= nil and record.opts.rot_glb.x == -171.4 and record.opts.rot_glb.y == 70.5 and record.opts.rot_glb.z == -1.7,
 		"opts.rot_glb must match calibrated SHIELD_OFFSET (-171.4, 70.5, -1.7)")
-	assert(record.opts.pos_b3d ~= nil and record.opts.pos_b3d.x == -0.95 and record.opts.pos_b3d.y == 4.44 and record.opts.pos_b3d.z == 1.48,
-		"opts.pos_b3d must match calibrated SHIELD_OFFSET (-0.95, 4.44, 1.48)")
+	assert(record.opts.pos_b3d ~= nil and record.opts.pos_b3d.x == 0.95 and record.opts.pos_b3d.y == 4.44 and record.opts.pos_b3d.z == 1.48,
+		"opts.pos_b3d must match calibrated SHIELD_OFFSET (0.95, 4.44, 1.48)")
 	assert(record.opts.rot_b3d ~= nil and record.opts.rot_b3d.x == -171.4 and record.opts.rot_b3d.y == -109.5 and record.opts.rot_b3d.z == -1.7,
 		"opts.rot_b3d must match calibrated SHIELD_OFFSET (-171.4, -109.5, -1.7)")
 
@@ -5436,8 +5442,8 @@ test("Shield Visual Attachment to External Entities (attach_shield_to_entity)", 
 	assert(b3d_shield ~= nil and b3d_shield:is_valid(), "B3D attach_shield_to_entity must return valid shield entity")
 	local _, bone_b3d, pos_b3d, rot_b3d = b3d_shield:get_attach()
 	assert(bone_b3d == "Arm_Left", "B3D shield must be attached to Arm_Left")
-	assert(math.abs(pos_b3d.x - (-0.95)) < 0.01 and math.abs(pos_b3d.y - 4.44) < 0.01 and math.abs(pos_b3d.z - 1.48) < 0.01,
-		"B3D standard shield must use calibrated SHIELD_OFFSET (-0.95, 4.44, 1.48)")
+	assert(math.abs(pos_b3d.x - 0.95) < 0.01 and math.abs(pos_b3d.y - 4.44) < 0.01 and math.abs(pos_b3d.z - 1.48) < 0.01,
+		"B3D standard shield must use calibrated SHIELD_OFFSET (0.95, 4.44, 1.48)")
 	assert(math.abs(rot_b3d.x - (-171.4)) < 0.01 and math.abs(rot_b3d.y - (-109.5)) < 0.01 and math.abs(rot_b3d.z - (-1.7)) < 0.01,
 		"B3D standard shield must use calibrated SHIELD_OFFSET (-171.4, -109.5, -1.7)")
 	b3d_shield:remove()
@@ -5670,8 +5676,8 @@ test("Shield Visual Transform Calibration & DRY Resolution (resolve_shield_visua
 		"pos_glb must be calibrated (-0.95, 4.44, -1.48)")
 	assert(opts_std.rot_glb and opts_std.rot_glb.x == -171.4 and opts_std.rot_glb.y == 70.5 and opts_std.rot_glb.z == -1.7,
 		"rot_glb must be calibrated (-171.4, 70.5, -1.7)")
-	assert(opts_std.pos_b3d and opts_std.pos_b3d.x == -0.95 and opts_std.pos_b3d.y == 4.44 and opts_std.pos_b3d.z == 1.48,
-		"pos_b3d must be calibrated (-0.95, 4.44, 1.48)")
+	assert(opts_std.pos_b3d and opts_std.pos_b3d.x == 0.95 and opts_std.pos_b3d.y == 4.44 and opts_std.pos_b3d.z == 1.48,
+		"pos_b3d must be calibrated (0.95, 4.44, 1.48)")
 	assert(opts_std.rot_b3d and opts_std.rot_b3d.x == -171.4 and opts_std.rot_b3d.y == -109.5 and opts_std.rot_b3d.z == -1.7,
 		"rot_b3d must be calibrated (-171.4, -109.5, -1.7)")
 
@@ -6133,8 +6139,8 @@ test("Bulky Torso Armor Shield Clearance: Dynamic Forearm Offset Across Player, 
 	})
 	assert(math.abs(bulky_opts.pos_glb.x - (-1.85)) < 1e-4 and math.abs(bulky_opts.pos_glb.z - (-1.80)) < 1e-4,
 		"With bulky torso, shield GLB pos must be offset by {-0.90, 0, -0.32} to {-1.85, 4.44, -1.80}")
-	assert(math.abs(bulky_opts.pos_b3d.x - (-1.85)) < 1e-4 and math.abs(bulky_opts.pos_b3d.z - 1.80) < 1e-4,
-		"With bulky torso, shield B3D pos must be offset by {-0.90, 0, 0.32} to {-1.85, 4.44, 1.80}")
+	assert(math.abs(bulky_opts.pos_b3d.x - 1.85) < 1e-4 and math.abs(bulky_opts.pos_b3d.z - 1.80) < 1e-4,
+		"With bulky torso, shield B3D pos must be offset by {0.90, 0, 0.32} to {1.85, 4.44, 1.80}")
 
 	-- Verify constants.SHIELD_OFFSET was not mutated in-place
 	assert(x_player_armor.constants.SHIELD_OFFSET.glb.pos.x == -0.95,
@@ -6206,6 +6212,218 @@ test("Bulky Torso Armor Shield Clearance: Dynamic Forearm Offset Across Player, 
 		"Assembled preview shield min X must be shifted outward by -0.90 when bulky chestplate is worn")
 	assert(math.abs((sh_acc_bulky.min[3] - sh_acc_slim.min[3]) - (-0.32)) < 1e-3,
 		"Assembled preview shield min Z (glTF right-handed, character faces -Z) must be shifted forward by -0.32 when bulky chestplate is worn")
+end)
+
+test("Standalone B3D Armor Attachment Rotations & B3D Wiggler Without x_player_api", function()
+	_G.x_player_api = nil
+	local constants = x_player_armor.constants
+	local wiggler = x_player_armor.b3d_wiggler
+	assert(wiggler ~= nil, "x_player_armor.b3d_wiggler module must be loaded")
+
+	-- 1. Verify B3D and skinsdb_b3d attachment rotation constants
+	for _, rig in ipairs({"b3d", "skinsdb_b3d"}) do
+		local trans = constants.ATTACH_TRANSFORMS[rig]
+		assert(trans ~= nil, rig .. " transform table must exist")
+		assert(trans.head.rot.x == 0 and trans.head.rot.y == 180 and trans.head.rot.z == 0,
+			rig .. " head rotation must be {0, 180, 0}")
+		assert(trans.torso.rot.x == 0 and trans.torso.rot.y == 180 and trans.torso.rot.z == 0,
+			rig .. " torso rotation must be {0, 180, 0}")
+		for _, limb in ipairs({"sleeve_l", "sleeve_r", "legs_l", "legs_r", "feet_l", "feet_r"}) do
+			assert(trans[limb].rot.x == 180 and trans[limb].rot.y == 180 and trans[limb].rot.z == 0,
+				rig .. " " .. limb .. " rotation must be {180, 180, 0} to counter B3D limb bone Rx(180)*Ry(180)")
+		end
+	end
+
+	-- 2. Verify standalone B3D binary wiggler on synthetic BB3D chunk with 180-deg Body (0,0,1,0) and Leg (0,-1,0,0)
+	local write_f32 = wiggler._test.write_f32_le
+	local read_f32 = wiggler._test.read_f32_le
+	local is_perfect = wiggler._test.is_perfect_rotation
+	local function u32_le(n)
+		local b1 = n % 256; n = math.floor(n / 256)
+		local b2 = n % 256; n = math.floor(n / 256)
+		local b3 = n % 256; n = math.floor(n / 256)
+		local b4 = n % 256
+		return string.char(b1, b2, b3, b4)
+	end
+
+	-- Build KEYS chunk with 1 rotation keyframe (flags = 4): frame 1, quat (0, -1, 0, 0)
+	local keys_payload = u32_le(4) .. u32_le(1)
+		.. write_f32(0.0) .. write_f32(-1.0) .. write_f32(0.0) .. write_f32(0.0)
+	local keys_chunk = "KEYS" .. u32_le(#keys_payload) .. keys_payload
+
+	-- Build NODE chunk "Body\0" with pos(0,0,0), scale(1,1,1), rot(0, 0, 1, 0) + child KEYS chunk
+	local node_header = "Body\0"
+		.. write_f32(0) .. write_f32(0) .. write_f32(0)
+		.. write_f32(1) .. write_f32(1) .. write_f32(1)
+		.. write_f32(0.0) .. write_f32(0.0) .. write_f32(1.0) .. write_f32(0.0)
+	local node_payload = node_header .. keys_chunk
+	local node_chunk = "NODE" .. u32_le(#node_payload) .. node_payload
+	local bb3d_payload = u32_le(1) .. node_chunk
+	local raw_b3d = "BB3D" .. u32_le(#bb3d_payload) .. bb3d_payload
+
+	local patched_b3d, nodes_wiggled, keys_wiggled = wiggler.wiggle_b3d_data(raw_b3d)
+	assert(nodes_wiggled == 1, "Must wiggle 1 degenerate NODE rotation (Body Ry 180)")
+	assert(keys_wiggled == 1, "Must wiggle 1 degenerate KEYS rotation (Leg Rx 180)")
+	assert(#patched_b3d == #raw_b3d, "Wiggled B3D binary size must match original size")
+
+	local node_rot_offset = 13 + 8 + 5 + 24
+	local pw = read_f32(patched_b3d, node_rot_offset)
+	local px = read_f32(patched_b3d, node_rot_offset + 4)
+	local py = read_f32(patched_b3d, node_rot_offset + 8)
+	local pz = read_f32(patched_b3d, node_rot_offset + 12)
+	assert(not is_perfect(pw, px, py, pz), "Patched NODE quaternion must no longer trigger Irrlicht decomposition bug")
+
+	-- 3. Verify scan_and_wiggle_b3d_model, player_api.set_model hook, and full armor attachment without x_player_api
+	local tmp_b3d_path = "/tmp/x_pa_test_character.b3d"
+	local tf = io.open(tmp_b3d_path, "wb")
+	assert(tf ~= nil, "Must open temporary B3D file for writing")
+	tf:write(raw_b3d)
+	tf:close()
+
+	local old_find = wiggler.find_model_path
+	wiggler.find_model_path = function(fname)
+		if fname == "character.b3d" then
+			return tmp_b3d_path
+		end
+		return old_find(fname)
+	end
+	wiggler.processed_models["character.b3d"] = nil
+	wiggler.added_dynamic_media["_wiggled_character.b3d"] = nil
+
+	_G.player_api = {
+		registered_models = {
+			["character.b3d"] = {
+				animations = {stand = {x = 0, y = 79}},
+			},
+		},
+		set_model = function(p, mname)
+			p:set_properties({mesh = mname})
+		end,
+	}
+	x_player_armor.override.hook_visual_triggers()
+
+	local b3d_hero = create_mock_player("standalone_b3d_hero")
+	_G.player_api.set_model(b3d_hero, "character.b3d")
+	assert(b3d_hero:get_properties().mesh == "_wiggled_character.b3d",
+		"player_api.set_model hook must automatically upgrade player mesh to _wiggled_character.b3d when x_player_api is absent")
+	assert(_G.player_api.registered_models["_wiggled_character.b3d"] == _G.player_api.registered_models["character.b3d"],
+		"Wiggled mesh name must be aliased in player_api.registered_models")
+
+	-- Equip full armor set + shield and verify entity attachment rotations and shield verify_player_visuals
+	x_player_armor.inventory.init_player_inventory(b3d_hero)
+	local _, b3d_inv = x_player_armor.get_valid_player(b3d_hero)
+	b3d_inv:set_stack("armor", 1, ItemStack("x_player_armor:helmet_steel"))
+	b3d_inv:set_stack("armor", 2, ItemStack("x_player_armor:chestplate_steel"))
+	b3d_inv:set_stack("armor", 3, ItemStack("x_player_armor:leggings_steel"))
+	b3d_inv:set_stack("armor", 4, ItemStack("x_player_armor:boots_steel"))
+	b3d_inv:set_stack("armor", 5, ItemStack("x_player_armor:shield_steel"))
+
+	-- Even if mesh was reset to unwiggled character.b3d, update_player_visuals must wiggle it and attach upright
+	b3d_hero:set_properties({mesh = "character.b3d"})
+	x_player_armor.visuals.update_player_visuals(b3d_hero)
+	assert(b3d_hero:get_properties().mesh == "_wiggled_character.b3d",
+		"update_player_visuals must ensure player B3D mesh is wiggled when x_player_api is absent")
+
+	local ents = x_player_armor.visuals.player_entities["standalone_b3d_hero"]
+	assert(ents ~= nil, "Visual entities must be spawned for standalone B3D player")
+	assert(ents.head[1].attachment.rot.x == 0 and ents.head[1].attachment.rot.y == 180,
+		"B3D helmet must attach with rot {0, 180, 0}")
+	assert(ents.torso[1].attachment.rot.x == 0 and ents.torso[1].attachment.rot.y == 180,
+		"B3D chestplate must attach with rot {0, 180, 0}")
+	assert(ents.torso[2].attachment.rot.x == 180 and ents.torso[2].attachment.rot.y == 180,
+		"B3D sleeve_l must attach with rot {180, 180, 0}")
+	assert(ents.torso[3].attachment.rot.x == 180 and ents.torso[3].attachment.rot.y == 180,
+		"B3D sleeve_r must attach with rot {180, 180, 0}")
+	assert(ents.legs[1].attachment.rot.x == 180 and ents.legs[1].attachment.rot.y == 180,
+		"B3D legs_l must attach with rot {180, 180, 0}")
+	assert(ents.legs[2].attachment.rot.x == 180 and ents.legs[2].attachment.rot.y == 180,
+		"B3D legs_r must attach with rot {180, 180, 0}")
+	assert(ents.feet[1].attachment.rot.x == 180 and ents.feet[1].attachment.rot.y == 180,
+		"B3D feet_l must attach with rot {180, 180, 0}")
+	assert(ents.feet[2].attachment.rot.x == 180 and ents.feet[2].attachment.rot.y == 180,
+		"B3D feet_r must attach with rot {180, 180, 0}")
+
+	-- Verify verify_player_visuals returns false (healthy) even when a shield is equipped in slot 5 without x_player_api
+	local repaired = x_player_armor.visuals.verify_player_visuals(b3d_hero)
+	assert(repaired == false, "verify_player_visuals must not falsely report repair needed when shield is worn without x_player_api")
+
+	-- 4. Verify load-time dynamic_add_media (must be called without callback at load-time)
+	local old_dyn_media = core.dynamic_add_media
+	local load_time_calls = 0
+	core.dynamic_add_media = function(opts, cb)
+		if cb ~= nil then
+			error("must be called without callback at load-time")
+		end
+		assert(opts and opts.filename == "_wiggled_character.b3d", "Load-time media must register _wiggled_character.b3d")
+		load_time_calls = load_time_calls + 1
+		return true
+	end
+	wiggler.is_runtime = false
+	wiggler.processed_models["character.b3d"] = nil
+	wiggler.added_dynamic_media["_wiggled_character.b3d"] = nil
+	wiggler.scan_and_wiggle_registered_b3d_models()
+	assert(load_time_calls == 1, "Load-time scan_and_wiggle_registered_b3d_models must succeed without callback")
+	core.dynamic_add_media = old_dyn_media
+
+	-- 5. Verify hook_visual_triggers does not access undeclared _G.armor via metatable __index when armor is nil
+	local saved_armor = rawget(_G, "armor")
+	rawset(_G, "armor", nil)
+	local old_mt = getmetatable(_G)
+	local undeclared_accessed = false
+	setmetatable(_G, {
+		__index = function(_, k)
+			if k == "armor" then
+				undeclared_accessed = true
+			end
+			return nil
+		end,
+	})
+	x_player_armor.override.hook_visual_triggers()
+	setmetatable(_G, old_mt)
+	rawset(_G, "armor", saved_armor)
+	assert(undeclared_accessed == false, "hook_visual_triggers must use rawget(_G, 'armor') to avoid undeclared global warning")
+
+	-- Cleanup
+	x_player_armor.visuals.clear_all("standalone_b3d_hero")
+	wiggler.find_model_path = old_find
+	_G.player_api = nil
+	os.remove(tmp_b3d_path)
+end)
+
+test("Public facade exposes utility methods directly on x_player_armor", function()
+	assert(type(x_player_armor.format_armor_tooltip) == "function", "x_player_armor.format_armor_tooltip must be a function")
+	assert(type(x_player_armor.format_armor_stand_tooltip) == "function", "x_player_armor.format_armor_stand_tooltip must be a function")
+	assert(type(x_player_armor.format_armor_tooltip_from_def) == "function", "x_player_armor.format_armor_tooltip_from_def must be a function")
+	assert(type(x_player_armor.force_alias) == "function", "x_player_armor.force_alias must be a function")
+	assert(type(x_player_armor.copy_table) == "function", "x_player_armor.copy_table must be a function")
+
+	-- Verify copy_table performs shallow copy
+	local orig = {a = 1, b = 2}
+	local clone = x_player_armor.copy_table(orig)
+	assert(clone.a == 1 and clone.b == 2, "copy_table must clone table data")
+	clone.a = 99
+	assert(orig.a == 1, "copy_table must create a new table without mutating original top-level fields")
+
+	-- Verify format_armor_tooltip returns string
+	local tip = x_player_armor.format_armor_tooltip({
+		title = "Steel Helmet",
+		element = "head",
+		material = "steel",
+		level = 15,
+		uses = 350,
+	})
+	assert(type(tip) == "string" and string.find(tip, "Steel Helmet") ~= nil, "format_armor_tooltip must format title")
+
+	-- Verify format_armor_stand_tooltip returns string
+	local stand_tip = x_player_armor.format_armor_stand_tooltip(false)
+	assert(type(stand_tip) == "string" and string.find(stand_tip, "Armor Stand") ~= nil, "format_armor_stand_tooltip must format title")
+
+	local locked_stand_tip = x_player_armor.format_armor_stand_tooltip(true)
+	assert(type(locked_stand_tip) == "string" and string.find(locked_stand_tip, "Locked") ~= nil, "format_armor_stand_tooltip must format locked title")
+
+	-- Verify force_alias executes without error
+	x_player_armor.force_alias("test:legacy_item", "test:modern_item")
+	assert(core.registered_aliases["test:legacy_item"] == "test:modern_item", "force_alias must register alias")
 end)
 
 print(string.format("\n=========================================="))

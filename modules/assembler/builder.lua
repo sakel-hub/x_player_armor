@@ -17,7 +17,7 @@ local builder = {
 }
 
 ---Resolves the texture names for a single piece model.
----@param piece table Piece definition table
+---@param piece XPlayerArmorPieceDescriptor Piece definition table
 ---@param p_json? table Parsed glTF JSON of the piece
 ---@return string[] textures List of texture filenames
 function builder.get_piece_textures(piece, p_json)
@@ -47,7 +47,7 @@ end
 ---Builds a spec-compliant .glb binary string combining base preview model and custom pieces in RAM.
 ---Modular piece vertices and normals are transformed into world space and attached to the scene root
 ---so that Irrlicht computes the exact same bounding box (H = 18.01, dist = 38.90) as the base model.
----@param pieces_to_attach table[] Array of piece descriptor tables
+---@param pieces_to_attach XPlayerArmorPieceDescriptor[] Array of piece descriptor tables
 ---@return string? glb_binary, string[] material_textures
 function builder.assemble_glb(pieces_to_attach)
 	local base_json_raw, base_bin_raw = loader_mod.get_base_model()

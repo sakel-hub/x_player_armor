@@ -227,10 +227,17 @@ function api.register_material(material, def)
 	api.registered_materials[material] = def
 end
 
+---Standard Luanti tool capabilities table passed in punch callbacks.
+---@class ToolCapabilities
+---@field full_punch_interval? number Minimum time between punches for full damage
+---@field max_drop_level? number Maximum digging drop level
+---@field groupcaps? table<string, table> Group capabilities definitions
+---@field damage_groups? table<string, number> Base damage dealt per group
+
 ---Callback invoked when a player wearing armor or holding a shield is punched.
 ---Receives defending player, attacking entity or player, seconds elapsed, tool capabilities table (see Luanti doc/lua_api.md: Tool Capabilities),
 ---attack direction vector, and raw damage points.
----@alias XPlayerArmorPunchCallback fun(player: ObjectRef, hitter?: ObjectRef, time?: number, tool_capabilities?: table, dir?: vector, damage?: number)
+---@alias XPlayerArmorPunchCallback fun(player: ObjectRef, hitter?: ObjectRef, time?: number, caps?: ToolCapabilities, dir?: vector, damage?: number)
 
 ---3D position and rotation offsets for skeletal bone attachment.
 ---@class XPlayerArmorBoneOffset
@@ -310,6 +317,64 @@ end
 ---@field entity_name? string Custom Lua entity name to spawn
 ---@field torso_item? string|ItemStack Equipped torso item or stack for resolving bulky sleeve shield_clearance
 ---@field shield_clearance? XPlayerArmorShieldOffset Explicit torso shield clearance delta override
+
+---Resolved attachment options and calibrated transforms for a shield item.
+---@class XPlayerArmorResolvedShieldOpts
+---@field visual string Entity visual mode ("mesh" or "wielditem")
+---@field mesh? string 3D mesh model filename if visual is "mesh"
+---@field textures string[] Ordered array of texture filenames
+---@field override_transform boolean True if custom transforms are active
+---@field pos_glb Vector3|table<string, number> Position offset vector for glTF/GLB models
+---@field rot_glb Vector3|table<string, number> Euler rotation angles vector in degrees for glTF/GLB models
+---@field pos_b3d Vector3|table<string, number> Position offset vector for B3D models
+---@field rot_b3d Vector3|table<string, number> Euler rotation angles vector in degrees for B3D models
+---@field scale Vector3|table<string, number> Visual scale vector
+---@field visual_size Vector3|table<string, number> Visual scaling factor
+
+---Options table passed to x_player_armor.resolve_preview.
+---@class XPlayerArmorPreviewOpts
+---@field player? ObjectRef Target player ObjectRef
+---@field is_stand? boolean True if resolving preview for an armor stand
+---@field base_textures? string[] Base textures array for the character mannequin
+
+---Piece descriptor describing a 3D armor model piece for dynamic glTF mesh assembly.
+---@class XPlayerArmorPieceDescriptor
+---@field piece_id string Bone piece identifier (e.g. "head", "torso", "sleeve_l", "legs_r", "shield")
+---@field element string Armor slot category (e.g. "head", "torso", "legs", "feet", "shield")
+---@field model_file string 3D glTF/GLB model filename
+---@field mod_hint? string Mod name prefix hint for model discovery
+---@field item_def? XPlayerArmorItemDef Item definition table
+---@field item_name string Technical item name string
+---@field content_sha1 string SHA-1 content hash of the piece model
+
+---Configuration parameters for building rich formatted armor item tooltips.
+---@class XPlayerArmorTooltipParams
+---@field title? string Item display title header
+---@field element? string Armor slot element ("head", "torso", "legs", "feet", "shield")
+---@field material? string Armor material key (e.g. "wood", "steel", "diamond")
+---@field level? number Defense rating level
+---@field uses? number Total durability uses
+---@field heal? number Health regeneration percentage
+---@field fire? number Fire/lava protection tier (1 to 5)
+---@field water? number Water breathing / drowning protection level
+---@field feather? number Fall damage feather mitigation level
+---@field is_shield? boolean True if this item functions as a shield
+---@field is_tower? boolean True if this shield is a reinforced tower shield
+---@field reciprocate? boolean True if damage reciprocation (thorns) is active
+---@field speed? number Movement speed physics modifier
+---@field jump? number Jump height physics modifier
+---@field gravity? number Gravity physics modifier
+---@field custom_perks? (string|{text: string, color?: string})[] Array of custom perk lines
+---@field synergy_text? string Custom set synergy description text
+---@field hint? string Custom footer interaction hint
+
+---Layout item configuration defining an equipment slot on the armor inventory formspec.
+---@class XPlayerArmorSlotLayoutItem
+---@field idx number Inventory slot index (0-indexed for formspec list element)
+---@field lua_idx? number 1-indexed Lua inventory slot index
+---@field icon string Background silhouette texture icon
+---@field title string Formspec tooltip title
+---@field desc string Formspec tooltip description
 
 ---Complete configuration table for armor and shield item registration.
 ---Supports custom 3D models, bone transforms, audio, environmental perks, physics, and combat mechanics.
@@ -862,7 +927,7 @@ end
 ---@param player ObjectRef Defending player taking the punch
 ---@param hitter ObjectRef? Attacking entity or player
 ---@param time_from_last_punch number? Seconds elapsed since previous punch
----@param tool_capabilities table? Tool capabilities table of the punch (see Luanti doc/lua_api.md: Tool Capabilities)
+---@param tool_capabilities ToolCapabilities? Tool capabilities table of the punch (see Luanti doc/lua_api.md: Tool Capabilities)
 ---@param dir vector? Direction vector of the incoming attack
 ---@param damage number? Raw damage points before armor mitigation
 function api.punch(player, hitter, time_from_last_punch, tool_capabilities, dir, damage)
@@ -926,8 +991,8 @@ function api.get_player_preview_texture(player)
 end
 
 ---Unified preview resolution entry point for both player formspec and in-world armor stand.
----@param armor_list (ItemStack|table)[] Equipped items array
----@param opts? table Options table: { player = ObjectRef, is_stand = boolean, base_textures = string[] }
+---@param armor_list (ItemStack|string|table)[] Equipped items array
+---@param opts? XPlayerArmorPreviewOpts Options table: { player = ObjectRef, is_stand = boolean, base_textures = string[] }
 ---@return string model_name Resolved 3D model asset filename (e.g. "x_player_armor_preview.glb" or dynamic mesh)
 ---@return string|string[] textures Resolved texture specification or texture list
 function api.resolve_preview(armor_list, opts)
@@ -950,17 +1015,17 @@ function api.when_media_ready(filename, callback)
 end
 
 ---Scans an armor inventory list and detects 3D mesh pieces to attach to the preview armature.
----@param armor_list (ItemStack|table)[] Armor inventory list
+---@param armor_list (ItemStack|string|table)[] Armor inventory list
 ---@param custom_only boolean? If true, only detects explicitly defined custom 3D models (excluding standard fallbacks)
 ---@return boolean has_custom True if at least one custom piece requires dynamic assembly
----@return table[] pieces_to_attach Array of piece descriptors for assembler
+---@return XPlayerArmorPieceDescriptor[] pieces_to_attach Array of piece descriptors for assembler
 ---@return table<string, boolean> slot_mask Map of covered slots
 function api.detect_custom_pieces(armor_list, custom_only)
 	return api.gltf_assembler.detect_custom_pieces(armor_list, custom_only)
 end
 
 ---Builds a spec-compliant .glb binary string combining base preview model and custom pieces in RAM.
----@param pieces_to_attach table[] Array of piece descriptor tables
+---@param pieces_to_attach XPlayerArmorPieceDescriptor[] Array of piece descriptor tables
 ---@return string? glb_binary Assembled glTF 2.0 binary string or nil on error
 ---@return string[] material_textures Array of material texture names for the combined model
 function api.assemble_glb(pieces_to_attach)
@@ -1108,7 +1173,7 @@ end
 ---@param parent ObjectRef The entity to attach the wield item to
 ---@param item_or_stack string|ItemStack Held item name or ItemStack
 ---@param format string? Model format ("glb" or "b3d")
----@param custom_opts? table Optional custom transform and visual overrides
+---@param custom_opts? XPlayerArmorShieldVisualOpts|table Optional custom transform and visual overrides
 ---@return ObjectRef? entity The attached visual entity or nil on failure
 function api.attach_wield_item_to_entity(parent, item_or_stack, format, custom_opts)
 	return api.visuals.attach_wield_item_to_entity(parent, item_or_stack, format, custom_opts)
@@ -1117,7 +1182,7 @@ end
 ---Resolves the composite attachment options, mesh, textures, and calibrated transforms for a shield item.
 ---@param item_or_stack string|ItemStack Shield item name or stack
 ---@param custom_opts? XPlayerArmorShieldVisualOpts Optional custom overrides
----@return table opts Resolved options table containing visual, mesh, textures, and bone transforms
+---@return XPlayerArmorResolvedShieldOpts opts Resolved options table containing visual, mesh, textures, and bone transforms
 function api.resolve_shield_visual_opts(item_or_stack, custom_opts)
 	return api.visuals.resolve_shield_visual_opts(item_or_stack, custom_opts)
 end
@@ -1209,6 +1274,43 @@ end
 ---@return SkinResolution resolution Resolved skin textures (base skin and 3D outfit layer)
 function api.get_skin_info(player)
 	return api.skins.get_skin_info(player)
+end
+
+---Builds a modern, rich, colorized tooltip for armor and shield items.
+---@param params XPlayerArmorTooltipParams Configuration options table
+---@return string tooltip Formatted tooltip string with embedded Luanti color escapes
+function api.format_armor_tooltip(params)
+	return api.utils.format_armor_tooltip(params)
+end
+
+---Builds a modern, rich, colorized tooltip for Armor Stand nodes.
+---@param is_locked boolean? Whether this is an owner-locked armor stand
+---@return string tooltip Formatted tooltip string
+function api.format_armor_stand_tooltip(is_locked)
+	return api.utils.format_armor_stand_tooltip(is_locked)
+end
+
+---Builds a modern formatted tooltip from an arbitrary armor definition table.
+---@param name string Item technical name
+---@param def XPlayerArmorItemDef Armor item definition
+---@return string? tooltip Formatted tooltip or nil
+function api.format_armor_tooltip_from_def(name, def)
+	return api.utils.format_armor_tooltip_from_def(name, def)
+end
+
+---Registers a forced alias for backwards compatibility, overriding any existing legacy definition.
+---@param legacy_name string Old or legacy item name
+---@param modern_name string Replacement modern item name
+function api.force_alias(legacy_name, modern_name)
+	return api.utils.force_alias(legacy_name, modern_name)
+end
+
+---Shallow copies a key-value table.
+---@generic T: table
+---@param t T Target table
+---@return T copy Cloned table copy
+function api.copy_table(t)
+	return api.utils.copy_table(t)
 end
 
 return api

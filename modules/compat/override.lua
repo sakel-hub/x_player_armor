@@ -169,10 +169,7 @@ function override.takeover_legacy_armor()
 				 override.captured_legacy_armor.registered_armors[":" .. clean_legacy] ~= nil)
 		local recipes = core.get_all_craft_recipes(clean_legacy)
 		local has_recipes = recipes and #recipes > 0
-		local is_registered = (core.registered_items and core.registered_items[clean_legacy] ~= nil) or
-				(core.registered_tools and core.registered_tools[clean_legacy] ~= nil) or
-				(core.registered_nodes and core.registered_nodes[clean_legacy] ~= nil) or
-				(core.registered_craftitems and core.registered_craftitems[clean_legacy] ~= nil) or
+		local is_registered = core.registered_items[clean_legacy] ~= nil or
 				in_legacy or has_recipes
 
 		if is_registered then
@@ -183,6 +180,7 @@ function override.takeover_legacy_armor()
 	end
 
 	if not override.legacy_detected then
+		override.hook_visual_triggers()
 		return
 	end
 
@@ -329,6 +327,9 @@ function override.hook_visual_triggers()
 		p_api._x_pa_set_model_wrapped = true
 		p_api.set_model = function(player, model_name)
 			orig_set_model(player, model_name)
+			if x_player_armor.b3d_wiggler then
+				x_player_armor.b3d_wiggler.ensure_player_wiggled_b3d(player)
+			end
 			schedule_restore_if_valid(player)
 		end
 	end
@@ -363,18 +364,19 @@ function override.hook_visual_triggers()
 		end
 	end
 
-	if _G.armor and not _G.armor._x_pa_wrapped then
-		_G.armor._x_pa_wrapped = true
-		local orig_armor_vis = _G.armor.update_player_visuals
-		_G.armor.update_player_visuals = function(self_or_player, maybe_player)
+	local global_armor = rawget(_G, "armor")
+	if global_armor and not global_armor._x_pa_wrapped then
+		global_armor._x_pa_wrapped = true
+		local orig_armor_vis = global_armor.update_player_visuals
+		global_armor.update_player_visuals = function(self_or_player, maybe_player)
 			if orig_armor_vis then
 				orig_armor_vis(self_or_player, maybe_player)
 			end
 			update_visuals_if_valid(self_or_player, maybe_player)
 		end
 
-		local orig_armor_set = _G.armor.set_player_armor
-		_G.armor.set_player_armor = function(self_or_player, maybe_player)
+		local orig_armor_set = global_armor.set_player_armor
+		global_armor.set_player_armor = function(self_or_player, maybe_player)
 			if orig_armor_set then
 				orig_armor_set(self_or_player, maybe_player)
 			end

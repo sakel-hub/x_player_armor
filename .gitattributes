@@ -33,6 +33,7 @@ models/*.obj text eol=lf
 # GitHub Linguist Overrides (Keeps Repository Statistics 100% Lua)
 # ==============================================================================
 *.py linguist-generated=true
+**/*.py linguist-generated=true
 scripts/** linguist-generated=true
 assets/** linguist-generated=true
 scratch/** linguist-generated=true
@@ -47,6 +48,7 @@ package-lock.json linguist-generated=true
 
 # Python tooling, cache, and generated scripts
 *.py export-ignore
+**/*.py export-ignore
 __pycache__ export-ignore
 *.py[cod] export-ignore
 /assets/scripts export-ignore

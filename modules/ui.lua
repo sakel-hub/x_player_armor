@@ -190,7 +190,7 @@ ui.SLOTS_LAYOUT = SLOTS_LAYOUT
 ---@param row_ys number[] Array of 2 Y coordinates
 ---@param slot_size number? Slot width/height (defaults to 1.0)
 ---@param inv_ref InvRef? Optional inventory reference for empty slot tooltip checks
----@param custom_slots table? Optional custom slot definitions
+---@param custom_slots XPlayerArmorSlotLayoutItem[]? Optional custom slot definitions
 ---@return string formspec
 function ui.render_slots(target, col_xs, row_ys, slot_size, inv_ref, custom_slots)
 	local size = slot_size or 1.0
@@ -252,7 +252,7 @@ function ui.render_player_hotbar(x, y, spacing)
 end
 
 ---Builds the scrollable hypertext markup aggregating armor attributes and active perks.
----@param pdef table Player armor definition
+---@param pdef XPlayerArmorPlayerDef Player armor definition
 ---@param player ObjectRef? Optional player reference for contextual resolution
 ---@return string hypertext_markup
 function ui.build_stats_hypertext(pdef, player)

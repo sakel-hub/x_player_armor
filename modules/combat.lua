@@ -141,8 +141,6 @@ combat.was_blocked = {}
 ---@param player ObjectRef
 ---@return ItemStack? shield_stack, number? slot_idx, string? mat_key
 function combat.get_equipped_shield(player)
-	if not player or not player:is_player() then return nil, nil, nil end
-
 	local name, inv = x_player_armor.get_valid_player(player)
 	if not name or not inv then return nil, nil, nil end
 
@@ -218,10 +216,6 @@ end
 ---@param player ObjectRef
 ---@return boolean is_blocking, ItemStack? shield_stack, number? slot_idx, string? mat_key
 function combat.is_blocking(player)
-	if not player or not player:is_player() then
-		return false, nil, nil, nil
-	end
-
 	local shield_stack, slot_idx, mat_key = combat.get_equipped_shield(player)
 	if not shield_stack then
 		return false, nil, nil, nil

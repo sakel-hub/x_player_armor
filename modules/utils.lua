@@ -130,7 +130,7 @@ function utils.force_alias(legacy_name, modern_name)
 end
 
 ---Builds a modern, rich, colorized tooltip for armor and shield items.
----@param params table Configuration options table
+---@param params XPlayerArmorTooltipParams Configuration options table
 ---@return string tooltip Formatted tooltip string with embedded Luanti color escapes
 function utils.format_armor_tooltip(params)
 	params = params or {}
@@ -347,7 +347,7 @@ end
 
 ---Builds a modern formatted tooltip from an arbitrary armor definition table.
 ---@param name string Item technical name
----@param def table Armor item definition
+---@param def XPlayerArmorItemDef Armor item definition
 ---@return string? tooltip Formatted tooltip or nil
 function utils.format_armor_tooltip_from_def(name, def)
 	if not def then return nil end

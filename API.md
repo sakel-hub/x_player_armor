@@ -16,6 +16,12 @@ High-performance modular player armor, shield defense, durability, and damage mi
   - [XPlayerArmorBoneOffset](#xplayerarmorboneoffset)
   - [XPlayerArmorShieldOffset](#xplayerarmorshieldoffset)
   - [XPlayerArmorShieldVisualOpts](#xplayerarmorshieldvisualopts)
+  - [XPlayerArmorResolvedShieldOpts](#xplayerarmorresolvedshieldopts)
+  - [XPlayerArmorPreviewOpts](#xplayerarmorpreviewopts)
+  - [XPlayerArmorPieceDescriptor](#xplayerarmorpiecedescriptor)
+  - [XPlayerArmorTooltipParams](#xplayerarmortooltipparams)
+  - [XPlayerArmorSlotLayoutItem](#xplayerarmorslotlayoutitem)
+  - [ToolCapabilities](#toolcapabilities)
   - [XPlayerArmorProjectileData](#xplayerarmorprojectiledata)
   - [XPlayerArmorWearColor](#xplayerarmorwearcolor)
   - [XPlayerArmorParticleOpts](#xplayerarmorparticleopts)
@@ -90,6 +96,7 @@ Supports custom 3D models, bone transforms, audio, environmental perks, physics,
 | `reciprocate_percent` | `number?` | Percentage of incoming damage reflected to attacker. Ignored if reciprocate_damage is false or nil. |
 | `wear_color` | `XPlayerArmorWearColor?` | Durability bar color gradient configuration (see Luanti doc/lua_api.md: Item definition) |
 | `shield_offset` | `XPlayerArmorShieldOffset?` | Custom shield forearm attachment transforms for glb and b3d skeletons. Ignored if element is not "shield". |
+| `shield_clearance` | `XPlayerArmorShieldOffset?` | Outward forearm offset applied to shields when this torso armor is worn. |
 | `tower_shield` | `boolean?` | Whether shield renders with tower shield model variant in preview and stand. Ignored if element is not "shield". |
 | `block_reduction` | `number?` | Frontal damage reduction fraction 0.0 to 1.0 (default: 0.20 or tiered). Ignored if element is not "shield". |
 | `block_arc` | `number?` | Custom frontal blocking arc angle in degrees (default: 44-64 deg tiered). Ignored if element is not "shield". |
@@ -179,6 +186,97 @@ Configuration options for attaching or modifying a shield visual entity.
 | `first_person` | `boolean?` | Whether shield is visible in 1st person view |
 | `bone` | `string?` | Target skeletal attachment bone (defaults to "Arm_Left") |
 | `entity_name` | `string?` | Custom Lua entity name to spawn |
+| `torso_item` | `(string\|ItemStack)?` | Equipped torso item or stack for resolving bulky sleeve shield_clearance |
+| `shield_clearance` | `XPlayerArmorShieldOffset?` | Explicit torso shield clearance delta override |
+
+### `XPlayerArmorResolvedShieldOpts`
+
+Resolved attachment options and calibrated transforms for a shield item.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `visual` | `string` | Entity visual mode ("mesh" or "wielditem") |
+| `mesh` | `string?` | 3D mesh model filename if visual is "mesh" |
+| `textures` | `string[]` | Ordered array of texture filenames |
+| `override_transform` | `boolean` | True if custom transforms are active |
+| `pos_glb` | `(Vector3\|table<string,number>)` | Position offset vector for glTF/GLB models |
+| `rot_glb` | `(Vector3\|table<string,number>)` | Euler rotation angles vector in degrees for glTF/GLB models |
+| `pos_b3d` | `(Vector3\|table<string,number>)` | Position offset vector for B3D models |
+| `rot_b3d` | `(Vector3\|table<string,number>)` | Euler rotation angles vector in degrees for B3D models |
+| `scale` | `(Vector3\|table<string,number>)` | Visual scale vector |
+| `visual_size` | `(Vector3\|table<string,number>)` | Visual scaling factor |
+
+### `XPlayerArmorPreviewOpts`
+
+Options table passed to x_player_armor.resolve_preview.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `player` | `ObjectRef?` | Target player ObjectRef |
+| `is_stand` | `boolean?` | True if resolving preview for an armor stand |
+| `base_textures` | `string[]?` | Base textures array for the character mannequin |
+
+### `XPlayerArmorPieceDescriptor`
+
+Piece descriptor describing a 3D armor model piece for dynamic glTF mesh assembly.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `piece_id` | `string` | Bone piece identifier (e.g. "head", "torso", "sleeve_l", "legs_r", "shield") |
+| `element` | `string` | Armor slot category (e.g. "head", "torso", "legs", "feet", "shield") |
+| `model_file` | `string` | 3D glTF/GLB model filename |
+| `mod_hint` | `string?` | Mod name prefix hint for model discovery |
+| `item_def` | `XPlayerArmorItemDef?` | Item definition table |
+| `item_name` | `string` | Technical item name string |
+| `content_sha1` | `string` | SHA-1 content hash of the piece model |
+
+### `XPlayerArmorTooltipParams`
+
+Configuration parameters for building rich formatted armor item tooltips.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `title` | `string?` | Item display title header |
+| `element` | `string?` | Armor slot element ("head", "torso", "legs", "feet", "shield") |
+| `material` | `string?` | Armor material key (e.g. "wood", "steel", "diamond") |
+| `level` | `number?` | Defense rating level |
+| `uses` | `number?` | Total durability uses |
+| `heal` | `number?` | Health regeneration percentage |
+| `fire` | `number?` | Fire/lava protection tier (1 to 5) |
+| `water` | `number?` | Water breathing / drowning protection level |
+| `feather` | `number?` | Fall damage feather mitigation level |
+| `is_shield` | `boolean?` | True if this item functions as a shield |
+| `is_tower` | `boolean?` | True if this shield is a reinforced tower shield |
+| `reciprocate` | `boolean?` | True if damage reciprocation (thorns) is active |
+| `speed` | `number?` | Movement speed physics modifier |
+| `jump` | `number?` | Jump height physics modifier |
+| `gravity` | `number?` | Gravity physics modifier |
+| `custom_perks` | `(string\|{...})[]?` | Array of custom perk lines |
+| `synergy_text` | `string?` | Custom set synergy description text |
+| `hint` | `string?` | Custom footer interaction hint |
+
+### `XPlayerArmorSlotLayoutItem`
+
+Layout item configuration defining an equipment slot on the armor inventory formspec.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `idx` | `number` | Inventory slot index (0-indexed for formspec list element) |
+| `lua_idx` | `number?` | 1-indexed Lua inventory slot index |
+| `icon` | `string` | Background silhouette texture icon |
+| `title` | `string` | Formspec tooltip title |
+| `desc` | `string` | Formspec tooltip description |
+
+### `ToolCapabilities`
+
+Standard Luanti tool capabilities table passed in punch callbacks.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `full_punch_interval` | `number?` | Minimum time between punches for full damage |
+| `max_drop_level` | `number?` | Maximum digging drop level |
+| `groupcaps` | `table<string,table>?` | Group capabilities definitions |
+| `damage_groups` | `table<string,number>?` | Base damage dealt per group |
 
 ### `XPlayerArmorProjectileData`
 
@@ -328,7 +426,7 @@ Receives defending player, attacking entity or player, seconds elapsed, tool cap
 attack direction vector, and raw damage points.
 
 ```lua
-type XPlayerArmorPunchCallback = fun(player: ObjectRef, hitter: ObjectRef?, time: number?, tool_capabilities: table?, dir: vector?, damage: number?)
+type XPlayerArmorPunchCallback = fun(player: ObjectRef, hitter: ObjectRef?, time: number?, caps: ToolCapabilities?, dir: vector?, damage: number?)
 ```
 
 ### `XPlayerArmorSounds`
@@ -814,14 +912,14 @@ x_player_armor.damage(player: ObjectRef, index: number, stack: ItemStack, uses: 
 Calculates armor mitigation and wear on punch.
 
 ```lua
-x_player_armor.punch(player: ObjectRef, hitter: ObjectRef?, time_from_last_punch: number?, tool_capabilities: table?, dir: vector?, damage: number?) -> nil
+x_player_armor.punch(player: ObjectRef, hitter: ObjectRef?, time_from_last_punch: number?, tool_capabilities: ToolCapabilities?, dir: vector?, damage: number?) -> nil
 ```
 
 **Parameters:**
 - `player` (`ObjectRef`) — Defending player taking the punch
 - `hitter` (`ObjectRef?`) — Attacking entity or player
 - `time_from_last_punch` (`number?`) — Seconds elapsed since previous punch
-- `tool_capabilities` (`table?`) — Tool capabilities table of the punch (see Luanti doc/lua_api.md: Tool Capabilities)
+- `tool_capabilities` (`ToolCapabilities?`) — Tool capabilities table of the punch (see Luanti doc/lua_api.md: Tool Capabilities)
 - `dir` (`vector?`) — Direction vector of the incoming attack
 - `damage` (`number?`) — Raw damage points before armor mitigation
 
@@ -1137,14 +1235,14 @@ x_player_armor.attach_shield_to_entity(parent: ObjectRef, item_or_stack: (string
 Attaches a wield item visual entity to an external entity (such as an armor stand or corpse) on Arm_Right.
 
 ```lua
-x_player_armor.attach_wield_item_to_entity(parent: ObjectRef, item_or_stack: (string|ItemStack), format: string?, custom_opts: table?) -> ObjectRef?
+x_player_armor.attach_wield_item_to_entity(parent: ObjectRef, item_or_stack: (string|ItemStack), format: string?, custom_opts: (XPlayerArmorShieldVisualOpts|table)?) -> ObjectRef?
 ```
 
 **Parameters:**
 - `parent` (`ObjectRef`) — The entity to attach the wield item to
 - `item_or_stack` (`(string|ItemStack)`) — Held item name or ItemStack
 - `format` (`string?`) — Model format ("glb" or "b3d")
-- `custom_opts` (`table?`) — Optional custom transform and visual overrides
+- `custom_opts` (`(XPlayerArmorShieldVisualOpts|table)?`) — Optional custom transform and visual overrides
 
 **Returns:**
 - `entity` (`ObjectRef?`) — The attached visual entity or nil on failure
@@ -1156,7 +1254,7 @@ x_player_armor.attach_wield_item_to_entity(parent: ObjectRef, item_or_stack: (st
 Resolves the composite attachment options, mesh, textures, and calibrated transforms for a shield item.
 
 ```lua
-x_player_armor.resolve_shield_visual_opts(item_or_stack: (string|ItemStack), custom_opts: XPlayerArmorShieldVisualOpts?) -> table
+x_player_armor.resolve_shield_visual_opts(item_or_stack: (string|ItemStack), custom_opts: XPlayerArmorShieldVisualOpts?) -> XPlayerArmorResolvedShieldOpts
 ```
 
 **Parameters:**
@@ -1164,7 +1262,7 @@ x_player_armor.resolve_shield_visual_opts(item_or_stack: (string|ItemStack), cus
 - `custom_opts` (`XPlayerArmorShieldVisualOpts?`) — Optional custom overrides
 
 **Returns:**
-- `opts` (`table`) — Resolved options table containing visual, mesh, textures, and bone transforms
+- `opts` (`XPlayerArmorResolvedShieldOpts`) — Resolved options table containing visual, mesh, textures, and bone transforms
 
 ---
 
@@ -1289,12 +1387,12 @@ In-memory single-mesh model assembler, piece transformation pipeline, preview ge
 Unified preview resolution entry point for both player formspec and in-world armor stand.
 
 ```lua
-x_player_armor.resolve_preview(armor_list: (ItemStack|table)[], opts: table?) -> string, (string|string[])
+x_player_armor.resolve_preview(armor_list: (ItemStack|string|table)[], opts: XPlayerArmorPreviewOpts?) -> string, (string|string[])
 ```
 
 **Parameters:**
-- `armor_list` (`(ItemStack|table)[]`) — Equipped items array
-- `opts` (`table?`) — Options table: { player = ObjectRef, is_stand = boolean, base_textures = string[] }
+- `armor_list` (`(ItemStack|string|table)[]`) — Equipped items array
+- `opts` (`XPlayerArmorPreviewOpts?`) — Options table: { player = ObjectRef, is_stand = boolean, base_textures = string[] }
 
 **Returns:**
 - `model_name` (`string`) — Resolved 3D model asset filename (e.g. "x_player_armor_preview.glb" or dynamic mesh)
@@ -1307,16 +1405,16 @@ x_player_armor.resolve_preview(armor_list: (ItemStack|table)[], opts: table?) ->
 Scans an armor inventory list and detects 3D mesh pieces to attach to the preview armature.
 
 ```lua
-x_player_armor.detect_custom_pieces(armor_list: (ItemStack|table)[], custom_only: boolean?) -> boolean, table[], table<string,boolean>
+x_player_armor.detect_custom_pieces(armor_list: (ItemStack|string|table)[], custom_only: boolean?) -> boolean, XPlayerArmorPieceDescriptor[], table<string,boolean>
 ```
 
 **Parameters:**
-- `armor_list` (`(ItemStack|table)[]`) — Armor inventory list
+- `armor_list` (`(ItemStack|string|table)[]`) — Armor inventory list
 - `custom_only` (`boolean?`) — If true, only detects explicitly defined custom 3D models (excluding standard fallbacks)
 
 **Returns:**
 - `has_custom` (`boolean`) — True if at least one custom piece requires dynamic assembly
-- `pieces_to_attach` (`table[]`) — Array of piece descriptors for assembler
+- `pieces_to_attach` (`XPlayerArmorPieceDescriptor[]`) — Array of piece descriptors for assembler
 - `slot_mask` (`table<string,boolean>`) — Map of covered slots
 
 ---
@@ -1326,11 +1424,11 @@ x_player_armor.detect_custom_pieces(armor_list: (ItemStack|table)[], custom_only
 Builds a spec-compliant .glb binary string combining base preview model and custom pieces in RAM.
 
 ```lua
-x_player_armor.assemble_glb(pieces_to_attach: table[]) -> string?, string[]
+x_player_armor.assemble_glb(pieces_to_attach: XPlayerArmorPieceDescriptor[]) -> string?, string[]
 ```
 
 **Parameters:**
-- `pieces_to_attach` (`table[]`) — Array of piece descriptor tables
+- `pieces_to_attach` (`XPlayerArmorPieceDescriptor[]`) — Array of piece descriptor tables
 
 **Returns:**
 - `glb_binary` (`string?`) — Assembled glTF 2.0 binary string or nil on error
@@ -1570,7 +1668,7 @@ x_player_armor.get_combat_hud_id(player: ObjectRef) -> number?
 
 ### Mod Integration & Utilities
 
-Integration helpers for optional mod environments.
+Integration helpers and formatting utilities for custom armor development.
 
 #### `x_player_armor.get_mod_api(modname)`
 
@@ -1585,6 +1683,88 @@ x_player_armor.get_mod_api(modname: string) -> table<string,any>?
 
 **Returns:**
 - `mod_api` (`table<string,any>?`) — The global table or nil if absent
+
+---
+
+#### `x_player_armor.format_armor_tooltip(params)`
+
+Builds a modern, rich, colorized tooltip for armor and shield items.
+
+```lua
+x_player_armor.format_armor_tooltip(params: XPlayerArmorTooltipParams) -> string
+```
+
+**Parameters:**
+- `params` (`XPlayerArmorTooltipParams`) — Configuration options table
+
+**Returns:**
+- `tooltip` (`string`) — Formatted tooltip string with embedded Luanti color escapes
+
+---
+
+#### `x_player_armor.format_armor_stand_tooltip(is_locked)`
+
+Builds a modern, rich, colorized tooltip for Armor Stand nodes.
+
+```lua
+x_player_armor.format_armor_stand_tooltip(is_locked: boolean?) -> string
+```
+
+**Parameters:**
+- `is_locked` (`boolean?`) — Whether this is an owner-locked armor stand
+
+**Returns:**
+- `tooltip` (`string`) — Formatted tooltip string
+
+---
+
+#### `x_player_armor.format_armor_tooltip_from_def(name, def)`
+
+Builds a modern formatted tooltip from an arbitrary armor definition table.
+
+```lua
+x_player_armor.format_armor_tooltip_from_def(name: string, def: XPlayerArmorItemDef) -> string?
+```
+
+**Parameters:**
+- `name` (`string`) — Item technical name
+- `def` (`XPlayerArmorItemDef`) — Armor item definition
+
+**Returns:**
+- `tooltip` (`string?`) — Formatted tooltip or nil
+
+---
+
+#### `x_player_armor.force_alias(legacy_name, modern_name)`
+
+Registers a forced alias for backwards compatibility, overriding any existing legacy definition.
+
+```lua
+x_player_armor.force_alias(legacy_name: string, modern_name: string) -> unknown
+```
+
+**Parameters:**
+- `legacy_name` (`string`) — Old or legacy item name
+- `modern_name` (`string`) — Replacement modern item name
+
+**Returns:**
+- (`unknown`)
+
+---
+
+#### `x_player_armor.copy_table(t)`
+
+Shallow copies a key-value table.
+
+```lua
+x_player_armor.copy_table(t: T) -> T
+```
+
+**Parameters:**
+- `t` (`T`) — Target table
+
+**Returns:**
+- `copy` (`T`) — Cloned table copy
 
 ---
 

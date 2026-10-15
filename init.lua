@@ -22,6 +22,7 @@ dofile(modpath .. "/api.lua")
 local modules = {
 	"utils",
 	"constants",
+	"b3d_wiggler",
 	"visuals",
 	"vfx",
 	"inventory",

@@ -125,6 +125,9 @@ local function get_attachment_targets(player)
 			end
 			return targets
 		end
+		if x_player_armor.b3d_wiggler then
+			x_player_armor.b3d_wiggler.ensure_player_wiggled_b3d(player)
+		end
 		table.insert(targets, {
 			parent = player,
 			observers = nil,
@@ -649,14 +652,13 @@ function visuals.verify_player_visuals(player)
 					if cur_item == "" or not left_ent or not left_ent:is_valid() then
 						needs_repair = true
 					end
-				else
-					local s_ents = ents.shield
-					if not s_ents or #s_ents == 0 or not s_ents[1] or not s_ents[1]:is_valid() then
-						needs_repair = true
-					end
 				end
 			end
 		end
+	end
+
+	if x_player_armor.b3d_wiggler then
+		x_player_armor.b3d_wiggler.ensure_player_wiggled_b3d(player)
 	end
 
 	if needs_repair then
@@ -672,6 +674,13 @@ local watchdog_registered = false
 function visuals.register_watchdog()
 	if watchdog_registered then return end
 	watchdog_registered = true
+
+	if x_player_armor.b3d_wiggler then
+		x_player_armor.b3d_wiggler.scan_and_wiggle_registered_b3d_models()
+	end
+	if x_player_armor.override and x_player_armor.override.hook_visual_triggers then
+		x_player_armor.override.hook_visual_triggers()
+	end
 
 	-- luacheck: push
 	-- luacheck: ignore 122
@@ -825,7 +834,7 @@ end
 ---Single source of truth used for both standalone entity attachment and x_player_api left-wield integration.
 ---@param item_or_stack string|ItemStack Shield item name or stack
 ---@param custom_opts? XPlayerArmorShieldVisualOpts Optional overrides
----@return table opts Resolved options table
+---@return XPlayerArmorResolvedShieldOpts opts Resolved options table
 function visuals.resolve_shield_visual_opts(item_or_stack, custom_opts)
 	local item_name = (type(item_or_stack) == "userdata" and item_or_stack:get_name())
 		or (type(item_or_stack) == "table" and item_or_stack.get_name and item_or_stack:get_name())
@@ -885,7 +894,7 @@ function visuals.resolve_shield_visual_opts(item_or_stack, custom_opts)
 			or (item_offset and item_offset.pos)
 			or (custom_opts and custom_opts.pos)
 			or b3d_trans.pos
-			or {x = -0.95, y = 4.44, z = 1.48}
+			or {x = 0.95, y = 4.44, z = 1.48}
 		rot_b3d = (custom_opts and custom_opts.rot_b3d)
 			or (item_offset and item_offset.b3d and item_offset.b3d.rot)
 			or (item_offset and item_offset.rot)
@@ -925,10 +934,19 @@ function visuals.resolve_shield_visual_opts(item_or_stack, custom_opts)
 					z = (pos_glb.z or 0) + (c_glb.z or 0),
 				}
 			end
-			local c_b3d = (clearance.b3d and clearance.b3d.pos) or clearance.pos
+			local c_b3d = (clearance.b3d and clearance.b3d.pos)
+				or (clearance.pos and {
+					x = -(clearance.pos.x or 0),
+					y = clearance.pos.y or 0,
+					z = -(clearance.pos.z or 0),
+				})
 			if c_b3d then
+				local dx = c_b3d.x or 0
+				if c_glb and (c_glb.x or 0) < 0 and dx < 0 then
+					dx = -dx
+				end
 				pos_b3d = {
-					x = (pos_b3d.x or 0) + (c_b3d.x or 0),
+					x = (pos_b3d.x or 0) + dx,
 					y = (pos_b3d.y or 0) + (c_b3d.y or 0),
 					z = (pos_b3d.z or 0) + (c_b3d.z or 0),
 				}
