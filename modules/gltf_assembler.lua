@@ -52,10 +52,10 @@ setmetatable(assembler, {
 })
 
 ---Scans an armor inventory list and detects 3D mesh pieces to attach to the preview armature.
----@param armor_list (ItemStack|table)[] Armor inventory list
+---@param armor_list (ItemStack|string|table)[] Armor inventory list
 ---@param custom_only boolean? If true, only detects explicitly defined custom 3D models (excluding standard fallbacks)
 ---@return boolean has_custom True if at least one custom piece requires dynamic assembly
----@return table[] pieces_to_attach Array of piece descriptors for assembler
+---@return XPlayerArmorPieceDescriptor[] pieces_to_attach Array of piece descriptors for assembler
 ---@return table<string, boolean> slot_mask Map of covered slots
 function assembler.detect_custom_pieces(armor_list, custom_only)
 	local pieces_to_attach = {}
@@ -136,7 +136,7 @@ function assembler.detect_custom_pieces(armor_list, custom_only)
 end
 
 ---Resolves all custom textures in order for a set of attached pieces.
----@param pieces table[] Array of piece descriptor tables
+---@param pieces XPlayerArmorPieceDescriptor[] Array of piece descriptor tables
 ---@return string[] textures List of texture filenames
 local function resolve_pieces_textures(pieces)
 	local result = {}
@@ -190,7 +190,7 @@ function assembler.resolve_base_preview_textures(armor_list, skin_info)
 end
 
 ---Retrieves or creates the assembled GLB binary and textures from RAM cache or bounded disk cache.
----@param pieces table[] Array of piece descriptor tables
+---@param pieces XPlayerArmorPieceDescriptor[] Array of piece descriptor tables
 ---@param prefix string Cache key and model filename prefix
 ---@return string model_filename, table? assembled_data
 local function get_or_assemble_glb(pieces, prefix)

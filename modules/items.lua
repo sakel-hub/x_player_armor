@@ -247,13 +247,13 @@ x_player_armor.legacy_replacements[admin_legacy] = "x_player_armor:shield_admin"
 utils.force_alias(admin_legacy, "x_player_armor:shield_admin")
 
 ---Returns the defined armor material configurations table.
----@return table<string, table> materials
+---@return table<string, XPlayerArmorMaterialDef> materials
 function items.get_materials()
 	return MATERIALS
 end
 
 ---Returns the defined armor equipment pieces configuration table.
----@return table<string, table> pieces
+---@return table<string, string[]> pieces
 function items.get_pieces()
 	return PIECES
 end

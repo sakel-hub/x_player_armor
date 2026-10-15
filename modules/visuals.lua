@@ -834,7 +834,7 @@ end
 ---Single source of truth used for both standalone entity attachment and x_player_api left-wield integration.
 ---@param item_or_stack string|ItemStack Shield item name or stack
 ---@param custom_opts? XPlayerArmorShieldVisualOpts Optional overrides
----@return table opts Resolved options table
+---@return XPlayerArmorResolvedShieldOpts opts Resolved options table
 function visuals.resolve_shield_visual_opts(item_or_stack, custom_opts)
 	local item_name = (type(item_or_stack) == "userdata" and item_or_stack:get_name())
 		or (type(item_or_stack) == "table" and item_or_stack.get_name and item_or_stack:get_name())

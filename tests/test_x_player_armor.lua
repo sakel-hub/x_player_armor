@@ -6390,6 +6390,42 @@ test("Standalone B3D Armor Attachment Rotations & B3D Wiggler Without x_player_a
 	os.remove(tmp_b3d_path)
 end)
 
+test("Public facade exposes utility methods directly on x_player_armor", function()
+	assert(type(x_player_armor.format_armor_tooltip) == "function", "x_player_armor.format_armor_tooltip must be a function")
+	assert(type(x_player_armor.format_armor_stand_tooltip) == "function", "x_player_armor.format_armor_stand_tooltip must be a function")
+	assert(type(x_player_armor.format_armor_tooltip_from_def) == "function", "x_player_armor.format_armor_tooltip_from_def must be a function")
+	assert(type(x_player_armor.force_alias) == "function", "x_player_armor.force_alias must be a function")
+	assert(type(x_player_armor.copy_table) == "function", "x_player_armor.copy_table must be a function")
+
+	-- Verify copy_table performs shallow copy
+	local orig = {a = 1, b = 2}
+	local clone = x_player_armor.copy_table(orig)
+	assert(clone.a == 1 and clone.b == 2, "copy_table must clone table data")
+	clone.a = 99
+	assert(orig.a == 1, "copy_table must create a new table without mutating original top-level fields")
+
+	-- Verify format_armor_tooltip returns string
+	local tip = x_player_armor.format_armor_tooltip({
+		title = "Steel Helmet",
+		element = "head",
+		material = "steel",
+		level = 15,
+		uses = 350,
+	})
+	assert(type(tip) == "string" and string.find(tip, "Steel Helmet") ~= nil, "format_armor_tooltip must format title")
+
+	-- Verify format_armor_stand_tooltip returns string
+	local stand_tip = x_player_armor.format_armor_stand_tooltip(false)
+	assert(type(stand_tip) == "string" and string.find(stand_tip, "Armor Stand") ~= nil, "format_armor_stand_tooltip must format title")
+
+	local locked_stand_tip = x_player_armor.format_armor_stand_tooltip(true)
+	assert(type(locked_stand_tip) == "string" and string.find(locked_stand_tip, "Locked") ~= nil, "format_armor_stand_tooltip must format locked title")
+
+	-- Verify force_alias executes without error
+	x_player_armor.force_alias("test:legacy_item", "test:modern_item")
+	assert(core.registered_aliases["test:legacy_item"] == "test:modern_item", "force_alias must register alias")
+end)
+
 print(string.format("\n=========================================="))
 print(string.format("  ALL %d UNIT TESTS PASSED SUCCESSFULLY!  ", passed))
 print(string.format("=========================================="))
