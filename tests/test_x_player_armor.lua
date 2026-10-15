@@ -6426,6 +6426,99 @@ test("Public facade exposes utility methods directly on x_player_armor", functio
 	assert(core.registered_aliases["test:legacy_item"] == "test:modern_item", "force_alias must register alias")
 end)
 
+test("character_anim compatibility and B3D wiggler bypass", function()
+	local wiggler = x_player_armor.b3d_wiggler
+	assert(wiggler ~= nil, "x_player_armor.b3d_wiggler module must be loaded")
+
+	-- Ensure clean baseline without character_anim or x_player_api
+	_G.character_anim = nil
+	local old_get_modpath = core.get_modpath
+	core.get_modpath = function(m)
+		if m == "character_anim" then return nil end
+		if old_get_modpath then return old_get_modpath(m) end
+		return nil
+	end
+	assert(wiggler.is_external_wiggler_present() == false,
+		"is_external_wiggler_present must be false when neither character_anim nor x_player_api is present")
+
+	-- 1. Verify detection via global character_anim table
+	_G.character_anim = {conf = {}}
+	assert(wiggler.is_external_wiggler_present() == true,
+		"is_external_wiggler_present must be true when _G.character_anim exists")
+
+	-- 2. Verify scan_and_wiggle_b3d_model preserves original mesh name when character_anim is active
+	local untouched = wiggler.scan_and_wiggle_b3d_model("skinsdb_3d_armor_character_5.b3d")
+	assert(untouched == "skinsdb_3d_armor_character_5.b3d",
+		"scan_and_wiggle_b3d_model must not prepend _wiggled_ when character_anim is active")
+
+	-- 3. Verify ensure_player_wiggled_b3d restores a legacy _wiggled_ mesh to clean mesh
+	local anim_player = create_mock_player("test_anim_hero")
+	anim_player:set_properties({mesh = "_wiggled_skinsdb_3d_armor_character_5.b3d"})
+	local restored_mesh = wiggler.ensure_player_wiggled_b3d(anim_player)
+	assert(restored_mesh == "skinsdb_3d_armor_character_5.b3d",
+		"ensure_player_wiggled_b3d must strip _wiggled_ and return original mesh name")
+	assert(anim_player:get_properties().mesh == "skinsdb_3d_armor_character_5.b3d",
+		"Player entity properties mesh must be restored to original mesh name without _wiggled_ prefix")
+
+	-- 4. Verify detection via core.get_modpath("character_anim") even if _G.character_anim is nil
+	_G.character_anim = nil
+	core.get_modpath = function(m)
+		if m == "character_anim" then return "/path/to/character_anim" end
+		if old_get_modpath then return old_get_modpath(m) end
+		return nil
+	end
+	assert(wiggler.is_external_wiggler_present() == true,
+		"is_external_wiggler_present must be true when core.get_modpath('character_anim') returns a path")
+	local untouched2 = wiggler.scan_and_wiggle_b3d_model("character.b3d")
+	assert(untouched2 == "character.b3d",
+		"scan_and_wiggle_b3d_model must not alter character.b3d when character_anim mod is enabled")
+
+	-- 5. Verify modlib media path registration when modlib is present during wiggling
+	core.get_modpath = old_get_modpath
+	_G.modlib = {
+		minetest = {
+			media = {
+				paths = {}
+			}
+		}
+	}
+	local write_f32 = wiggler._test.write_f32_le
+	local function u32_le(n)
+		local b1 = n % 256; n = math.floor(n / 256)
+		local b2 = n % 256; n = math.floor(n / 256)
+		local b3 = n % 256; n = math.floor(n / 256)
+		local b4 = n % 256
+		return string.char(b1, b2, b3, b4)
+	end
+	local node_header = "Body\0"
+		.. write_f32(0) .. write_f32(0) .. write_f32(0)
+		.. write_f32(1) .. write_f32(1) .. write_f32(1)
+		.. write_f32(0.0) .. write_f32(0.0) .. write_f32(1.0) .. write_f32(0.0)
+	local node_chunk = "NODE" .. u32_le(#node_header) .. node_header
+	local bb3d_payload = u32_le(1) .. node_chunk
+	local synthetic_b3d = "BB3D" .. u32_le(#bb3d_payload) .. bb3d_payload
+
+	-- Create dummy b3d file to wiggle
+	local tmp_dir = core.get_worldpath()
+	local dummy_b3d = tmp_dir .. "/dummy_test_media.b3d"
+	local f = io.open(dummy_b3d, "wb")
+	f:write(synthetic_b3d)
+	f:close()
+
+	wiggler.processed_models["dummy_test_media.b3d"] = nil
+	wiggler.added_dynamic_media["_wiggled_dummy_test_media.b3d"] = nil
+	local wiggled_dummy = wiggler.scan_and_wiggle_b3d_model("dummy_test_media.b3d", dummy_b3d)
+	assert(wiggled_dummy == "_wiggled_dummy_test_media.b3d", "Dummy B3D model should be wiggled")
+	assert(_G.modlib.minetest.media.paths["_wiggled_dummy_test_media.b3d"] ~= nil,
+		"modlib.minetest.media.paths must record path to wiggled model file")
+
+	-- Cleanup
+	_G.modlib = nil
+	_G.character_anim = nil
+	core.get_modpath = old_get_modpath
+	os.remove(dummy_b3d)
+end)
+
 print(string.format("\n=========================================="))
 print(string.format("  ALL %d UNIT TESTS PASSED SUCCESSFULLY!  ", passed))
 print(string.format("=========================================="))

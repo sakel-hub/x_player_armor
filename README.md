@@ -238,6 +238,7 @@ For complete class definitions, parameter types, callbacks, and subsystem method
 - **Hard Dependencies**: **None** (zero hard dependencies — runs 100% standalone in any Luanti game or arena server)
 - **Optional Integrations**:
   - `x_player_api` (Optional: visual proxy binding for dual GLB/B3D rigs, advanced locomotion sync, off-hand shield wielding, and equip montages)
+  - `character_anim` / `modlib` (Optional: dynamic head, body, and arm animations with built-in B3D model workaround)
   - `player_api` (Optional: basic player model animation fallback)
   - `default` (Optional: crafting recipes for cactus, steel, bronze, diamond, and gold gear)
   - `sfinv` / `unified_inventory` / `i3` (Optional: inventory tabs and interactive 3D armor preview)

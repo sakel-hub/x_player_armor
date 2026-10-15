@@ -306,6 +306,22 @@ local function alias_in_player_api(orig_name, wiggled_name)
 	end
 end
 
+---Checks whether an external subsystem (x_player_api or character_anim) is actively managing B3D models.
+---When active, x_player_armor delegates model wiggling to avoid duplicate media registration or mod conflicts.
+---@return boolean
+function b3d_wiggler.is_external_wiggler_present()
+	if x_player_armor.compat_x_player_api and x_player_armor.compat_x_player_api.is_present() then
+		return true
+	end
+	if core.get_modpath and (core.get_modpath("character_anim") or core.get_modpath("x_player_api")) then
+		return true
+	end
+	if rawget(_G, "character_anim") ~= nil then
+		return true
+	end
+	return false
+end
+
 ---Scans and wiggles a B3D model file, registering dynamic media when needed.
 ---@param mesh_name string The original mesh filename (e.g. "character.b3d")
 ---@param full_path? string Optional absolute path to the mesh file
@@ -319,9 +335,9 @@ function b3d_wiggler.scan_and_wiggle_b3d_model(mesh_name, full_path)
 		return mesh_name
 	end
 
-	-- If x_player_api is active, delegate to its wiggler to avoid duplicate media registration
-	if x_player_armor.compat_x_player_api and x_player_armor.compat_x_player_api.is_present() then
-		local x_api = x_player_armor.get_mod_api("x_player_api")
+	-- If an external wiggler/animation system is active, delegate to avoid duplicate media registration or crashes
+	if b3d_wiggler.is_external_wiggler_present() then
+		local x_api = x_player_armor.get_mod_api and x_player_armor.get_mod_api("x_player_api")
 		if x_api and x_api.scan_and_wiggle_b3d_model then
 			return x_api.scan_and_wiggle_b3d_model(mesh_name, full_path)
 		end
@@ -373,6 +389,13 @@ function b3d_wiggler.scan_and_wiggle_b3d_model(mesh_name, full_path)
 						out_file:write(wiggled_data)
 						out_file:close()
 						out_path = candidate_path
+
+						-- Register in modlib media paths if modlib is loaded to avoid missing media assertions
+						local modlib_global = rawget(_G, "modlib")
+						if modlib_global and modlib_global.minetest and modlib_global.minetest.media
+								and modlib_global.minetest.media.paths then
+							modlib_global.minetest.media.paths[target_name] = candidate_path
+						end
 					end
 				end
 			end
@@ -421,7 +444,7 @@ function b3d_wiggler.scan_and_wiggle_registered_b3d_models()
 		end)
 	end
 
-	if x_player_armor.compat_x_player_api and x_player_armor.compat_x_player_api.is_present() then
+	if b3d_wiggler.is_external_wiggler_present() then
 		return
 	end
 
@@ -449,6 +472,7 @@ function b3d_wiggler.scan_and_wiggle_registered_b3d_models()
 end
 
 ---Ensures a player using a B3D model without x_player_api has the wiggled mesh applied.
+---When x_player_api or character_anim is active, delegates bone wiggling and ensures any legacy _wiggled_ prefix is cleaned.
 ---@param player ObjectRef
 ---@return string|nil active_mesh
 function b3d_wiggler.ensure_player_wiggled_b3d(player)
@@ -458,8 +482,18 @@ function b3d_wiggler.ensure_player_wiggled_b3d(player)
 	if player.is_valid and not player:is_valid() then
 		return nil
 	end
-	if x_player_armor.compat_x_player_api and x_player_armor.compat_x_player_api.is_present() then
-		return nil
+	if b3d_wiggler.is_external_wiggler_present() then
+		-- If player mesh currently has _wiggled_ prefix from an earlier session without character_anim, restore clean mesh
+		local props = player.get_properties and player:get_properties()
+		local mesh = props and props.mesh
+		if mesh and mesh:find("^_wiggled_") then
+			local original_mesh = mesh:gsub("^_wiggled_", "")
+			if player.set_properties then
+				player:set_properties({mesh = original_mesh})
+			end
+			return original_mesh
+		end
+		return mesh
 	end
 
 	local props = player.get_properties and player:get_properties()
