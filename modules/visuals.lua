@@ -894,7 +894,7 @@ function visuals.resolve_shield_visual_opts(item_or_stack, custom_opts)
 			or (item_offset and item_offset.pos)
 			or (custom_opts and custom_opts.pos)
 			or b3d_trans.pos
-			or {x = -0.95, y = 4.44, z = 1.48}
+			or {x = 0.95, y = 4.44, z = 1.48}
 		rot_b3d = (custom_opts and custom_opts.rot_b3d)
 			or (item_offset and item_offset.b3d and item_offset.b3d.rot)
 			or (item_offset and item_offset.rot)
@@ -934,10 +934,19 @@ function visuals.resolve_shield_visual_opts(item_or_stack, custom_opts)
 					z = (pos_glb.z or 0) + (c_glb.z or 0),
 				}
 			end
-			local c_b3d = (clearance.b3d and clearance.b3d.pos) or clearance.pos
+			local c_b3d = (clearance.b3d and clearance.b3d.pos)
+				or (clearance.pos and {
+					x = -(clearance.pos.x or 0),
+					y = clearance.pos.y or 0,
+					z = -(clearance.pos.z or 0),
+				})
 			if c_b3d then
+				local dx = c_b3d.x or 0
+				if c_glb and (c_glb.x or 0) < 0 and dx < 0 then
+					dx = -dx
+				end
 				pos_b3d = {
-					x = (pos_b3d.x or 0) + (c_b3d.x or 0),
+					x = (pos_b3d.x or 0) + dx,
 					y = (pos_b3d.y or 0) + (c_b3d.y or 0),
 					z = (pos_b3d.z or 0) + (c_b3d.z or 0),
 				}

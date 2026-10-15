@@ -162,9 +162,9 @@ constants.ATTACH_TRANSFORMS = {
 		feet_r = {bone = "Leg_Right", model = constants.MODELS.feet_r,
 			pos = {x = 0, y = 0, z = 0}, rot = {x = 180, y = 180, z = 0}, scale = {x = 1, y = 1, z = 1}},
 		shield = {bone = "Arm_Left", model = constants.MODELS.shield,
-			pos = {x = -0.95, y = 4.44, z = 1.48}, rot = {x = -171.4, y = -109.5, z = -1.7}, scale = {x = 1, y = 1, z = 1}},
+			pos = {x = 0.95, y = 4.44, z = 1.48}, rot = {x = -171.4, y = -109.5, z = -1.7}, scale = {x = 1, y = 1, z = 1}},
 		shield_tower = {bone = "Arm_Left", model = constants.MODELS.shield_tower,
-			pos = {x = -0.95, y = 4.44, z = 1.48}, rot = {x = -171.4, y = -109.5, z = -1.7}, scale = {x = 1, y = 1, z = 1}},
+			pos = {x = 0.95, y = 4.44, z = 1.48}, rot = {x = -171.4, y = -109.5, z = -1.7}, scale = {x = 1, y = 1, z = 1}},
 	},
 	skinsdb_b3d = {
 		head = {bone = "Head", model = constants.MODELS.head, pos = {x = 0, y = 0, z = 0}, rot = {x = 0, y = 180, z = 0},
@@ -184,9 +184,9 @@ constants.ATTACH_TRANSFORMS = {
 		feet_r = {bone = "Leg_Right", model = constants.MODELS.feet_r, pos = {x = 0, y = -0.55, z = 0}, rot = {x = 180, y = 180, z = 0},
 			scale = {x = 1.14, y = 1.20, z = 1.14}},
 		shield = {bone = "Arm_Left", model = constants.MODELS.shield,
-			pos = {x = -0.95, y = 4.44, z = 1.48}, rot = {x = -171.4, y = -109.5, z = -1.7}, scale = {x = 1, y = 1, z = 1}},
+			pos = {x = 0.95, y = 4.44, z = 1.48}, rot = {x = -171.4, y = -109.5, z = -1.7}, scale = {x = 1, y = 1, z = 1}},
 		shield_tower = {bone = "Arm_Left", model = constants.MODELS.shield_tower,
-			pos = {x = -0.95, y = 4.44, z = 1.48}, rot = {x = -171.4, y = -109.5, z = -1.7}, scale = {x = 1, y = 1, z = 1}},
+			pos = {x = 0.95, y = 4.44, z = 1.48}, rot = {x = -171.4, y = -109.5, z = -1.7}, scale = {x = 1, y = 1, z = 1}},
 	},
 	skinsdb_glb = {
 		head = {bone = "Head", model = constants.MODELS.head, pos = {x = 0, y = 0, z = 0}, rot = {x = 0, y = 0, z = 0},
@@ -307,7 +307,7 @@ constants.SHIELD_OFFSET = {
 		scale = {x = 1.0, y = 1.0, z = 1.0},
 	},
 	b3d = {
-		pos = {x = -0.95, y = 4.44, z = 1.48},
+		pos = {x = 0.95, y = 4.44, z = 1.48},
 		rot = {x = -171.4, y = -109.5, z = -1.7},
 		scale = {x = 1.0, y = 1.0, z = 1.0},
 	},

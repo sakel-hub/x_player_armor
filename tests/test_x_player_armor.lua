@@ -1323,7 +1323,7 @@ test("Dual-Format Armor Attachments & Visuals Reconciliation", function()
 	assert(b3d.legs_l.rot.x == 180 and b3d.legs_l.rot.y == 180 and b3d.legs_l.rot.z == 0, "B3D legs_l rot must be (180, 180, 0)")
 	assert(b3d.feet_l.rot.x == 180 and b3d.feet_l.rot.y == 180 and b3d.feet_l.rot.z == 0, "B3D feet_l rot must be (180, 180, 0)")
 	assert(b3d.shield.rot.x == -171.4 and b3d.shield.rot.y == -109.5 and b3d.shield.rot.z == -1.7, "B3D shield rot must be (-171.4, -109.5, -1.7)")
-	assert(b3d.shield.pos.x == -0.95 and b3d.shield.pos.y == 4.44 and b3d.shield.pos.z == 1.48, "B3D shield pos must be (-0.95, 4.44, 1.48)")
+	assert(b3d.shield.pos.x == 0.95 and b3d.shield.pos.y == 4.44 and b3d.shield.pos.z == 1.48, "B3D shield pos must be (0.95, 4.44, 1.48)")
 
 	-- Test Visuals update on native B3D player
 	local hero = create_mock_player("visual_tester")
@@ -2202,8 +2202,8 @@ test("Shield Left-Hand Attachment via x_player_api Subsystem", function()
 		"opts.pos_glb must match calibrated SHIELD_OFFSET (-0.95, 4.44, -1.48)")
 	assert(record.opts.rot_glb ~= nil and record.opts.rot_glb.x == -171.4 and record.opts.rot_glb.y == 70.5 and record.opts.rot_glb.z == -1.7,
 		"opts.rot_glb must match calibrated SHIELD_OFFSET (-171.4, 70.5, -1.7)")
-	assert(record.opts.pos_b3d ~= nil and record.opts.pos_b3d.x == -0.95 and record.opts.pos_b3d.y == 4.44 and record.opts.pos_b3d.z == 1.48,
-		"opts.pos_b3d must match calibrated SHIELD_OFFSET (-0.95, 4.44, 1.48)")
+	assert(record.opts.pos_b3d ~= nil and record.opts.pos_b3d.x == 0.95 and record.opts.pos_b3d.y == 4.44 and record.opts.pos_b3d.z == 1.48,
+		"opts.pos_b3d must match calibrated SHIELD_OFFSET (0.95, 4.44, 1.48)")
 	assert(record.opts.rot_b3d ~= nil and record.opts.rot_b3d.x == -171.4 and record.opts.rot_b3d.y == -109.5 and record.opts.rot_b3d.z == -1.7,
 		"opts.rot_b3d must match calibrated SHIELD_OFFSET (-171.4, -109.5, -1.7)")
 
@@ -5442,8 +5442,8 @@ test("Shield Visual Attachment to External Entities (attach_shield_to_entity)", 
 	assert(b3d_shield ~= nil and b3d_shield:is_valid(), "B3D attach_shield_to_entity must return valid shield entity")
 	local _, bone_b3d, pos_b3d, rot_b3d = b3d_shield:get_attach()
 	assert(bone_b3d == "Arm_Left", "B3D shield must be attached to Arm_Left")
-	assert(math.abs(pos_b3d.x - (-0.95)) < 0.01 and math.abs(pos_b3d.y - 4.44) < 0.01 and math.abs(pos_b3d.z - 1.48) < 0.01,
-		"B3D standard shield must use calibrated SHIELD_OFFSET (-0.95, 4.44, 1.48)")
+	assert(math.abs(pos_b3d.x - 0.95) < 0.01 and math.abs(pos_b3d.y - 4.44) < 0.01 and math.abs(pos_b3d.z - 1.48) < 0.01,
+		"B3D standard shield must use calibrated SHIELD_OFFSET (0.95, 4.44, 1.48)")
 	assert(math.abs(rot_b3d.x - (-171.4)) < 0.01 and math.abs(rot_b3d.y - (-109.5)) < 0.01 and math.abs(rot_b3d.z - (-1.7)) < 0.01,
 		"B3D standard shield must use calibrated SHIELD_OFFSET (-171.4, -109.5, -1.7)")
 	b3d_shield:remove()
@@ -5676,8 +5676,8 @@ test("Shield Visual Transform Calibration & DRY Resolution (resolve_shield_visua
 		"pos_glb must be calibrated (-0.95, 4.44, -1.48)")
 	assert(opts_std.rot_glb and opts_std.rot_glb.x == -171.4 and opts_std.rot_glb.y == 70.5 and opts_std.rot_glb.z == -1.7,
 		"rot_glb must be calibrated (-171.4, 70.5, -1.7)")
-	assert(opts_std.pos_b3d and opts_std.pos_b3d.x == -0.95 and opts_std.pos_b3d.y == 4.44 and opts_std.pos_b3d.z == 1.48,
-		"pos_b3d must be calibrated (-0.95, 4.44, 1.48)")
+	assert(opts_std.pos_b3d and opts_std.pos_b3d.x == 0.95 and opts_std.pos_b3d.y == 4.44 and opts_std.pos_b3d.z == 1.48,
+		"pos_b3d must be calibrated (0.95, 4.44, 1.48)")
 	assert(opts_std.rot_b3d and opts_std.rot_b3d.x == -171.4 and opts_std.rot_b3d.y == -109.5 and opts_std.rot_b3d.z == -1.7,
 		"rot_b3d must be calibrated (-171.4, -109.5, -1.7)")
 
@@ -6139,8 +6139,8 @@ test("Bulky Torso Armor Shield Clearance: Dynamic Forearm Offset Across Player, 
 	})
 	assert(math.abs(bulky_opts.pos_glb.x - (-1.85)) < 1e-4 and math.abs(bulky_opts.pos_glb.z - (-1.80)) < 1e-4,
 		"With bulky torso, shield GLB pos must be offset by {-0.90, 0, -0.32} to {-1.85, 4.44, -1.80}")
-	assert(math.abs(bulky_opts.pos_b3d.x - (-1.85)) < 1e-4 and math.abs(bulky_opts.pos_b3d.z - 1.80) < 1e-4,
-		"With bulky torso, shield B3D pos must be offset by {-0.90, 0, 0.32} to {-1.85, 4.44, 1.80}")
+	assert(math.abs(bulky_opts.pos_b3d.x - 1.85) < 1e-4 and math.abs(bulky_opts.pos_b3d.z - 1.80) < 1e-4,
+		"With bulky torso, shield B3D pos must be offset by {0.90, 0, 0.32} to {1.85, 4.44, 1.80}")
 
 	-- Verify constants.SHIELD_OFFSET was not mutated in-place
 	assert(x_player_armor.constants.SHIELD_OFFSET.glb.pos.x == -0.95,
