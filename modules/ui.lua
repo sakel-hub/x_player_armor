@@ -347,6 +347,21 @@ function ui.build_stats_hypertext(pdef, player)
 			color = "#f1e05a",
 			text = S("★ Set Bonus: +10% Defense"),
 		})
+		if type(pdef.set_perks) == "table" then
+			for _, sp in ipairs(pdef.set_perks) do
+				if type(sp) == "string" and sp ~= "" then
+					table.insert(perks, {
+						color = "#58a6ff",
+						text = sp,
+					})
+				elseif type(sp) == "table" and sp.text and sp.text ~= "" then
+					table.insert(perks, {
+						color = sp.color or "#58a6ff",
+						text = sp.text,
+					})
+				end
+			end
+		end
 	end
 	if heal > 0 then
 		table.insert(perks, {

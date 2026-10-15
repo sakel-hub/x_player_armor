@@ -453,8 +453,12 @@ function combat.try_deflect_projectile(player, proj_obj, hit_pos, flight_dir, _p
 	end
 
 	-- Tier 2 Asymmetric Guard Cone Bias check
+	local shield_def = shield_stack and shield_stack:get_definition()
+	if shield_def and shield_def.deflect_projectiles == false then
+		return false
+	end
 	local shield_props = constants.SHIELD_TIER_PROPERTIES[mat_key] or {}
-	local arc = shield_props.arc or constants.BLOCK_CONE_ANGLE or 52
+	local arc = (shield_def and shield_def.block_arc) or shield_props.arc or constants.BLOCK_CONE_ANGLE or 52
 	local bias = shield_props.bias or constants.BLOCK_ASYMMETRIC_BIAS or 22
 	if not combat.is_facing_attack(player, flight_dir, arc, bias) then
 		return false
@@ -525,7 +529,6 @@ function combat.try_deflect_projectile(player, proj_obj, hit_pos, flight_dir, _p
 	})
 
 	-- Audio parry feedback and metallic sparks at exact shield contact position
-	local shield_def = shield_stack and shield_stack:get_definition()
 	local block_snd = (shield_def and (shield_def.sound_block or (shield_def.sounds and shield_def.sounds.block))) or constants.SOUNDS.shield_block
 	play_sound(shield_pos, block_snd, 0.9)
 	combat.spawn_shield_block_particles(shield_pos, player)
@@ -555,6 +558,8 @@ function combat.handle_punch(player, hitter, time_from_last_punch, tool_capabili
 	if not player or not player:is_player() then return end
 	if player:get_hp() <= 0 then return end
 	if core.settings:get_bool("enable_damage") == false then return end
+	local xmc = rawget(_G, "x_mob_core")
+	if xmc and xmc.is_secondary_punch and xmc.is_secondary_punch() then return end
 
 	local pos = player:get_pos()
 	if hitter and hitter:is_player() then
@@ -623,7 +628,7 @@ function combat.handle_punch(player, hitter, time_from_last_punch, tool_capabili
 	local is_blocked = false
 	if is_blocking and dir then
 		local shield_props = constants.SHIELD_TIER_PROPERTIES[shield_mat] or {}
-		local arc = shield_props.arc or constants.BLOCK_CONE_ANGLE or 52
+		local arc = (shield_def and shield_def.block_arc) or shield_props.arc or constants.BLOCK_CONE_ANGLE or 52
 		local bias = shield_props.bias or constants.BLOCK_ASYMMETRIC_BIAS or 22
 		if combat.is_facing_attack(player, dir, arc, bias) then
 			is_blocked = true
@@ -716,15 +721,16 @@ core.register_on_player_hpchange(function(player, hp_change, reason)
 
 	-- Active shield blocking damage mitigation (e.g. 10% - 25% reduction based on shield tier)
 	if reason.type == "punch" and hp_change < 0 then
-		local is_blocking, _, _, mat_key = x_player_armor.is_blocking(player)
+		local is_blocking, shield_stack, _, mat_key = x_player_armor.is_blocking(player)
 		if is_blocking then
 			local attack_dir = combat.get_attack_direction(player, reason)
 			if attack_dir then
+				local shield_def = shield_stack and shield_stack:get_definition()
 				local shield_props = constants.SHIELD_TIER_PROPERTIES[mat_key] or {}
-				local arc = shield_props.arc or constants.BLOCK_CONE_ANGLE or 52
+				local arc = (shield_def and shield_def.block_arc) or shield_props.arc or constants.BLOCK_CONE_ANGLE or 52
 				local bias = shield_props.bias or constants.BLOCK_ASYMMETRIC_BIAS or 22
 				if combat.is_facing_attack(player, attack_dir, arc, bias) then
-					local reduction = shield_props.reduction or constants.BLOCK_DEFAULT_REDUCTION or 0.20
+					local reduction = (shield_def and shield_def.block_reduction) or shield_props.reduction or constants.BLOCK_DEFAULT_REDUCTION or 0.20
 					local blocked_amount = math.floor(-hp_change * reduction)
 					if blocked_amount > 0 then
 						hp_change = hp_change + blocked_amount

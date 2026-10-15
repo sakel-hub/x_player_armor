@@ -23,6 +23,9 @@ function effects.update_player_armor(player)
 	local gravity_mod = 1.0
 	local count = 0
 	local materials_worn = {}
+	local body_materials_worn = {}
+	local material_set_perks = {}
+	local is_admin_armor = false
 	local has_shield = false
 	local has_reciprocate = false
 
@@ -41,8 +44,9 @@ function effects.update_player_armor(player)
 			if def and def.groups then
 				count = count + 1
 				local groups = def.groups
+				local is_shield_item = (groups.armor_shield or 0) > 0 or (groups.shield or 0) > 0 or def.element == "shield"
 
-				if (groups.armor_shield or 0) > 0 or (groups.shield or 0) > 0 then
+				if is_shield_item then
 					has_shield = true
 				end
 				if def.reciprocate_damage == true or def.thorns == true or (type(def.thorns) == "number" and def.thorns > 0) then
@@ -64,6 +68,9 @@ function effects.update_player_armor(player)
 						end
 					end
 				end
+				if lvl >= 100 or (groups.armor_admin and groups.armor_admin > 0) then
+					is_admin_armor = true
+				end
 				total_level = total_level + lvl
 
 				-- Dynamic attributes (with legacy top-level def fallback)
@@ -83,9 +90,24 @@ function effects.update_player_armor(player)
 				jump_mod = jump_mod + (groups.physics_jump or def.physics_jump or def.jump or 0)
 				gravity_mod = gravity_mod + (groups.physics_gravity or def.physics_gravity or def.gravity or 0)
 
-				local mat = utils.get_item_material(stack:get_name())
+				local item_name = stack:get_name()
+				local mat = utils.get_item_material(item_name)
 				if mat then
 					materials_worn[mat] = (materials_worn[mat] or 0) + 1
+					if not is_shield_item then
+						body_materials_worn[mat] = (body_materials_worn[mat] or 0) + 1
+					end
+					if mat == "admin" then
+						is_admin_armor = true
+					end
+					if not material_set_perks[mat] then
+						local reg_def = x_player_armor.registered_armors and x_player_armor.registered_armors[item_name]
+						local perks = def.set_perks or def.armor_set_perks
+							or (reg_def and (reg_def.set_perks or reg_def.armor_set_perks))
+						if type(perks) == "table" and #perks > 0 then
+							material_set_perks[mat] = perks
+						end
+					end
 				end
 			end
 		end
@@ -96,12 +118,16 @@ function effects.update_player_armor(player)
 	local total_water = total_attrs.water or 0
 	local total_feather = total_attrs.feather or 0
 
-	-- Full-set bonus check (at least 4 matching pieces)
+	-- Full-set bonus check (at least 4 matching pieces; custom set_perks require 4 non-shield body pieces)
 	local has_set_bonus = false
+	local active_set_perks = nil
 	if constants.SET_BONUS then
-		for _, mat_count in pairs(materials_worn) do
+		for mat, mat_count in pairs(materials_worn) do
 			if mat_count >= 4 then
 				has_set_bonus = true
+				if (body_materials_worn[mat] or 0) >= 4 then
+					active_set_perks = material_set_perks[mat]
+				end
 				break
 			end
 		end
@@ -109,6 +135,11 @@ function effects.update_player_armor(player)
 
 	if has_set_bonus then
 		total_level = math.floor(total_level * 1.10)
+	end
+
+	-- Cap non-admin total armor defense at 90% so 4-piece + shield cannot grant 100% immortality
+	if not is_admin_armor and total_level > 90 then
+		total_level = 90
 	end
 
 	-- Apply server multipliers
@@ -133,6 +164,7 @@ function effects.update_player_armor(player)
 	player_def.jump = jump_mod
 	player_def.gravity = gravity_mod
 	player_def.set_bonus = has_set_bonus
+	player_def.set_perks = active_set_perks
 	player_def.has_shield = has_shield
 	player_def.has_reciprocate = has_reciprocate
 

@@ -523,6 +523,22 @@ function api.register_armor(name, def)
 	if material and material ~= "" then
 		def.groups["armor_material_" .. material] = 1
 		def.material = material
+		if def.element == "shield" and (def.block_reduction or def.block_arc)
+				and constants.SHIELD_TIER_PROPERTIES and not constants.SHIELD_TIER_PROPERTIES[material] then
+			constants.SHIELD_TIER_PROPERTIES[material] = {
+				reduction = def.block_reduction or constants.BLOCK_DEFAULT_REDUCTION or 0.20,
+				restitution = constants.BLOCK_RESTITUTION or 0.50,
+				arc = def.block_arc or constants.BLOCK_CONE_ANGLE or 52,
+				recoil_mult = 0.8,
+			}
+		end
+	end
+
+	-- Normalize optional full-set passive ability descriptions for ACTIVE PERKS UI
+	local set_perks = def.set_perks or def.armor_set_perks
+	if type(set_perks) == "table" and #set_perks > 0 then
+		def.set_perks = set_perks
+		def.armor_set_perks = set_perks
 	end
 
 	-- Normalize player physics modifiers (speed, jump, gravity)
