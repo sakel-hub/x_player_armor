@@ -636,8 +636,6 @@ function stand.swap_armor(pos, player, is_locked)
 	-- Update player armor state, stats, visuals and active effects
 	x_player_armor.inventory.save_inventory(player, pinv)
 	x_player_armor.set_player_armor(player)
-	x_player_armor.update_player_visuals(player)
-	x_player_armor.run_callbacks("on_update", player)
 	x_player_armor.ui.refresh_player_formspec(player)
 
 	-- Update in-world mannequin visual

@@ -718,8 +718,6 @@ function api.remove_all(player)
 	end
 	api.inventory.save_inventory(player, inv)
 	api.set_player_armor(player)
-	api.update_player_visuals(player)
-	api.run_callbacks("on_update", player)
 	api.refresh_player_formspec(player)
 end
 

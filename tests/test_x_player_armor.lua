@@ -944,6 +944,7 @@ local function create_mock_player(name)
 	function player:get_breath() return self.breath end
 	function player:set_breath(val) self.breath = val end
 	function player:set_armor_groups(groups) self.armor_groups = groups end
+	function player:get_armor_groups() return self.armor_groups end
 	function player:set_physics_override(phys) self.physics = phys end
 	function player:get_physics_override() return self.physics end
 	player.properties = {textures = {"x_player_armor_character.png"}, mesh = "character.b3d"}
@@ -6011,6 +6012,83 @@ test("glTF Assembler: Pipeline Consistency, PREVIEW_SLOTS, and Zero-Wield Fallba
 	assert(media_mod.player_ready_media[dummy_file] == nil, "prune_cache must clear player_ready_media for pruned file")
 	assert(media_mod.cache_index[dummy_file] == nil, "prune_cache must clear cache_index for pruned file")
 
+	-- 5. Corpse armor/shield state hygiene & deathstats integration
+	local old_drop = constants_mod.DROP_ON_DEATH
+	constants_mod.DROP_ON_DEATH = false
+	local corpse_hero = create_mock_player("corpse_unequip_hero")
+	x_player_armor.inventory.init_player_inventory(corpse_hero)
+	x_player_armor.equip(corpse_hero, ItemStack("x_player_armor:helmet_diamond"))
+	x_player_armor.equip(corpse_hero, ItemStack("x_player_armor:shield_diamond"))
+	assert(_G.armor.textures["corpse_unequip_hero"].shield == "x_player_armor_diamond.png",
+		"armor.textures[name].shield must reflect equipped diamond shield")
+
+	-- Simulate deathstats setting immortal=1 and zero-speed physics on dead player before handle_player_death
+	corpse_hero:set_armor_groups({ immortal = 1, fall_damage_add_percent = -100 })
+	corpse_hero:set_physics_override({ speed = 0, jump = 0, gravity = 0 })
+	_G.deathstats = {
+		player_camera_data = {
+			corpse_unequip_hero = {
+				old_armor_groups = { fleshy = 75 },
+				old_physics_override = { speed = 1, jump = 1, gravity = 1 },
+			},
+		},
+	}
+
+	x_player_armor.inventory.handle_player_death(corpse_hero)
+	assert(x_player_armor.visuals.last_death_armor["corpse_unequip_hero"] ~= nil and
+		#x_player_armor.visuals.last_death_armor["corpse_unequip_hero"] == 2,
+		"handle_player_death must snapshot worn armor")
+	assert(corpse_hero:get_armor_groups().immortal == 1,
+		"handle_player_death with DROP_ON_DEATH=false must not overwrite dead player's immortal=1 armor group")
+	assert(corpse_hero:get_physics_override().speed == 0,
+		"handle_player_death with DROP_ON_DEATH=false must not overwrite dead player's zero physics override")
+
+	-- Also verify that when DROP_ON_DEATH=true while deathstats camera is active,
+	-- effects.update_player_armor updates deathstats.old_armor_groups without clobbering immortal=1
+	constants_mod.DROP_ON_DEATH = true
+	x_player_armor.inventory.handle_player_death(corpse_hero)
+	assert(corpse_hero:get_armor_groups().immortal == 1,
+		"handle_player_death with DROP_ON_DEATH=true must preserve dead player's active immortal=1 group while in deathstats camera")
+	assert(_G.deathstats.player_camera_data.corpse_unequip_hero.old_armor_groups.fleshy == 100,
+		"effects.update_player_armor must update deathstats old_armor_groups to reflect dropped armor")
+	_G.deathstats = nil
+	constants_mod.DROP_ON_DEATH = false
+
+	-- Re-equip and unequip all armor after respawn
+	x_player_armor.equip(corpse_hero, ItemStack("x_player_armor:helmet_diamond"))
+	x_player_armor.equip(corpse_hero, ItemStack("x_player_armor:shield_diamond"))
+	x_player_armor.unequip(corpse_hero, "head")
+	x_player_armor.unequip(corpse_hero, "shield")
+	assert(x_player_armor.visuals.last_death_armor["corpse_unequip_hero"] == nil,
+		"Unequipping armor must clear stale last_death_armor snapshot")
+	assert(_G.armor.textures["corpse_unequip_hero"].shield == "blank.png",
+		"armor.textures[name].shield must dynamically update to blank.png when shield is unequipped")
+
+	local mock_corpse_parent = {
+		pos = { x = 0, y = 0, z = 0 },
+		props = { mesh = "character.glb" },
+		get_pos = function(self) return self.pos end,
+		get_properties = function(self) return self.props end,
+		is_valid = function(self) return true end,
+	}
+	-- Even if last_death_armor had a stale entry while DROP_ON_DEATH is false, live empty inventory takes precedence
+	x_player_armor.visuals.last_death_armor["corpse_unequip_hero"] = { ItemStack("x_player_armor:helmet_diamond") }
+	local ents = x_player_armor.attach_armor_to_entity(mock_corpse_parent, corpse_hero, "glb")
+	assert(#ents == 0, "attach_armor_to_entity must not attach stale last_death_armor when live inventory is empty and not dropped")
+	x_player_armor.visuals.last_death_armor["corpse_unequip_hero"] = nil
+
+	-- 6. Verify verify_player_visuals heals hidden (is_visible=false / visual_size=0) armor entities on living player
+	x_player_armor.equip(corpse_hero, ItemStack("x_player_armor:helmet_diamond"))
+	local head_ents = x_player_armor.visuals.player_entities["corpse_unequip_hero"]
+		and x_player_armor.visuals.player_entities["corpse_unequip_hero"].head
+	assert(head_ents and #head_ents >= 1, "Equipped helmet must spawn visual entity")
+	head_ents[1]:set_properties({ is_visible = false, visual_size = { x = 0, y = 0, z = 0 } })
+	local repaired = x_player_armor.verify_player_visuals(corpse_hero)
+	assert(repaired == true, "verify_player_visuals must detect and repair hidden armor entity on living player")
+	local healed_ents = x_player_armor.visuals.player_entities["corpse_unequip_hero"].head
+	assert(healed_ents[1]:get_properties().is_visible ~= false and healed_ents[1]:get_properties().visual_size.x > 0,
+		"Repaired armor entity must be visible with non-zero visual_size")
+	constants_mod.DROP_ON_DEATH = old_drop
 end)
 
 test("Bulky Torso Armor Shield Clearance: Dynamic Forearm Offset Across Player, Stand, Corpse & glTF Preview", function()

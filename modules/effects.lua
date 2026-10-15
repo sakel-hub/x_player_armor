@@ -195,7 +195,14 @@ function effects.update_player_armor(player)
 			armor_groups[grp] = math.max(0, base - lvl)
 		end
 	end
-	player:set_armor_groups(armor_groups)
+
+	local ds = rawget(_G, "deathstats")
+	local ds_data = ds and type(ds.player_camera_data) == "table" and ds.player_camera_data[name]
+	if ds_data then
+		ds_data.old_armor_groups = armor_groups
+	else
+		player:set_armor_groups(armor_groups)
+	end
 
 	-- Apply physics overrides
 	local monoids = x_player_armor.get_mod_api("player_monoids")
@@ -227,6 +234,12 @@ function effects.update_player_armor(player)
 		else
 			physics_mod.remove_physics_factor(player, "gravity", "x_player_armor:physics")
 		end
+	elseif ds_data then
+		ds_data.old_physics_override = {
+			speed = speed_mod,
+			jump = jump_mod,
+			gravity = gravity_mod,
+		}
 	else
 		player:set_physics_override({
 			speed = speed_mod,

@@ -368,12 +368,23 @@ function visuals.update_player_visuals(player)
 			if not current or current.item ~= target.item or (current.is_skinsdb ~= is_skinsdb_rig) or #current ~= expected_count then
 				needs_spawn = true
 			else
+				local ds = rawget(_G, "deathstats")
+				local is_dead_cam = (ds and type(ds.player_camera_data) == "table" and ds.player_camera_data[name] ~= nil)
+					or (player.get_hp and player:get_hp() <= 0)
 				-- Verify validity and attachment to an active target parent
 				for i = 1, #current do
 					local obj = current[i]
 					if not obj or not obj:is_valid() then
 						needs_spawn = true
 						break
+					end
+					if not is_dead_cam and obj.get_properties then
+						local oprops = obj:get_properties()
+						if oprops and (oprops.is_visible == false
+								or (oprops.visual_size and (oprops.visual_size.x == 0 or oprops.visual_size.y == 0))) then
+							needs_spawn = true
+							break
+						end
 					end
 					local attach_parent = obj:get_attach()
 					if not attach_parent or (attach_parent.is_valid and not attach_parent:is_valid()) then
@@ -406,6 +417,8 @@ function visuals.update_player_visuals(player)
 
 	-- Reconcile shield wield item via x_player_api
 	if has_x_api then
+		local ds = rawget(_G, "deathstats")
+		local is_dead_cam = (ds and type(ds.player_camera_data) == "table" and ds.player_camera_data[name] ~= nil)
 		local target = worn_elements.shield
 		local torso_item = (worn_elements.torso and worn_elements.torso.item) or ""
 		local prev_torso_item = visuals.player_entities[name].shield_torso_item or ""
@@ -534,6 +547,10 @@ core.register_on_shutdown(function()
 end)
 
 core.register_on_respawnplayer(function(player)
+	local name = player and player.get_player_name and player:get_player_name()
+	if name and visuals.last_death_armor then
+		visuals.last_death_armor[name] = nil
+	end
 	core.after(0.05, function()
 		if player and player:is_player() then
 			visuals.update_player_visuals(player)
@@ -557,6 +574,12 @@ function visuals.verify_player_visuals(player)
 
 	local name, inv = x_player_armor.get_valid_player(player)
 	if not name or not inv then return false end
+
+	local ds = rawget(_G, "deathstats")
+	if (ds and type(ds.player_camera_data) == "table" and ds.player_camera_data[name] ~= nil)
+			or (player.get_hp and player:get_hp() <= 0) then
+		return false
+	end
 
 	local armor_list = inv:get_list("armor")
 	if not armor_list then return false end
@@ -590,6 +613,14 @@ function visuals.verify_player_visuals(player)
 						if not obj or not obj:is_valid() then
 							needs_repair = true
 							break
+						end
+						if obj.get_properties then
+							local oprops = obj:get_properties()
+							if oprops and (oprops.is_visible == false
+									or (oprops.visual_size and (oprops.visual_size.x == 0 or oprops.visual_size.y == 0))) then
+								needs_repair = true
+								break
+							end
 						end
 						local p = obj:get_attach()
 						if not p or (p.is_valid and not p:is_valid()) then
@@ -713,11 +744,13 @@ function visuals.attach_armor_to_entity(parent, player_or_name, format)
 			pname = player_obj.get_player_name and player_obj:get_player_name()
 		end
 
+		local has_live_inv = false
 		if player_obj and player_obj.is_player and player_obj:is_player() then
 			local _, inv = x_player_armor.get_valid_player(player_obj)
 			if inv then
 				local list = inv:get_list("armor")
 				if list then
+					has_live_inv = true
 					for _, st in ipairs(list) do
 						if st and not st:is_empty() then
 							table.insert(armor_stacks, st)
@@ -727,8 +760,8 @@ function visuals.attach_armor_to_entity(parent, player_or_name, format)
 			end
 		end
 
-		-- If inventory was already cleared on death, consult last_death_armor snapshot
-		if #armor_stacks == 0 and pname and visuals.last_death_armor[pname] then
+		-- If inventory was already cleared on death (or unavailable), consult last_death_armor snapshot
+		if #armor_stacks == 0 and (not has_live_inv or constants.DROP_ON_DEATH or constants.DESTROY_ON_DEATH) and pname and visuals.last_death_armor[pname] then
 			for _, st in ipairs(visuals.last_death_armor[pname]) do
 				if st and not st:is_empty() then
 					table.insert(armor_stacks, st)
