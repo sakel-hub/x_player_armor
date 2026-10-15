@@ -31,8 +31,10 @@ desktop.ini
 *.blend[0-9]
 
 # ==============================================================================
-# Python cache, bytecode, and virtual environments
+# Python scripts, cache, bytecode, and virtual environments
 # ==============================================================================
+*.py
+assets/scripts/
 __pycache__/
 *.py[cod]
 *$py.class
