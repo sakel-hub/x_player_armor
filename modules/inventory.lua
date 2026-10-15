@@ -424,10 +424,16 @@ function inventory.handle_player_death(player)
 end
 
 core.register_on_joinplayer(function(player)
+	if x_player_armor.b3d_wiggler then
+		x_player_armor.b3d_wiggler.ensure_player_wiggled_b3d(player)
+	end
 	inventory.init_player_inventory(player)
 	x_player_armor.gltf_assembler.update_player(player)
 	core.after(0.1, function()
 		if player:is_player() then
+			if x_player_armor.b3d_wiggler then
+				x_player_armor.b3d_wiggler.ensure_player_wiggled_b3d(player)
+			end
 			x_player_armor.visuals.cleanup_orphaned_visuals()
 			x_player_armor.set_player_armor(player)
 		end

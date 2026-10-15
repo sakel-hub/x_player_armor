@@ -125,6 +125,9 @@ local function get_attachment_targets(player)
 			end
 			return targets
 		end
+		if x_player_armor.b3d_wiggler then
+			x_player_armor.b3d_wiggler.ensure_player_wiggled_b3d(player)
+		end
 		table.insert(targets, {
 			parent = player,
 			observers = nil,
@@ -649,14 +652,13 @@ function visuals.verify_player_visuals(player)
 					if cur_item == "" or not left_ent or not left_ent:is_valid() then
 						needs_repair = true
 					end
-				else
-					local s_ents = ents.shield
-					if not s_ents or #s_ents == 0 or not s_ents[1] or not s_ents[1]:is_valid() then
-						needs_repair = true
-					end
 				end
 			end
 		end
+	end
+
+	if x_player_armor.b3d_wiggler then
+		x_player_armor.b3d_wiggler.ensure_player_wiggled_b3d(player)
 	end
 
 	if needs_repair then
@@ -672,6 +674,13 @@ local watchdog_registered = false
 function visuals.register_watchdog()
 	if watchdog_registered then return end
 	watchdog_registered = true
+
+	if x_player_armor.b3d_wiggler then
+		x_player_armor.b3d_wiggler.scan_and_wiggle_registered_b3d_models()
+	end
+	if x_player_armor.override and x_player_armor.override.hook_visual_triggers then
+		x_player_armor.override.hook_visual_triggers()
+	end
 
 	-- luacheck: push
 	-- luacheck: ignore 122
