@@ -5,7 +5,7 @@
 ![Luanti](https://img.shields.io/badge/Luanti-5.10%2B-5599ff.svg)
 [![Luacheck](https://github.com/sakel-hub/x_player_armor/actions/workflows/luacheck.yml/badge.svg)](https://github.com/sakel-hub/x_player_armor/actions)
 [![License: LGPL 2.1](https://img.shields.io/badge/License-LGPL_v2.1-blue.svg)](LICENSE.txt)
-[![Media License: CC-BY 4.0](https://img.shields.io/badge/Media-CC_BY_4.0-lightgrey.svg)](LICENSE.txt)
+[![Media License: CC-BY-SA 3.0 / CC-BY 4.0](https://img.shields.io/badge/Media-CC_BY--SA_3.0_%2F_CC_BY_4.0-lightgrey.svg)](LICENSE.txt)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/sakel-hub/x_player_armor/pulls)
 ![AI-Assisted](https://img.shields.io/badge/AI--assisted-gray)
 
@@ -250,7 +250,7 @@ For complete class definitions, parameter types, callbacks, and subsystem method
 The mod includes full developer scripts, testing harnesses, and Luanti static analysis:
 
 ```bash
-# Run the 83-assertion automated unit test suite
+# Run the automated unit test suite
 npm test
 
 # Run Luanti static analysis (Luacheck)

@@ -12,6 +12,7 @@
 
 import { execSync } from 'child_process'
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
@@ -70,14 +71,10 @@ async function main() {
         process.exit(1)
     }
 
-    const docBuildDir = path.join(rootDir, 'doc_build')
+    const docBuildDir = fs.mkdtempSync(path.join(os.tmpdir(), 'x_player_armor_doc_build_'))
     const jsonPath = path.join(docBuildDir, 'doc.json')
 
     try {
-        if (!fs.existsSync(docBuildDir)) {
-            fs.mkdirSync(docBuildDir, { recursive: true })
-        }
-
         // Run emmylua_doc_cli to generate JSON AST
         execSync(`emmylua_doc_cli "${rootDir}" -f json -o "${jsonPath}"`, {
             cwd: rootDir,
@@ -133,6 +130,12 @@ async function main() {
         emit('  - [XPlayerArmorBoneOffset](#xplayerarmorboneoffset)')
         emit('  - [XPlayerArmorShieldOffset](#xplayerarmorshieldoffset)')
         emit('  - [XPlayerArmorShieldVisualOpts](#xplayerarmorshieldvisualopts)')
+        emit('  - [XPlayerArmorResolvedShieldOpts](#xplayerarmorresolvedshieldopts)')
+        emit('  - [XPlayerArmorPreviewOpts](#xplayerarmorpreviewopts)')
+        emit('  - [XPlayerArmorPieceDescriptor](#xplayerarmorpiecedescriptor)')
+        emit('  - [XPlayerArmorTooltipParams](#xplayerarmortooltipparams)')
+        emit('  - [XPlayerArmorSlotLayoutItem](#xplayerarmorslotlayoutitem)')
+        emit('  - [ToolCapabilities](#toolcapabilities)')
         emit('  - [XPlayerArmorProjectileData](#xplayerarmorprojectiledata)')
         emit('  - [XPlayerArmorWearColor](#xplayerarmorwearcolor)')
         emit('  - [XPlayerArmorParticleOpts](#xplayerarmorparticleopts)')
@@ -181,6 +184,12 @@ async function main() {
             'XPlayerArmorBoneOffset',
             'XPlayerArmorShieldOffset',
             'XPlayerArmorShieldVisualOpts',
+            'XPlayerArmorResolvedShieldOpts',
+            'XPlayerArmorPreviewOpts',
+            'XPlayerArmorPieceDescriptor',
+            'XPlayerArmorTooltipParams',
+            'XPlayerArmorSlotLayoutItem',
+            'ToolCapabilities',
             'XPlayerArmorProjectileData',
             'XPlayerArmorWearColor',
             'XPlayerArmorParticleOpts',
@@ -359,9 +368,14 @@ async function main() {
             },
             {
                 title: 'Mod Integration & Utilities',
-                desc: 'Integration helpers for optional mod environments.',
+                desc: 'Integration helpers and formatting utilities for custom armor development.',
                 fns: [
-                    'get_mod_api'
+                    'get_mod_api',
+                    'format_armor_tooltip',
+                    'format_armor_stand_tooltip',
+                    'format_armor_tooltip_from_def',
+                    'force_alias',
+                    'copy_table'
                 ]
             }
         ]
