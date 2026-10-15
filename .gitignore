@@ -34,7 +34,9 @@ desktop.ini
 # Python scripts, cache, bytecode, and virtual environments
 # ==============================================================================
 *.py
+**/*.py
 assets/scripts/
+scripts/**/*.py
 __pycache__/
 *.py[cod]
 *$py.class
