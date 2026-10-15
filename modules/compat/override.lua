@@ -169,10 +169,7 @@ function override.takeover_legacy_armor()
 				 override.captured_legacy_armor.registered_armors[":" .. clean_legacy] ~= nil)
 		local recipes = core.get_all_craft_recipes(clean_legacy)
 		local has_recipes = recipes and #recipes > 0
-		local is_registered = (core.registered_items and core.registered_items[clean_legacy] ~= nil) or
-				(core.registered_tools and core.registered_tools[clean_legacy] ~= nil) or
-				(core.registered_nodes and core.registered_nodes[clean_legacy] ~= nil) or
-				(core.registered_craftitems and core.registered_craftitems[clean_legacy] ~= nil) or
+		local is_registered = core.registered_items[clean_legacy] ~= nil or
 				in_legacy or has_recipes
 
 		if is_registered then

@@ -7,8 +7,6 @@
 ---@class XPlayerArmorCompatXPlayerAPI
 local x_api_compat = {}
 
-local is_x_player_api_present = false
-
 ---Retrieves the active x_player_api global API table if available.
 ---@return table|nil
 local function get_api()
@@ -19,18 +17,15 @@ x_api_compat.get_api = get_api
 ---Check whether x_player_api is present and active
 ---@return boolean
 function x_api_compat.is_present()
-	return (is_x_player_api_present or get_api() ~= nil) and (get_api() ~= nil)
+	return get_api() ~= nil
 end
 
 ---Initialize x_player_api integrations if available
 function x_api_compat.init()
 	local x_api = get_api()
 	if not x_api then
-		is_x_player_api_present = false
 		return
 	end
-
-	is_x_player_api_present = true
 
 	-- Register equip sound effects for armor groups and materials
 	local equip_sounds = {

@@ -452,7 +452,7 @@ end
 ---@param player ObjectRef
 ---@return string|nil active_mesh
 function b3d_wiggler.ensure_player_wiggled_b3d(player)
-	if not player or not player.is_player or not player:is_player() then
+	if not player or not player:is_player() then
 		return nil
 	end
 	if player.is_valid and not player:is_valid() then
