@@ -9,6 +9,7 @@
 ---@field registered_groups table<string, number> Base armor groups map
 ---@field callbacks table<string, function[]> Event callback listener tables
 ---@field constants XPlayerArmorConstants Constants and configuration settings
+---@field gltf_assembler XPlayerArmorGltfAssembler In-memory glTF 2.0 dynamic model assembler facade
 local DEFAULT_ELEMENTS = {"head", "torso", "legs", "feet", "shield"}
 local DEFAULT_ATTRIBUTES = {"heal", "fire", "water", "feather"}
 
@@ -17,6 +18,7 @@ local default_x_player_api = {
 	get_api = function() return nil end,
 	attach_shield = function() return nil end,
 	attach_shield_to_entity = function() return nil end,
+	attach_wield_item_to_entity = function() return nil end,
 	update_shield = function() return nil end,
 	remove_shield = function() end,
 	set_shield_first_person = function() end,
@@ -69,7 +71,7 @@ function api.get_mod_api(modname)
 	if type(mod) == "table" then
 		return mod
 	end
-	if core.get_modpath and core.get_modpath(modname) then
+	if core.get_modpath(modname) then
 		mod = rawget(_G, modname)
 		if type(mod) == "table" then
 			return mod
@@ -108,7 +110,7 @@ function api.get_fire_nodes()
 	if global_armor and global_armor.fire_nodes then
 		return global_armor.fire_nodes
 	end
-	return api.constants and api.constants.FIRE_NODES or {}
+	return api.constants.FIRE_NODES or {}
 end
 
 ---Checks whether damage reciprocation (thorns) is globally configured or active.
@@ -234,6 +236,7 @@ end
 ---@class XPlayerArmorBoneOffset
 ---@field pos Vector3|table<string, number> 3D position offset vector relative to bone origin {x, y, z}
 ---@field rot Vector3|table<string, number> Euler rotation angles in degrees {x, y, z}
+---@field scale Vector3|table<string, number>? Scale vector override {x, y, z}
 
 ---Bone attachment configuration for custom 3D models.
 ---@class XPlayerArmorTransform
@@ -305,6 +308,8 @@ end
 ---@field first_person? boolean Whether shield is visible in 1st person view
 ---@field bone? string Target skeletal attachment bone (defaults to "Arm_Left")
 ---@field entity_name? string Custom Lua entity name to spawn
+---@field torso_item? string|ItemStack Equipped torso item or stack for resolving bulky sleeve shield_clearance
+---@field shield_clearance? XPlayerArmorShieldOffset Explicit torso shield clearance delta override
 
 ---Complete configuration table for armor and shield item registration.
 ---Supports custom 3D models, bone transforms, audio, environmental perks, physics, and combat mechanics.
@@ -324,7 +329,7 @@ end
 ---@field transforms XPlayerArmorTransforms? Skeletal bone attachment transforms keyed by piece ID or model format ("glb"|"b3d")
 ---@field glow number? Light emission level from 0 to 14 (ideal for enchanted, crystalline, or glowing gear). Ignored if custom 3D mesh is not used.
 ---@field visual_size Vector3|table<string, number>? Visual scale factor override for custom 3D models. Ignored if custom 3D mesh is not used.
----@field backface_culling boolean? Whether backface culling is enabled on the model entity (default: true). Ignored if custom 3D mesh is not used.
+---@field backface_culling boolean? Whether backface culling is enabled on the model entity (default: false). Ignored if custom 3D mesh is not used.
 ---@field shaded boolean? Whether diffuse shading and lighting is enabled on the model entity (default: true). Ignored if custom 3D mesh is not used.
 ---@field sounds XPlayerArmorSounds? Custom sound effects table for equip, unequip, hit, break, and block events
 ---@field heal number? Passive health regeneration boost level (sets groups.armor_heal)
@@ -339,6 +344,7 @@ end
 ---@field reciprocate_percent number? Percentage of incoming damage reflected to attacker. Ignored if reciprocate_damage is false or nil.
 ---@field wear_color XPlayerArmorWearColor? Durability bar color gradient configuration (see Luanti doc/lua_api.md: Item definition)
 ---@field shield_offset XPlayerArmorShieldOffset? Custom shield forearm attachment transforms for glb and b3d skeletons. Ignored if element is not "shield".
+---@field shield_clearance XPlayerArmorShieldOffset? Outward forearm offset applied to shields when this torso armor is worn.
 ---@field tower_shield boolean? Whether shield renders with tower shield model variant in preview and stand. Ignored if element is not "shield".
 ---@field block_reduction number? Frontal damage reduction fraction 0.0 to 1.0 (default: 0.20 or tiered). Ignored if element is not "shield".
 ---@field block_arc number? Custom frontal blocking arc angle in degrees (default: 44-64 deg tiered). Ignored if element is not "shield".
@@ -360,14 +366,14 @@ end
 function api.get_legacy_replacement(name)
 	if not name or type(name) ~= "string" then return nil end
 	local clean_name = name:gsub("^:", "")
-	if api.legacy_replacements and api.legacy_replacements[clean_name] then
+	if api.legacy_replacements[clean_name] then
 		return api.legacy_replacements[clean_name]
 	end
 	-- Pattern fallback for standard 3d_armor pieces: 3d_armor:<piece>_<material>
 	local piece, mat = clean_name:match("^3d_armor:(%w+)_(%w+)$")
 	if piece and mat then
 		local candidate = "x_player_armor:" .. piece .. "_" .. mat
-		if api.registered_armors and api.registered_armors[candidate] then
+		if api.registered_armors[candidate] then
 			return candidate
 		end
 	end
@@ -375,7 +381,7 @@ function api.get_legacy_replacement(name)
 	local s_mat = clean_name:match("^shields:shield_(%w+)$")
 	if s_mat then
 		local candidate = "x_player_armor:shield_" .. s_mat
-		if api.registered_armors and api.registered_armors[candidate] then
+		if api.registered_armors[candidate] then
 			return candidate
 		end
 	end
@@ -383,7 +389,7 @@ function api.get_legacy_replacement(name)
 	local es_mat = clean_name:match("^shields:shield_enhanced_(%w+)$")
 	if es_mat then
 		local candidate = "x_player_armor:shield_enhanced_" .. es_mat
-		if api.registered_armors and api.registered_armors[candidate] then
+		if api.registered_armors[candidate] then
 			return candidate
 		end
 	end
@@ -416,16 +422,13 @@ function api.register_armor(name, def)
 	-- Intercept registration of superseded legacy armor and cleanup duplicate
 	local replacement = api.get_legacy_replacement(name)
 	if replacement then
-		local ov = rawget(api, "override") or (api.compat and api.compat.override)
+		local ov = rawget(api, "compat_override") or (api.compat and api.compat.override)
 		if ov and ov.cleanup_legacy_item then
 			ov.cleanup_legacy_item(name, replacement)
+		elseif api.utils and api.utils.force_alias then
+			api.utils.force_alias(name, replacement)
 		else
-			local force_alias = x_player_armor.force_alias or (api.utils and api.utils.force_alias)
-			if force_alias then
-				force_alias(name, replacement)
-			else
-				core.register_alias_force(name, replacement)
-			end
+			core.register_alias_force(name, replacement)
 		end
 		return
 	end
@@ -523,6 +526,22 @@ function api.register_armor(name, def)
 	if material and material ~= "" then
 		def.groups["armor_material_" .. material] = 1
 		def.material = material
+		if def.element == "shield" and (def.block_reduction or def.block_arc)
+				and constants.SHIELD_TIER_PROPERTIES and not constants.SHIELD_TIER_PROPERTIES[material] then
+			constants.SHIELD_TIER_PROPERTIES[material] = {
+				reduction = def.block_reduction or constants.BLOCK_DEFAULT_REDUCTION or 0.20,
+				restitution = constants.BLOCK_RESTITUTION or 0.50,
+				arc = def.block_arc or constants.BLOCK_CONE_ANGLE or 52,
+				recoil_mult = 0.8,
+			}
+		end
+	end
+
+	-- Normalize optional full-set passive ability descriptions for ACTIVE PERKS UI
+	local set_perks = def.set_perks or def.armor_set_perks
+	if type(set_perks) == "table" and #set_perks > 0 then
+		def.set_perks = set_perks
+		def.armor_set_perks = set_perks
 	end
 
 	-- Normalize player physics modifiers (speed, jump, gravity)
@@ -569,15 +588,36 @@ function api.register_armor(name, def)
 		def.preview = def.inventory_image
 	end
 
-	-- Normalize custom 3D model meshes and transforms
-	def.model = def.model or def.mesh
+	if def.textures and type(def.textures) == "table" and #def.textures > 0 then
+		if not def.texture and def.textures[1] then
+			def.texture = def.textures[1]
+		end
+	elseif def.texture then
+		def.textures = {def.texture}
+	end
+
+	-- Normalize 3D model meshes and transforms (single source of truth: mesh, textures, shield_offset)
 	def.mesh = def.mesh or def.model
+	if not def.mesh and def.element == "shield" then
+		local c_models = x_player_armor.constants.MODELS
+		if def.tower_shield or (def.groups and def.groups.armor_shield_tower and def.groups.armor_shield_tower > 0) then
+			def.mesh = c_models.shield_tower
+		else
+			def.mesh = c_models.shield
+		end
+	end
+	def.model = def.mesh
 	def.models = def.models or def.meshes
-	def.meshes = def.meshes or def.models
+	def.meshes = def.models
 	def.transforms = def.transforms or def.attach_transforms
-	def.attach_transforms = def.attach_transforms or def.transforms
+	def.attach_transforms = def.transforms
 	def.shield_offset = def.shield_offset or def.shield_transform
-	def.shield_transform = def.shield_transform or def.shield_offset
+	def.shield_transform = def.shield_offset
+
+	-- Normalize visual rendering flags (default backface_culling to false for 3D armor interiors)
+	if def.backface_culling == nil then
+		def.backface_culling = false
+	end
 
 	-- Normalize sound effects
 	if type(def.sounds) ~= "table" then
@@ -678,8 +718,6 @@ function api.remove_all(player)
 	end
 	api.inventory.save_inventory(player, inv)
 	api.set_player_armor(player)
-	api.update_player_visuals(player)
-	api.run_callbacks("on_update", player)
 	api.refresh_player_formspec(player)
 end
 
@@ -701,14 +739,19 @@ function api.get_shield_offset(format)
 	if not tbl and consts.SHIELD_OFFSET then
 		tbl = consts.SHIELD_OFFSET.glb
 	end
-	return tbl or {pos = {x = -0.8, y = 5.0, z = -2.8}, rot = {x = 180, y = 45, z = 0}}
+	return tbl or {
+		pos = {x = -0.95, y = 4.44, z = -1.48},
+		rot = {x = -171.4, y = 70.5, z = -1.7},
+		scale = {x = 1.0, y = 1.0, z = 1.0},
+	}
 end
 
 ---Sets or overrides the shield attachment transform for a model format.
 ---@param format string Model format ("glb" or "b3d")
 ---@param pos Vector3 Offset position vector
 ---@param rot Vector3 Euler rotation angles in degrees
-function api.set_shield_offset(format, pos, rot)
+---@param scale? Vector3 Scale vector override
+function api.set_shield_offset(format, pos, rot, scale)
 	local consts = x_player_armor.constants
 	if not consts.SHIELD_OFFSET then
 		consts.SHIELD_OFFSET = {}
@@ -721,6 +764,9 @@ function api.set_shield_offset(format, pos, rot)
 	end
 	if rot then
 		consts.SHIELD_OFFSET[format].rot = {x = rot.x or 0, y = rot.y or 0, z = rot.z or 0}
+	end
+	if scale then
+		consts.SHIELD_OFFSET[format].scale = {x = scale.x or 1, y = scale.y or 1, z = scale.z or 1}
 	end
 end
 
@@ -775,7 +821,8 @@ end
 ---Returns the detached armor inventory and player name if valid.
 ---@nodiscard
 ---@param player ObjectRef Target player
----@return string? name, InvRef? inv Validated player name and detached armor inventory reference, or nil, nil
+---@return string? name Validated player name, or nil if invalid
+---@return InvRef? inv Detached armor inventory reference, or nil if invalid
 function api.get_valid_player(player)
 	if not player or not player:is_player() then
 		return nil, nil
@@ -827,6 +874,7 @@ end
 ---@param player ObjectRef Target player to recalculate armor groups, physics, and stats for
 function api.set_player_armor(player)
 	api.effects.update_player_armor(player)
+	api.visuals.update_player_visuals(player)
 end
 
 ---Updates modular bone attachments and visual entity state for a player.
@@ -852,6 +900,14 @@ function api.schedule_player_visual_restore(player_name)
 	api.visuals.schedule_player_restore(player_name)
 end
 
+---Verifies that all worn armor items have valid, visible, attached visual entities.
+---Performs an on-demand repair if any worn piece is missing or detached.
+---@param player ObjectRef Target player
+---@return boolean repaired True if visuals were repaired, false if already healthy
+function api.verify_player_visuals(player)
+	return api.visuals.verify_player_visuals(player)
+end
+
 ---Attaches modular armor visual entities to an arbitrary parent entity (such as a deathstats corpse).
 ---@param parent ObjectRef The entity to attach armor to
 ---@param player_or_name ObjectRef|string|(string|ItemStack)[] Player object, player name, or explicit armor item list
@@ -867,6 +923,53 @@ end
 ---@return string preview_texture Composite preview texture string for 3D model formspecs
 function api.get_player_preview_texture(player)
 	return api.ui.get_preview_texture(player)
+end
+
+---Unified preview resolution entry point for both player formspec and in-world armor stand.
+---@param armor_list (ItemStack|table)[] Equipped items array
+---@param opts? table Options table: { player = ObjectRef, is_stand = boolean, base_textures = string[] }
+---@return string model_name Resolved 3D model asset filename (e.g. "x_player_armor_preview.glb" or dynamic mesh)
+---@return string|string[] textures Resolved texture specification or texture list
+function api.resolve_preview(armor_list, opts)
+	return api.gltf_assembler.resolve_preview(armor_list, opts)
+end
+
+---Checks if a dynamically assembled mesh is already downloaded and ready on the client.
+---@param filename string Model filename
+---@param player_name? string Optional player name for targeted delivery check
+---@return boolean is_ready True if model is acknowledged ready on client
+function api.is_media_ready(filename, player_name)
+	return api.gltf_assembler.is_media_ready(filename, player_name)
+end
+
+---Queues or executes a callback once the specified dynamic media is acknowledged as ready on the client.
+---@param filename string Model filename
+---@param callback fun() Callback function executed when media is ready
+function api.when_media_ready(filename, callback)
+	return api.gltf_assembler.when_media_ready(filename, callback)
+end
+
+---Scans an armor inventory list and detects 3D mesh pieces to attach to the preview armature.
+---@param armor_list (ItemStack|table)[] Armor inventory list
+---@param custom_only boolean? If true, only detects explicitly defined custom 3D models (excluding standard fallbacks)
+---@return boolean has_custom True if at least one custom piece requires dynamic assembly
+---@return table[] pieces_to_attach Array of piece descriptors for assembler
+---@return table<string, boolean> slot_mask Map of covered slots
+function api.detect_custom_pieces(armor_list, custom_only)
+	return api.gltf_assembler.detect_custom_pieces(armor_list, custom_only)
+end
+
+---Builds a spec-compliant .glb binary string combining base preview model and custom pieces in RAM.
+---@param pieces_to_attach table[] Array of piece descriptor tables
+---@return string? glb_binary Assembled glTF 2.0 binary string or nil on error
+---@return string[] material_textures Array of material texture names for the combined model
+function api.assemble_glb(pieces_to_attach)
+	return api.gltf_assembler.assemble_glb(pieces_to_attach)
+end
+
+---Clears all in-memory dynamic media caches and active player previews.
+function api.clear_media_cache()
+	return api.gltf_assembler.clear_cache()
 end
 
 ---Opens the armor and equipment inventory formspec for a player.
@@ -890,14 +993,14 @@ function api.show_shield_block_hud(player, immediate)
 end
 
 ---Hides the 2D shield block HUD indicator from the target player.
----@param player ObjectRef
+---@param player ObjectRef Target player to hide the shield blocking indicator from
 function api.hide_shield_block_hud(player)
 	api.shield_hud.hide(player)
 end
 
 ---Retrieves the active shield block HUD element ID for a player if one exists.
----@param player ObjectRef
----@return number? hud_id
+---@param player ObjectRef Target player
+---@return number? hud_id Active shield blocking HUD element ID, or nil if none is displayed
 function api.get_shield_block_hud(player)
 	if not player or not player:is_player() then return nil end
 	return api.shield_hud.active_huds[player:get_player_name()]
@@ -906,14 +1009,17 @@ end
 ---Evaluates whether a player is capable of blocking with an equipped shield.
 ---@nodiscard
 ---@param player ObjectRef Target player
----@return boolean can_block
+---@return boolean can_block True if the player has an equipped shield ready to block
 function api.can_block(player)
 	return api.combat.can_block(player)
 end
 
 ---Checks whether a player is actively holding a shield block stance.
 ---@param player ObjectRef Target player
----@return boolean is_blocking, ItemStack? shield_stack, number? slot_idx, string? mat_key
+---@return boolean is_blocking True if the player is actively holding block stance
+---@return ItemStack? shield_stack Active equipped shield ItemStack or nil
+---@return number? slot_idx Armor inventory slot index (5 or 6) or nil
+---@return string? mat_key Material identifier string (e.g. "steel", "diamond") or nil
 function api.is_blocking(player)
 	return api.combat.is_blocking(player)
 end
@@ -944,7 +1050,7 @@ end
 
 ---Displays or updates the combat armor HUD overlay on the target player.
 ---@param player ObjectRef Target player to display the combat HUD on
----@return number? hud_id Active combat HUD element ID, or nil
+---@return number? hud_id Active combat HUD element ID, or nil if inactive
 function api.trigger_combat_hud(player)
 	if not api.combat_hud then return nil end
 	return api.combat_hud.trigger(player)
@@ -996,6 +1102,24 @@ end
 ---@return ObjectRef? entity The attached shield entity or nil
 function api.attach_shield_to_entity(parent, item_or_stack, format, custom_opts)
 	return api.visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_opts)
+end
+
+---Attaches a wield item visual entity to an external entity (such as an armor stand or corpse) on Arm_Right.
+---@param parent ObjectRef The entity to attach the wield item to
+---@param item_or_stack string|ItemStack Held item name or ItemStack
+---@param format string? Model format ("glb" or "b3d")
+---@param custom_opts? table Optional custom transform and visual overrides
+---@return ObjectRef? entity The attached visual entity or nil on failure
+function api.attach_wield_item_to_entity(parent, item_or_stack, format, custom_opts)
+	return api.visuals.attach_wield_item_to_entity(parent, item_or_stack, format, custom_opts)
+end
+
+---Resolves the composite attachment options, mesh, textures, and calibrated transforms for a shield item.
+---@param item_or_stack string|ItemStack Shield item name or stack
+---@param custom_opts? XPlayerArmorShieldVisualOpts Optional custom overrides
+---@return table opts Resolved options table containing visual, mesh, textures, and bone transforms
+function api.resolve_shield_visual_opts(item_or_stack, custom_opts)
+	return api.visuals.resolve_shield_visual_opts(item_or_stack, custom_opts)
 end
 
 ---Updates or modifies an attached off-hand shield entity via x_player_api.
@@ -1074,7 +1198,7 @@ end
 ---Resolves the player's active skin and produces the canonical dual-slot texture pair.
 ---@nodiscard
 ---@param player ObjectRef Target player
----@return SkinResolution resolution
+---@return SkinResolution resolution Resolved skin textures (base skin and 3D outfit layer)
 function api.resolve_player_skin(player)
 	return api.skins.resolve_player_skin(player)
 end
@@ -1082,7 +1206,7 @@ end
 ---Retrieves skin information for a player.
 ---@nodiscard
 ---@param player ObjectRef Target player
----@return SkinResolution resolution
+---@return SkinResolution resolution Resolved skin textures (base skin and 3D outfit layer)
 function api.get_skin_info(player)
 	return api.skins.get_skin_info(player)
 end

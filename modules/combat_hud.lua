@@ -409,7 +409,7 @@ function combat_hud.init()
 	core.register_on_mods_loaded(function()
 		-- Throttled globalstep timer (4 ticks per second with zero-overhead idle skipping)
 		local step_accum = 0
-		core.register_globalstep(function(dtime)
+		combat_hud.step = function(dtime)
 			if next(combat_hud.active_players) == nil then
 				return
 			end
@@ -426,7 +426,8 @@ function combat_hud.init()
 					combat_hud.hide(pname)
 				end
 			end
-		end)
+		end
+		core.register_globalstep(combat_hud.step)
 	end)
 end
 

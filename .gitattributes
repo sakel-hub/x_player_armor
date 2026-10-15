@@ -49,6 +49,8 @@ package-lock.json linguist-generated=true
 *.py export-ignore
 __pycache__ export-ignore
 *.py[cod] export-ignore
+/assets/scripts export-ignore
+assets/scripts/** export-ignore
 
 # Git, CI/CD, and developer configuration
 /.gitattributes export-ignore

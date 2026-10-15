@@ -144,12 +144,18 @@ async function main() {
         emit('  - [XPlayerArmorPunchCallback](#xplayerarmorpunchcallback)')
         emit('  - [XPlayerArmorSounds](#xplayerarmorsounds)')
         emit('  - [SkinResolution](#skinresolution)')
+        emit('  - [XPlayerArmorGltfAssembler](#xplayerarmorgltfassembler)')
+        emit('  - [XPlayerArmorAssemblerMath](#xplayerarmorassemblermath)')
+        emit('  - [XPlayerArmorAssemblerLoader](#xplayerarmorassemblerloader)')
+        emit('  - [XPlayerArmorAssemblerBuilder](#xplayerarmorassemblerbuilder)')
+        emit('  - [XPlayerArmorAssemblerMedia](#xplayerarmorassemblermedia)')
         emit('- [Public API Reference](#public-api-reference)')
         emit('  - [Registration & Definitions](#registration--definitions)')
         emit('  - [Lifecycle & Event Callbacks](#lifecycle--event-callbacks)')
         emit('  - [Equipment & Inventory State](#equipment--inventory-state)')
         emit('  - [Combat, Defense & Shield Mechanics](#combat-defense--shield-mechanics)')
         emit('  - [Visuals & 3D Attachments](#visuals--3d-attachments)')
+        emit('  - [Dynamic glTF 2.0 Assembler & Media Pipeline](#dynamic-gltf-20-assembler--media-pipeline)')
         emit('  - [User Interface & Formspecs](#user-interface--formspecs)')
         emit('  - [HUD Overlays](#hud-overlays)')
         emit('  - [Mod Integration & Utilities](#mod-integration--utilities)')
@@ -185,7 +191,12 @@ async function main() {
             'XPlayerArmorPlayerDef',
             'XPlayerArmorPunchCallback',
             'XPlayerArmorSounds',
-            'SkinResolution'
+            'SkinResolution',
+            'XPlayerArmorGltfAssembler',
+            'XPlayerArmorAssemblerMath',
+            'XPlayerArmorAssemblerLoader',
+            'XPlayerArmorAssemblerBuilder',
+            'XPlayerArmorAssemblerMedia'
         ]
 
         for (const typeName of primaryTypes) {
@@ -296,9 +307,12 @@ async function main() {
                     'clear_player_visuals',
                     'restore_all_player_visuals',
                     'schedule_player_visual_restore',
+                    'verify_player_visuals',
                     'attach_armor_to_entity',
                     'attach_shield',
                     'attach_shield_to_entity',
+                    'attach_wield_item_to_entity',
+                    'resolve_shield_visual_opts',
                     'update_shield',
                     'remove_shield',
                     'set_shield_first_person',
@@ -306,6 +320,18 @@ async function main() {
                     'cleanup_orphaned_visuals',
                     'resolve_player_skin',
                     'get_skin_info'
+                ]
+            },
+            {
+                title: 'Dynamic glTF 2.0 Assembler & Media Pipeline',
+                desc: 'In-memory single-mesh model assembler, piece transformation pipeline, preview generation, and client media delivery.',
+                fns: [
+                    'resolve_preview',
+                    'detect_custom_pieces',
+                    'assemble_glb',
+                    'is_media_ready',
+                    'when_media_ready',
+                    'clear_media_cache'
                 ]
             },
             {

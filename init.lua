@@ -30,6 +30,7 @@ local modules = {
 	"items",
 	"crafting",
 	"skins",
+	"gltf_assembler",
 	"ui",
 	"stand",
 	"shield_hud",
@@ -41,5 +42,8 @@ for i = 1, #modules do
 	local file = modpath .. "/modules/" .. modules[i] .. ".lua"
 	dofile(file)
 end
+
+-- Initialize visual self-healing watchdog
+core.register_on_mods_loaded(x_player_armor.visuals.register_watchdog)
 
 core.log("action", "[" .. modname .. "] v" .. x_player_armor.version .. " initialized successfully.")

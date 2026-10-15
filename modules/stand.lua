@@ -1,10 +1,12 @@
 ---@class XPlayerArmorStand
+---@field attached_entities table<number, ObjectRef[]> Map of node position hashes to attached visual entities
 local stand = {
 	callbacks = {
 		on_equip = {},
 		on_take = {},
 		on_swap = {},
 	},
+	attached_entities = {},
 }
 
 local S = core.get_translator("x_player_armor")
@@ -12,46 +14,59 @@ local constants = x_player_armor.constants
 local utils = x_player_armor.utils
 
 -- Debounced restoration queue for self-healing when entities are cleared
+local update_stand_entity
 local pending_restores = {}
-local restore_scheduled = false
+local restore_queue = {}
+local restore_in_progress = false
 
 local function hash_pos(pos)
 	return core.hash_node_position(pos)
 end
 
----Registers a stand position for deferred rehydration.
----@param pos vector
-function stand.schedule_restore(pos)
-	local hash = hash_pos(pos)
-	pending_restores[hash] = vector.new(pos)
-	if not restore_scheduled then
-		restore_scheduled = true
-		core.after(0.5, function()
-			restore_scheduled = false
-			local batch = pending_restores
-			pending_restores = {}
-			for _, p in pairs(batch) do
-				local node = core.get_node_or_nil(p)
-				if node and (node.name == "x_player_armor:stand" or node.name == "x_player_armor:locked_stand") then
-					stand.update_stand_entity(p)
-				end
-			end
-		end)
+local function process_restore_queue()
+	local budget = 2 -- Process up to 2 stands per tick to prevent server lag spikes
+	while budget > 0 and #restore_queue > 0 do
+		local pos = table.remove(restore_queue, 1)
+		local node = core.get_node_or_nil(pos)
+		if node and (node.name == "x_player_armor:stand" or node.name == "x_player_armor:locked_stand") then
+			update_stand_entity(pos)
+			budget = budget - 1
+		end
+	end
+
+	if #restore_queue > 0 then
+		core.after(0.05, process_restore_queue)
+	else
+		restore_in_progress = false
+		pending_restores = {}
 	end
 end
 
-local STAND_ENTITY_OFFSET = vector.new(0, -0.41, 0)
+---Registers a stand position for deferred time-sliced rehydration across server ticks.
+---@param pos vector Position of the armor stand node
+function stand.schedule_restore(pos)
+	local hash = hash_pos(pos)
+	if pending_restores[hash] then
+		return
+	end
+	pending_restores[hash] = true
+	table.insert(restore_queue, vector.new(pos))
+
+	if not restore_in_progress then
+		restore_in_progress = true
+		core.after(0.05, process_restore_queue)
+	end
+end
+
+local STAND_ENTITY_OFFSET = vector.new(0, -0.4375, 0)
 stand.STAND_ENTITY_OFFSET = STAND_ENTITY_OFFSET
 
--- Visual mannequin entity for armor stands (Single-entity preview mesh)
+-- Visual mannequin entity for armor stands (Invisible skeletal armature for attachments)
 core.register_entity("x_player_armor:stand_entity", {
 	initial_properties = {
 		visual = "mesh",
 		mesh = constants.MODELS.stand_entity,
 		textures = {
-			"blank.png",
-			"blank.png",
-			"blank.png",
 			"blank.png",
 			"blank.png",
 			"blank.png",
@@ -127,9 +142,29 @@ local function get_stand_shield(pos)
 	return nil
 end
 
+---Cleans up any attached visual entities for the stand at pos.
+---@param pos vector Node position
+function stand.cleanup_attached_entities(pos)
+	local pos_hash = hash_pos(pos)
+	local attached = stand.attached_entities[pos_hash]
+	if attached then
+		for _, ent in ipairs(attached) do
+			if ent and (not ent.is_valid or ent:is_valid()) then
+				local luaent = ent:get_luaentity()
+				if luaent then
+					luaent._intentional_removal = true
+				end
+				ent:set_detach()
+				ent:remove()
+			end
+		end
+		stand.attached_entities[pos_hash] = nil
+	end
+end
+
 ---Updates the mannequin textures and attached equipment on the stand entity.
 ---@param pos vector
-local function update_stand_entity(pos)
+update_stand_entity = function(pos)
 	local meta = core.get_meta(pos)
 	local inv = meta:get_inventory()
 	if inv:get_size("armor") < 6 then
@@ -141,77 +176,7 @@ local function update_stand_entity(pos)
 	local node = core.get_node(pos)
 	local dir = core.facedir_to_dir(node.param2 or 0)
 	local yaw = (core.dir_to_yaw(dir) + math.pi) % (2 * math.pi)
-
-	-- Material array for x_player_armor_preview.glb (9 slots):
-	-- Slot 0: Body10 (blank.png; stand 3D node already has wooden arms built in)
-	-- Slot 1: Body18 (blank.png)
-	-- Slot 2: Head (list[1])
-	-- Slot 3: Torso (list[2])
-	-- Slot 4: Legs (list[3])
-	-- Slot 5: Feet (list[4])
-	-- Slot 6: Shield_Standard (list[5] if standard shield)
-	-- Slot 7: Shield_Tower (list[5] if tower shield)
-	-- Slot 8: Wielditem (list[6])
-
-	local head_tex = "blank.png"
-	if list[1] and not list[1]:is_empty() then
-		head_tex = x_player_armor.visuals.get_item_texture(list[1]:get_name()) or "blank.png"
-	end
-
-	local torso_tex = "blank.png"
-	if list[2] and not list[2]:is_empty() then
-		torso_tex = x_player_armor.visuals.get_item_texture(list[2]:get_name()) or "blank.png"
-	end
-
-	local legs_tex = "blank.png"
-	if list[3] and not list[3]:is_empty() then
-		legs_tex = x_player_armor.visuals.get_item_texture(list[3]:get_name()) or "blank.png"
-	end
-
-	local feet_tex = "blank.png"
-	if list[4] and not list[4]:is_empty() then
-		feet_tex = x_player_armor.visuals.get_item_texture(list[4]:get_name()) or "blank.png"
-	end
-
-	local shield_std_tex = "blank.png"
-	local shield_tower_tex = "blank.png"
-	if list[5] and not list[5]:is_empty() then
-		local shield_item = list[5]:get_name()
-		local s_tex = x_player_armor.visuals.get_item_texture(shield_item)
-		if s_tex and s_tex ~= "" then
-			local is_tower = core.get_item_group(shield_item, "armor_shield_tower") > 0
-				or core.get_item_group(shield_item, "armor_tower_shield") > 0
-			if not is_tower then
-				local def = core.registered_items[shield_item]
-				if def and (def.tower_shield or def.tower) then
-					is_tower = true
-				end
-			end
-
-			if is_tower then
-				shield_tower_tex = s_tex
-			else
-				shield_std_tex = s_tex
-			end
-		end
-	end
-
-	local wield_tex = "blank.png"
-	if list[6] and not list[6]:is_empty() then
-		wield_tex = x_player_armor.ui.get_item_wield_texture(list[6])
-	end
-
-	local textures = {
-		"blank.png", -- Slot 0: Body10
-		"blank.png", -- Slot 1: Body18
-		head_tex,    -- Slot 2: Head
-		torso_tex,   -- Slot 3: Torso
-		legs_tex,    -- Slot 4: Legs
-		feet_tex,    -- Slot 5: Feet
-		shield_std_tex,   -- Slot 6: Shield Standard
-		shield_tower_tex, -- Slot 7: Shield Tower
-		wield_tex,   -- Slot 8: Wielditem
-	}
+	local pos_hash = hash_pos(pos)
 
 	local ent_pos = vector.add(pos, STAND_ENTITY_OFFSET)
 	local obj = get_stand_entity(pos)
@@ -229,10 +194,67 @@ local function update_stand_entity(pos)
 		end
 		obj:set_yaw(yaw)
 		obj:set_properties({
-			textures = textures,
+			mesh = constants.MODELS.stand_entity,
+			textures = {
+				"blank.png",
+				"blank.png",
+				"blank.png",
+				"blank.png",
+				"blank.png",
+				"blank.png",
+			},
 			backface_culling = false,
 		})
 	end
+
+	-- Clean up previous attached visual pieces
+	stand.cleanup_attached_entities(pos)
+
+	if obj and obj.get_children then
+		local children = obj:get_children()
+		if children then
+			for _, child in ipairs(children) do
+				if child and (not child.is_valid or child:is_valid()) then
+					local clua = child:get_luaentity()
+					if clua and (clua.name == "x_player_armor:visual" or clua.name == "x_player_armor:stand_shield" or clua.name == "x_player_api:wield_item") then
+						clua._intentional_removal = true
+						child:set_detach()
+						child:remove()
+					end
+				end
+			end
+		end
+	end
+
+	-- Attach 3D armor pieces directly to the stand mannequin bones
+	local attached = {}
+	if obj and obj:is_valid() then
+		local armor_visuals = x_player_armor.visuals.attach_armor_to_entity(obj, list, "glb")
+		if armor_visuals then
+			for _, v in ipairs(armor_visuals) do
+				table.insert(attached, v)
+			end
+		end
+
+		local shield_stack = list[5]
+		if shield_stack and not shield_stack:is_empty() then
+			local shield_visual = x_player_armor.visuals.attach_shield_to_entity(obj, shield_stack, "glb", {
+				torso_item = list[2],
+			})
+			if shield_visual then
+				table.insert(attached, shield_visual)
+			end
+		end
+
+		local wield_stack = list[6]
+		if wield_stack and not wield_stack:is_empty() then
+			local wield_visual = x_player_armor.visuals.attach_wield_item_to_entity(obj, wield_stack, "glb")
+			if wield_visual then
+				table.insert(attached, wield_visual)
+			end
+		end
+	end
+	stand.attached_entities[pos_hash] = attached
 
 	-- Clean up obsolete standalone shield entities if present
 	local old_shield = get_stand_shield(pos)
@@ -537,10 +559,10 @@ function stand.get_stand_formspec(pos, player)
 	table.insert(fs, x_player_armor.ui.render_player_inventory(1.275, 7.05))
 
 	-- Shift-click circular listring loop
-	table.insert(fs, string.format("listring[nodemeta:%d,%d,%d;armor]", pos.x, pos.y, pos.z))
 	table.insert(fs, string.format("listring[detached:%s_armor;armor]", name))
 	table.insert(fs, "listring[current_player;main]")
 	table.insert(fs, string.format("listring[nodemeta:%d,%d,%d;armor]", pos.x, pos.y, pos.z))
+	table.insert(fs, "listring[current_player;main]")
 
 	return table.concat(fs, "")
 end
@@ -614,17 +636,14 @@ function stand.swap_armor(pos, player, is_locked)
 	-- Update player armor state, stats, visuals and active effects
 	x_player_armor.inventory.save_inventory(player, pinv)
 	x_player_armor.set_player_armor(player)
-	x_player_armor.update_player_visuals(player)
-	x_player_armor.run_callbacks("on_update", player)
 	x_player_armor.ui.refresh_player_formspec(player)
 
 	-- Update in-world mannequin visual
 	update_stand_entity(pos)
 
 	-- Sound feedback
-	local sounds = constants.SOUNDS
-	if sounds and sounds.equip then
-		core.sound_play(sounds.equip, {pos = pos, gain = 0.8, max_hear_distance = 16.0})
+	if constants.ENABLE_SOUNDS and constants.SOUNDS.equip then
+		core.sound_play(constants.SOUNDS.equip, {pos = pos, gain = 0.8, max_hear_distance = 16.0})
 	end
 
 	stand.run_callbacks("on_swap", pos, player)
@@ -768,9 +787,8 @@ function stand.take_all_armor(pos, player, is_locked)
 
 	if changed then
 		update_stand_entity(pos)
-		local sounds = constants.SOUNDS
-		if sounds and sounds.unequip then
-			core.sound_play(sounds.unequip, {pos = pos, gain = 0.8, max_hear_distance = 16.0})
+		if constants.ENABLE_SOUNDS and constants.SOUNDS.unequip then
+			core.sound_play(constants.SOUNDS.unequip, {pos = pos, gain = 0.8, max_hear_distance = 16.0})
 		end
 		core.show_formspec(name, "x_player_armor:stand_" .. pos.x .. "_" .. pos.y .. "_" .. pos.z, stand.get_stand_formspec(pos, player))
 	end
@@ -836,6 +854,7 @@ local function register_stand_node(subname, def)
 		mesh = constants.MODELS.stand,
 		visual_scale = 1.0, -- glTF 10 units = 1 node standard
 		tiles = {def.texture},
+		use_texture_alpha = "clip",
 		inventory_image = def.inventory_image or def.texture,
 		wield_image = def.wield_image or def.inventory_image or def.texture,
 		paramtype = "light",
@@ -884,6 +903,8 @@ local function register_stand_node(subname, def)
 		end,
 
 		on_destruct = function(pos)
+			stand.cleanup_attached_entities(pos)
+
 			local obj = get_stand_entity(pos)
 			if obj and obj:is_valid() then
 				local luaent = obj:get_luaentity()
@@ -1096,7 +1117,7 @@ core.register_lbm({
 	nodenames = {"x_player_armor:stand", "x_player_armor:locked_stand"},
 	run_at_every_load = true,
 	action = function(pos)
-		update_stand_entity(pos)
+		stand.schedule_restore(pos)
 	end,
 })
 

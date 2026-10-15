@@ -2,6 +2,7 @@
 local visuals = {
 	player_entities = {},
 	texture_cache = {},
+	last_death_armor = {},
 }
 
 local constants = x_player_armor.constants
@@ -17,15 +18,15 @@ core.register_entity("x_player_armor:visual", {
 		mesh = "",
 		textures = {"blank.png"},
 		visual_size = {x = 1, y = 1, z = 1},
-		backface_culling = true,
+		backface_culling = false,
 		shaded = true,
 		glow = 0,
 	},
 	on_activate = function(self)
 		self.object:set_armor_groups({immortal = 1})
 	end,
-	on_deactivate = function(self, removal)
-		if removal and not self._intentional_removal and self._player_name then
+	on_deactivate = function(self)
+		if not self._intentional_removal and self._player_name then
 			visuals.schedule_player_restore(self._player_name)
 		end
 	end,
@@ -55,8 +56,28 @@ local function get_attachment_targets(player)
 			local proxies = x_api.get_visual_proxies(player)
 			if proxies then
 				local active_format = (x_api.get_model_format and x_api.get_model_format()) or "glb"
-				if active_format == "b3d" then
-					if proxies.b3d and proxies.b3d:is_valid() then
+				local pdata = x_api.get_animation and x_api.get_animation(player)
+				local m_name = (pdata and pdata.model) or model_name or (x_api.get_default_model and x_api.get_default_model())
+				local model_def = m_name and x_api.get_model and x_api.get_model(m_name)
+				local has_glb = (active_format ~= "b3d")
+				if model_def then
+					has_glb = (active_format ~= "b3d") and (model_def.mesh_glb ~= nil or (model_def.mesh and model_def.mesh:match("%.glb$") ~= nil))
+				end
+
+				-- Verify active proxies and non-zero visual size
+				local glb_props = proxies.glb and proxies.glb:is_valid() and proxies.glb.get_properties and proxies.glb:get_properties()
+				if glb_props and glb_props.visual_size and (glb_props.visual_size.x == 0 or glb_props.visual_size.y == 0) then
+					has_glb = false
+				end
+
+				local b3d_props = proxies.b3d and proxies.b3d:is_valid() and proxies.b3d.get_properties and proxies.b3d:get_properties()
+				local has_b3d = (proxies.b3d and proxies.b3d:is_valid()) and true or false
+				if b3d_props and b3d_props.visual_size and (b3d_props.visual_size.x == 0 or b3d_props.visual_size.y == 0) then
+					has_b3d = false
+				end
+
+				if active_format == "b3d" or not has_glb then
+					if has_b3d then
 						table.insert(targets, {
 							parent = proxies.b3d,
 							observers = nil,
@@ -64,21 +85,29 @@ local function get_attachment_targets(player)
 							is_skinsdb = is_skinsdb,
 						})
 					end
-				else
-					if proxies.glb and proxies.glb:is_valid() then
-						local observers = x_api.get_modern_observers and x_api.get_modern_observers()
+				elseif not has_b3d then
+					if has_glb then
 						table.insert(targets, {
 							parent = proxies.glb,
-							observers = observers,
+							observers = nil,
 							format = "glb",
 							is_skinsdb = is_skinsdb,
 						})
 					end
-					if proxies.b3d and proxies.b3d:is_valid() then
-						local observers = x_api.get_legacy_observers and x_api.get_legacy_observers()
+				else
+					-- Dual format mode: both proxies active
+					if has_glb then
+						table.insert(targets, {
+							parent = proxies.glb,
+							observers = nil,
+							format = "glb",
+							is_skinsdb = is_skinsdb,
+						})
+					end
+					if has_b3d then
 						table.insert(targets, {
 							parent = proxies.b3d,
-							observers = observers,
+							observers = nil,
 							format = "b3d",
 							is_skinsdb = is_skinsdb,
 						})
@@ -88,6 +117,14 @@ local function get_attachment_targets(player)
 		end
 	end
 	if #targets == 0 then
+		local is_proxy_active = x_api and x_api.get_visual_proxies and not (x_api.is_pure_native_b3d_active and x_api.is_pure_native_b3d_active(player))
+		if is_proxy_active then
+			local pname = player and player:is_player() and player:get_player_name()
+			if pname then
+				visuals.schedule_player_restore(pname)
+			end
+			return targets
+		end
 		table.insert(targets, {
 			parent = player,
 			observers = nil,
@@ -184,7 +221,7 @@ local function spawn_piece(target, piece_id, default_texture, glow, player_name,
 	end
 
 	local item_glow = (item_def and item_def.glow) or glow or 0
-	local backface_culling = true
+	local backface_culling = false
 	if item_def and item_def.backface_culling ~= nil then
 		backface_culling = item_def.backface_culling
 	end
@@ -201,8 +238,10 @@ local function spawn_piece(target, piece_id, default_texture, glow, player_name,
 		backface_culling = backface_culling,
 		shaded = shaded,
 	})
-	-- 5th argument 'false' disables forced_visible, avoiding first-person view frustum clipping
-	obj:set_attach(parent, bone, pos, rot, false)
+	-- 5th argument: true for standalone entities (corpses, stands) to guarantee rendering;
+	-- false for living players to avoid first-person view frustum clipping
+	local force_vis = (player_name == nil)
+	obj:set_attach(parent, bone, pos, rot, force_vis)
 	if target.observers and obj.set_observers then
 		obj:set_observers(target.observers)
 	end
@@ -263,16 +302,10 @@ function visuals.get_item_texture(item_name)
 	if visuals.texture_cache[item_name] then
 		return visuals.texture_cache[item_name]
 	end
-	local resolved_name = core.registered_aliases[item_name] or item_name
-	local def = core.registered_tools[resolved_name] or core.registered_items[resolved_name]
-	local tex = nil
-	if def then
-		tex = def.texture
-		if not tex and def._x_player_armor and def._x_player_armor.texture then
-			tex = def._x_player_armor.texture
-		end
-	end
+	local def = x_player_armor.get_armor_def(item_name)
+	local tex = def and (def.texture or (def._x_player_armor and def._x_player_armor.texture))
 	if not tex then
+		local resolved_name = core.registered_aliases[item_name] or item_name
 		tex = resolved_name:gsub(":", "_") .. ".png"
 	end
 	if tex then
@@ -305,7 +338,7 @@ function visuals.update_player_visuals(player)
 			local item_name = stack:get_name()
 			local tex = visuals.get_item_texture(item_name)
 			if tex then
-				local idef = stack:get_definition() or (x_player_armor.registered_armors and x_player_armor.registered_armors[item_name])
+				local idef = stack:get_definition() or x_player_armor.get_armor_def(item_name)
 				worn_elements[element] = {
 					item = item_name,
 					texture = tex,
@@ -335,12 +368,23 @@ function visuals.update_player_visuals(player)
 			if not current or current.item ~= target.item or (current.is_skinsdb ~= is_skinsdb_rig) or #current ~= expected_count then
 				needs_spawn = true
 			else
+				local ds = rawget(_G, "deathstats")
+				local is_dead_cam = (ds and type(ds.player_camera_data) == "table" and ds.player_camera_data[name] ~= nil)
+					or (player.get_hp and player:get_hp() <= 0)
 				-- Verify validity and attachment to an active target parent
 				for i = 1, #current do
 					local obj = current[i]
 					if not obj or not obj:is_valid() then
 						needs_spawn = true
 						break
+					end
+					if not is_dead_cam and obj.get_properties then
+						local oprops = obj:get_properties()
+						if oprops and (oprops.is_visible == false
+								or (oprops.visual_size and (oprops.visual_size.x == 0 or oprops.visual_size.y == 0))) then
+							needs_spawn = true
+							break
+						end
 					end
 					local attach_parent = obj:get_attach()
 					if not attach_parent or (attach_parent.is_valid and not attach_parent:is_valid()) then
@@ -373,22 +417,35 @@ function visuals.update_player_visuals(player)
 
 	-- Reconcile shield wield item via x_player_api
 	if has_x_api then
+		local ds = rawget(_G, "deathstats")
+		local is_dead_cam = (ds and type(ds.player_camera_data) == "table" and ds.player_camera_data[name] ~= nil)
 		local target = worn_elements.shield
+		local torso_item = (worn_elements.torso and worn_elements.torso.item) or ""
+		local prev_torso_item = visuals.player_entities[name].shield_torso_item or ""
 		if target then
-			local stack_or_name = target.stack or target.item
-			local target_name = (type(stack_or_name) == "userdata" and stack_or_name:get_name())
-				or (type(stack_or_name) == "string" and stack_or_name:match("%S+"))
-				or ""
-			local current_left = x_player_armor.compat_x_player_api.get_left_wield_item(player)
-			if current_left ~= "" and current_left == target_name then
-				x_player_armor.compat_x_player_api.update_shield(player, stack_or_name)
-			else
-				x_player_armor.compat_x_player_api.attach_shield(player, stack_or_name)
+			if not is_dead_cam then
+				local stack_or_name = target.stack or target.item
+				local target_name = (type(stack_or_name) == "userdata" and stack_or_name:get_name())
+					or (type(stack_or_name) == "string" and stack_or_name:match("%S+"))
+					or ""
+				local current_left = x_player_armor.compat_x_player_api.get_left_wield_item(player)
+				local x_api = x_player_armor.get_mod_api("x_player_api")
+				local left_ent = x_api and x_api.get_left_wield_entity and x_api.get_left_wield_entity(player)
+				if current_left ~= "" and current_left == target_name and prev_torso_item == torso_item and left_ent and left_ent:is_valid() then
+					x_player_armor.compat_x_player_api.update_shield(player, stack_or_name)
+				else
+					x_player_armor.compat_x_player_api.attach_shield(player, stack_or_name)
+				end
+				visuals.player_entities[name].shield_torso_item = torso_item
 			end
 		else
+			visuals.player_entities[name].shield_torso_item = nil
 			x_player_armor.compat_x_player_api.remove_shield(player)
 		end
 	end
+
+	-- Eagerly assemble and deliver dynamic 3D preview model if custom pieces are worn
+	x_player_armor.gltf_assembler.update_player(player)
 end
 
 ---Removes all visual armor entities for a player.
@@ -400,15 +457,17 @@ function visuals.clear_all(player_name)
 	local player_data = visuals.player_entities[name]
 	if player_data then
 		for _, list in pairs(player_data) do
-			for i = 1, #list do
-				local obj = list[i]
-				if obj and obj:is_valid() then
-					local ent = obj:get_luaentity()
-					if ent then
-						ent._intentional_removal = true
+			if type(list) == "table" then
+				for i = 1, #list do
+					local obj = list[i]
+					if obj and obj:is_valid() then
+						local ent = obj:get_luaentity()
+						if ent then
+							ent._intentional_removal = true
+						end
+						obj:set_detach()
+						obj:remove()
 					end
-					obj:set_detach()
-					obj:remove()
 				end
 			end
 		end
@@ -488,12 +547,158 @@ core.register_on_shutdown(function()
 end)
 
 core.register_on_respawnplayer(function(player)
-	core.after(0.1, function()
+	local name = player and player.get_player_name and player:get_player_name()
+	if name and visuals.last_death_armor then
+		visuals.last_death_armor[name] = nil
+	end
+	core.after(0.05, function()
 		if player and player:is_player() then
 			visuals.update_player_visuals(player)
 		end
 	end)
+	core.after(0.2, function()
+		if player and player:is_player() then
+			visuals.verify_player_visuals(player)
+		end
+	end)
 end)
+
+---Verifies that all worn armor and shield pieces for a player have valid, attached visual entities.
+---Performs an on-demand reconciliation if any worn piece is missing, detached, or on an unready proxy.
+---@param player ObjectRef Target player
+---@return boolean needs_repair True if visuals required and executed repair, false if already healthy
+function visuals.verify_player_visuals(player)
+	if not player or not player:is_player() or (player.is_valid and not player:is_valid()) then
+		return false
+	end
+
+	local name, inv = x_player_armor.get_valid_player(player)
+	if not name or not inv then return false end
+
+	local ds = rawget(_G, "deathstats")
+	if (ds and type(ds.player_camera_data) == "table" and ds.player_camera_data[name] ~= nil)
+			or (player.get_hp and player:get_hp() <= 0) then
+		return false
+	end
+
+	local armor_list = inv:get_list("armor")
+	if not armor_list then return false end
+
+	local has_any_armor = false
+	for slot = 1, 5 do
+		local stack = armor_list[slot]
+		if stack and not stack:is_empty() then
+			has_any_armor = true
+			break
+		end
+	end
+
+	if not has_any_armor then return false end
+
+	local ents = visuals.player_entities[name]
+	local needs_repair = not ents
+
+	if not needs_repair then
+		for slot = 1, 4 do
+			local el = constants.SLOT_ELEMENTS[slot]
+			local stack = armor_list[slot]
+			if stack and not stack:is_empty() then
+				local el_ents = ents[el]
+				if not el_ents or #el_ents == 0 then
+					needs_repair = true
+					break
+				else
+					for e = 1, #el_ents do
+						local obj = el_ents[e]
+						if not obj or not obj:is_valid() then
+							needs_repair = true
+							break
+						end
+						if obj.get_properties then
+							local oprops = obj:get_properties()
+							if oprops and (oprops.is_visible == false
+									or (oprops.visual_size and (oprops.visual_size.x == 0 or oprops.visual_size.y == 0))) then
+								needs_repair = true
+								break
+							end
+						end
+						local p = obj:get_attach()
+						if not p or (p.is_valid and not p:is_valid()) then
+							needs_repair = true
+							break
+						end
+						local pprops = p.get_properties and p:get_properties()
+						if pprops and pprops.visual_size and (pprops.visual_size.x == 0 or pprops.visual_size.y == 0) then
+							needs_repair = true
+							break
+						end
+					end
+				end
+			end
+			if needs_repair then break end
+		end
+
+		-- Check shield (slot 5)
+		if not needs_repair then
+			local shield_stack = armor_list[5]
+			if shield_stack and not shield_stack:is_empty() then
+				if x_player_armor.compat_x_player_api.is_present() then
+					local cur_item = x_player_armor.compat_x_player_api.get_left_wield_item(player)
+					local x_api = x_player_armor.get_mod_api("x_player_api")
+					local left_ent = x_api and x_api.get_left_wield_entity and x_api.get_left_wield_entity(player)
+					if cur_item == "" or not left_ent or not left_ent:is_valid() then
+						needs_repair = true
+					end
+				else
+					local s_ents = ents.shield
+					if not s_ents or #s_ents == 0 or not s_ents[1] or not s_ents[1]:is_valid() then
+						needs_repair = true
+					end
+				end
+			end
+		end
+	end
+
+	if needs_repair then
+		visuals.update_player_visuals(player)
+		return true
+	end
+	return false
+end
+
+-- Event-driven visual self-healing registration.
+-- Hooks proxy activation and lifecycle events without continuous globalstep polling.
+local watchdog_registered = false
+function visuals.register_watchdog()
+	if watchdog_registered then return end
+	watchdog_registered = true
+
+	-- luacheck: push
+	-- luacheck: ignore 122
+	local function hook_proxy_entity(entity_name)
+		local edef = core.registered_entities[entity_name]
+		if edef and not edef._x_pa_proxy_wrapped then
+			edef._x_pa_proxy_wrapped = true
+			local orig_activate = edef.on_activate
+			edef.on_activate = function(self, staticdata, dtime_s)
+				if orig_activate then
+					orig_activate(self, staticdata, dtime_s)
+				end
+				core.after(0.05, function()
+					if self.object and self.object:is_valid() then
+						local parent = self.object:get_attach()
+						if parent and parent:is_player() then
+							visuals.schedule_player_restore(parent:get_player_name())
+						end
+					end
+				end)
+			end
+		end
+	end
+	hook_proxy_entity("x_player_api:visual_glb")
+	hook_proxy_entity("x_player_api:visual_b3d")
+	-- luacheck: pop
+end
 
 ---Attaches modular 3D armor visuals to a target parent entity (such as a corpse).
 ---@param parent ObjectRef The entity to attach armor to
@@ -503,6 +708,11 @@ end)
 function visuals.attach_armor_to_entity(parent, player_or_name, format)
 	if not parent or (parent.is_valid and not parent:is_valid()) then
 		return {}
+	end
+
+	local parent_lua = parent.get_luaentity and parent:get_luaentity()
+	if parent_lua then
+		parent_lua._x_pa_torso_item = nil
 	end
 
 	local fmt = format
@@ -517,7 +727,7 @@ function visuals.attach_armor_to_entity(parent, player_or_name, format)
 		for _, item in ipairs(player_or_name) do
 			if type(item) == "string" and item ~= "" then
 				table.insert(armor_stacks, ItemStack(item))
-			elseif type(item) == "userdata" and not item:is_empty() then
+			elseif (type(item) == "userdata" or (type(item) == "table" and item.get_name)) and not item:is_empty() then
 				table.insert(armor_stacks, item)
 			elseif type(item) == "table" and (item.name or item.item) then
 				table.insert(armor_stacks, ItemStack(item.name or item.item))
@@ -534,11 +744,13 @@ function visuals.attach_armor_to_entity(parent, player_or_name, format)
 			pname = player_obj.get_player_name and player_obj:get_player_name()
 		end
 
+		local has_live_inv = false
 		if player_obj and player_obj.is_player and player_obj:is_player() then
 			local _, inv = x_player_armor.get_valid_player(player_obj)
 			if inv then
 				local list = inv:get_list("armor")
 				if list then
+					has_live_inv = true
 					for _, st in ipairs(list) do
 						if st and not st:is_empty() then
 							table.insert(armor_stacks, st)
@@ -548,8 +760,8 @@ function visuals.attach_armor_to_entity(parent, player_or_name, format)
 			end
 		end
 
-		-- If inventory was already cleared on death, consult last_death_armor snapshot
-		if #armor_stacks == 0 and pname and visuals.last_death_armor and visuals.last_death_armor[pname] then
+		-- If inventory was already cleared on death (or unavailable), consult last_death_armor snapshot
+		if #armor_stacks == 0 and (not has_live_inv or constants.DROP_ON_DEATH or constants.DESTROY_ON_DEATH) and pname and visuals.last_death_armor[pname] then
 			for _, st in ipairs(visuals.last_death_armor[pname]) do
 				if st and not st:is_empty() then
 					table.insert(armor_stacks, st)
@@ -572,7 +784,7 @@ function visuals.attach_armor_to_entity(parent, player_or_name, format)
 		if iname and iname ~= "" then
 			local tex = visuals.get_item_texture(iname)
 			if tex then
-				local idef = stack:get_definition() or (x_player_armor.registered_armors and x_player_armor.registered_armors[iname])
+				local idef = stack:get_definition() or x_player_armor.get_armor_def(iname)
 				local element = idef and idef.element
 				if not element then
 					for _, el in ipairs({"head", "torso", "legs", "feet"}) do
@@ -584,6 +796,9 @@ function visuals.attach_armor_to_entity(parent, player_or_name, format)
 				end
 
 				if element and element ~= "shield" then
+					if element == "torso" and parent_lua then
+						parent_lua._x_pa_torso_item = iname
+					end
 					local piece_ids = (idef and idef.pieces) or constants.ELEMENT_PIECES[element]
 					if piece_ids then
 						for _, piece_id in ipairs(piece_ids) do
@@ -606,6 +821,148 @@ function visuals.attach_armor_to_entity(parent, player_or_name, format)
 	return created
 end
 
+---Resolves the composite attachment options, mesh, textures, and calibrated transforms for a shield item.
+---Single source of truth used for both standalone entity attachment and x_player_api left-wield integration.
+---@param item_or_stack string|ItemStack Shield item name or stack
+---@param custom_opts? XPlayerArmorShieldVisualOpts Optional overrides
+---@return table opts Resolved options table
+function visuals.resolve_shield_visual_opts(item_or_stack, custom_opts)
+	local item_name = (type(item_or_stack) == "userdata" and item_or_stack:get_name())
+		or (type(item_or_stack) == "table" and item_or_stack.get_name and item_or_stack:get_name())
+		or (type(item_or_stack) == "table" and (item_or_stack.name or item_or_stack.item))
+		or (type(item_or_stack) == "string" and item_or_stack:match("%S+"))
+		or ""
+	local item_def = core.registered_items[item_name]
+		or x_player_armor.get_armor_def(item_name)
+	local shield_trans = constants.SHIELD_OFFSET or {}
+	local glb_trans = shield_trans.glb or {}
+	local b3d_trans = shield_trans.b3d or {}
+	local item_offset = item_def and (item_def.shield_offset or item_def.shield_transform)
+
+	local custom_mesh = (custom_opts and custom_opts.mesh)
+		or (item_def and (item_def.mesh or item_def.model))
+
+	local item_tex = (item_name ~= "" and visuals.get_item_texture(item_name))
+		or (item_def and (item_def.texture or item_def.inventory_image))
+
+	local custom_textures = (custom_opts and custom_opts.textures)
+		or (item_def and (item_def.textures or (item_def.texture and {item_def.texture})))
+		or (item_tex and {item_tex})
+
+	local visual_type = (custom_opts and custom_opts.visual) or (custom_mesh and "mesh") or "wielditem"
+
+	local is_bone_local = (custom_opts and custom_opts.bone_local)
+		or (item_def and item_def.bone_local)
+
+	local pos_glb
+	local rot_glb
+	local pos_b3d
+	local rot_b3d
+	local scale
+
+	if is_bone_local and not item_offset and not (custom_opts and (custom_opts.pos or custom_opts.pos_glb)) then
+		pos_glb = {x = 0, y = 0, z = 0}
+		rot_glb = {x = 0, y = 0, z = 0}
+		pos_b3d = {x = 0, y = 0, z = 0}
+		rot_b3d = {x = 0, y = 180, z = 0}
+		scale = (custom_opts and (custom_opts.scale_glb or custom_opts.scale)) or {x = 1, y = 1, z = 1}
+	else
+		pos_glb = (custom_opts and custom_opts.pos_glb)
+			or (item_offset and item_offset.glb and item_offset.glb.pos)
+			or (item_offset and item_offset.pos)
+			or (custom_opts and custom_opts.pos)
+			or glb_trans.pos
+			or {x = -0.95, y = 4.44, z = -1.48}
+		rot_glb = (custom_opts and custom_opts.rot_glb)
+			or (item_offset and item_offset.glb and item_offset.glb.rot)
+			or (item_offset and item_offset.rot)
+			or (custom_opts and custom_opts.rot)
+			or glb_trans.rot
+			or {x = -171.4, y = 70.5, z = -1.7}
+
+		pos_b3d = (custom_opts and custom_opts.pos_b3d)
+			or (item_offset and item_offset.b3d and item_offset.b3d.pos)
+			or (item_offset and item_offset.pos)
+			or (custom_opts and custom_opts.pos)
+			or b3d_trans.pos
+			or {x = -0.95, y = 4.44, z = 1.48}
+		rot_b3d = (custom_opts and custom_opts.rot_b3d)
+			or (item_offset and item_offset.b3d and item_offset.b3d.rot)
+			or (item_offset and item_offset.rot)
+			or (custom_opts and custom_opts.rot)
+			or b3d_trans.rot
+			or {x = -171.4, y = -109.5, z = -1.7}
+
+		scale = (custom_opts and (custom_opts.scale_glb or custom_opts.scale))
+			or (item_offset and item_offset.glb and item_offset.glb.scale)
+			or (item_offset and item_offset.scale)
+			or glb_trans.scale
+			or (item_def and item_def.visual_size)
+			or {x = 1, y = 1, z = 1}
+	end
+
+	-- Apply torso-driven shield_clearance offset if a bulky torso is worn (and no explicit custom pos override)
+	if not (custom_opts and (custom_opts.pos or custom_opts.pos_glb or custom_opts.pos_b3d)) then
+		local clearance = custom_opts and custom_opts.shield_clearance
+		if not clearance and custom_opts and custom_opts.torso_item then
+			local t_item = custom_opts.torso_item
+			local t_name = (type(t_item) == "userdata" and t_item:get_name())
+				or (type(t_item) == "table" and t_item.get_name and t_item:get_name())
+				or (type(t_item) == "table" and (t_item.name or t_item.item))
+				or (type(t_item) == "string" and t_item:match("%S+"))
+				or ""
+			if t_name ~= "" then
+				local t_def = x_player_armor.get_armor_def(t_name) or core.registered_items[t_name]
+				clearance = t_def and t_def.shield_clearance
+			end
+		end
+		if clearance then
+			local c_glb = (clearance.glb and clearance.glb.pos) or clearance.pos
+			if c_glb then
+				pos_glb = {
+					x = (pos_glb.x or 0) + (c_glb.x or 0),
+					y = (pos_glb.y or 0) + (c_glb.y or 0),
+					z = (pos_glb.z or 0) + (c_glb.z or 0),
+				}
+			end
+			local c_b3d = (clearance.b3d and clearance.b3d.pos) or clearance.pos
+			if c_b3d then
+				pos_b3d = {
+					x = (pos_b3d.x or 0) + (c_b3d.x or 0),
+					y = (pos_b3d.y or 0) + (c_b3d.y or 0),
+					z = (pos_b3d.z or 0) + (c_b3d.z or 0),
+				}
+			end
+		end
+	end
+
+	local opts = {
+		visual = visual_type,
+		mesh = custom_mesh,
+		textures = custom_textures,
+		override_transform = true,
+		pos_glb = pos_glb,
+		rot_glb = rot_glb,
+		pos_b3d = pos_b3d,
+		rot_b3d = rot_b3d,
+		scale = scale,
+		visual_size = scale,
+		bone_local = is_bone_local,
+		item_def = item_def,
+		item_name = item_name,
+	}
+
+	if custom_opts then
+		for k, v in pairs(custom_opts) do
+			if opts[k] == nil then
+				opts[k] = v
+			end
+		end
+	end
+
+	return opts
+end
+
 ---Attaches a shield visual entity to a target parent entity (such as a corpse or mob) with proper forearm transforms.
 ---@param parent ObjectRef The entity to attach the shield to
 ---@param item_or_stack string|ItemStack Shield item name or stack
@@ -617,10 +974,18 @@ function visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_o
 		return nil
 	end
 
-	local item_name = (type(item_or_stack) == "userdata" and item_or_stack:get_name())
-		or (type(item_or_stack) == "string" and item_or_stack:match("%S+"))
-		or ""
-	if item_name == "" then
+	local resolve_opts = custom_opts
+	if not custom_opts or (custom_opts.torso_item == nil and custom_opts.shield_clearance == nil) then
+		local parent_lua = parent.get_luaentity and parent:get_luaentity()
+		if parent_lua and parent_lua._x_pa_torso_item then
+			resolve_opts = custom_opts and table.copy(custom_opts) or {}
+			resolve_opts.torso_item = parent_lua._x_pa_torso_item
+		end
+	end
+
+	local opts = visuals.resolve_shield_visual_opts(item_or_stack, resolve_opts)
+	local item_name = opts.item_name
+	if not item_name or item_name == "" then
 		return nil
 	end
 
@@ -628,59 +993,6 @@ function visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_o
 	if not fmt or fmt == "" then
 		local p_mesh = (parent.get_properties and parent:get_properties().mesh) or ""
 		fmt = (p_mesh:find("%.glb$") or p_mesh:find("%.gltf$")) and "glb" or "b3d"
-	end
-
-	local item_def = core.registered_items[item_name]
-		or (x_player_armor.registered_armors and x_player_armor.registered_armors[item_name])
-	local shield_trans = constants.SHIELD_OFFSET or {}
-	local glb_trans = shield_trans.glb or {}
-	local b3d_trans = shield_trans.b3d or {}
-	local item_offset = item_def and (item_def.shield_offset or item_def.shield_transform)
-
-	local pos_glb = (custom_opts and custom_opts.pos_glb)
-		or (item_offset and item_offset.glb and item_offset.glb.pos)
-		or (item_offset and item_offset.pos)
-		or (custom_opts and custom_opts.pos)
-		or glb_trans.pos or {x = -0.8, y = 5.0, z = -2.8}
-	local rot_glb = (custom_opts and custom_opts.rot_glb)
-		or (item_offset and item_offset.glb and item_offset.glb.rot)
-		or (item_offset and item_offset.rot)
-		or (custom_opts and custom_opts.rot)
-		or glb_trans.rot or {x = 180, y = 45, z = 0}
-
-	local pos_b3d = (custom_opts and custom_opts.pos_b3d)
-		or (item_offset and item_offset.b3d and item_offset.b3d.pos)
-		or (item_offset and item_offset.pos)
-		or (custom_opts and custom_opts.pos)
-		or b3d_trans.pos or {x = -0.8, y = 5.0, z = 2.8}
-	local rot_b3d = (custom_opts and custom_opts.rot_b3d)
-		or (item_offset and item_offset.b3d and item_offset.b3d.rot)
-		or (item_offset and item_offset.rot)
-		or (custom_opts and custom_opts.rot)
-		or b3d_trans.rot or {x = 180, y = -45, z = 0}
-
-	local custom_mesh = (custom_opts and custom_opts.mesh) or (item_def and (item_def.mesh or item_def.model))
-	local custom_textures = (custom_opts and custom_opts.textures)
-		or (item_def and (item_def.textures or (item_def.texture and {item_def.texture})))
-	local visual_type = (custom_opts and custom_opts.visual) or (custom_mesh and "mesh") or "wielditem"
-
-	local opts = {
-		visual = visual_type,
-		mesh = custom_mesh,
-		textures = custom_textures,
-		override_transform = true,
-		pos_glb = pos_glb,
-		rot_glb = rot_glb,
-		pos_b3d = pos_b3d,
-		rot_b3d = rot_b3d,
-	}
-
-	if custom_opts then
-		for k, v in pairs(custom_opts) do
-			if opts[k] == nil then
-				opts[k] = v
-			end
-		end
 	end
 
 	local bone = (custom_opts and custom_opts.bone) or "Arm_Left"
@@ -700,20 +1012,21 @@ function visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_o
 		if not pos then return nil end
 		local obj = core.add_entity(pos, ent_name)
 		if obj and obj:is_valid() then
-			local v_size = (visual_type == "wielditem") and {x = 0.25, y = 0.25, z = 0.25}
-				or (custom_opts and custom_opts.visual_size) or (item_def and item_def.visual_size) or {x = 1, y = 1, z = 1}
-			local glow = (custom_opts and custom_opts.glow) or (item_def and item_def.glow) or 0
+			local v_size = (opts.visual == "wielditem") and {x = 0.25, y = 0.25, z = 0.25}
+				or (custom_opts and (custom_opts.visual_size or custom_opts.scale))
+				or opts.scale or (opts.item_def and opts.item_def.visual_size) or {x = 1, y = 1, z = 1}
+			local glow = (custom_opts and custom_opts.glow) or (opts.item_def and opts.item_def.glow) or 0
 			obj:set_properties({
-				visual = visual_type,
-				mesh = custom_mesh,
-				textures = custom_textures or {item_name},
+				visual = opts.visual,
+				mesh = opts.mesh,
+				textures = opts.textures or {item_name},
 				wield_item = item_name,
 				visual_size = v_size,
 				pointable = false,
 				glow = glow,
 			})
-			local att_pos = (fmt == "glb") and pos_glb or pos_b3d
-			local att_rot = (fmt == "glb") and rot_glb or rot_b3d
+			local att_pos = (fmt == "glb") and opts.pos_glb or opts.pos_b3d
+			local att_rot = (fmt == "glb") and opts.rot_glb or opts.rot_b3d
 			obj:set_attach(parent, bone, att_pos, att_rot, true)
 			ent = obj
 		end
@@ -729,6 +1042,82 @@ function visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_o
 
 	return ent
 end
+
+---Attaches a wield item visual entity to a target parent entity (such as an armor stand or corpse) on the right arm.
+---@param parent ObjectRef The entity to attach the wield item to
+---@param item_or_stack string|ItemStack Held item name or stack
+---@param format string? Model format ("glb" or "b3d")
+---@param custom_opts? table Optional custom overrides
+---@return ObjectRef? entity The attached visual entity or nil
+function visuals.attach_wield_item_to_entity(parent, item_or_stack, format, custom_opts)
+	if not parent or (parent.is_valid and not parent:is_valid()) then
+		return nil
+	end
+
+	local item_name = (type(item_or_stack) == "userdata" and item_or_stack:get_name())
+		or (type(item_or_stack) == "table" and item_or_stack.get_name and item_or_stack:get_name())
+		or (type(item_or_stack) == "table" and (item_or_stack.name or item_or_stack.item))
+		or (type(item_or_stack) == "string" and item_or_stack:match("%S+"))
+		or ""
+	if item_name == "" then
+		return nil
+	end
+
+	local fmt = format
+	if not fmt or fmt == "" then
+		local p_mesh = (parent.get_properties and parent:get_properties().mesh) or ""
+		fmt = (p_mesh:find("%.glb$") or p_mesh:find("%.gltf$")) and "glb" or "b3d"
+	end
+
+	local bone = (custom_opts and custom_opts.bone) or "Arm_Right"
+	local ent_name = (custom_opts and custom_opts.entity_name)
+		or "x_player_armor:visual"
+
+	local x_api = x_player_armor.get_mod_api("x_player_api")
+	local ent = nil
+
+	if x_api and type(x_api.attach_wield_item_to_entity) == "function" and (x_api.enable_wield_item ~= false) then
+		ent = x_api.attach_wield_item_to_entity(parent, item_or_stack, fmt, bone, ent_name, true, custom_opts)
+	end
+
+	if not ent then
+		local pos = parent:get_pos()
+		if not pos then return nil end
+		local obj = core.add_entity(pos, ent_name)
+		if obj and obj:is_valid() then
+			local v_size = (custom_opts and (custom_opts.visual_size or custom_opts.scale))
+				or {x = 0.275, y = 0.275, z = 0.275}
+			local glow = (custom_opts and custom_opts.glow) or 0
+			obj:set_properties({
+				visual = "wielditem",
+				wield_item = item_name,
+				visual_size = v_size,
+				pointable = false,
+				glow = glow,
+			})
+			local att_pos = (fmt == "glb") and {x = 0, y = 5.2, z = -3.5} or {x = 0, y = 5.2, z = 3.5}
+			local att_rot = (fmt == "glb") and {x = -90, y = 45, z = -90} or {x = -90, y = 225, z = 90}
+			if custom_opts then
+				att_pos = (fmt == "glb" and (custom_opts.pos_glb or custom_opts.pos))
+					or custom_opts.pos_b3d or custom_opts.pos or att_pos
+				att_rot = (fmt == "glb" and (custom_opts.rot_glb or custom_opts.rot))
+					or custom_opts.rot_b3d or custom_opts.rot or att_rot
+			end
+			obj:set_attach(parent, bone, att_pos, att_rot, true)
+			ent = obj
+		end
+	end
+
+	if ent then
+		local luaent = ent:get_luaentity()
+		if luaent then
+			luaent._intentional_removal = true
+		end
+	end
+
+	return ent
+end
+
 
 core.register_chatcommand("clean_armor_visuals", {
 	params = "",

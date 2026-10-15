@@ -67,25 +67,30 @@ local armor = {
 
 armor.textures = setmetatable({}, {
 	__index = function(t, pname)
-		local player = core.get_player_by_name(pname)
 		local pdef = rawget(x_player_armor.def, pname)
 		local skin = (pdef and pdef.skin) or "x_player_armor_character.png"
-		local armor_tex = player and x_player_armor.ui.get_composite_armor_texture(player) or "blank.png"
-		local prev_tex = player and x_player_armor.ui.get_2d_preview_texture(player) or "character_preview.png"
-		local shield_tex = "blank.png"
-		if player then
-			local shield_stack = x_player_armor.combat.get_equipped_shield(player)
-			if shield_stack and not shield_stack:is_empty() then
-				shield_tex = x_player_armor.visuals.get_item_texture(shield_stack:get_name()) or "blank.png"
-			end
-		end
-		local data = {
+		local data = setmetatable({
 			skin = skin,
-			armor = armor_tex,
 			wielditem = "blank.png",
-			preview = prev_tex,
-			shield = shield_tex,
-		}
+		}, {
+			__index = function(_, k)
+				local player = core.get_player_by_name(pname)
+				if k == "armor" then
+					return player and x_player_armor.ui.get_composite_armor_texture(player) or "blank.png"
+				elseif k == "preview" then
+					return player and x_player_armor.ui.get_2d_preview_texture(player) or "character_preview.png"
+				elseif k == "shield" then
+					if player then
+						local shield_stack = x_player_armor.combat.get_equipped_shield(player)
+						if shield_stack and not shield_stack:is_empty() then
+							return x_player_armor.visuals.get_item_texture(shield_stack:get_name()) or "blank.png"
+						end
+					end
+					return "blank.png"
+				end
+				return nil
+			end,
+		})
 		rawset(t, pname, data)
 		return data
 	end,
@@ -160,7 +165,6 @@ function armor.remove_all(self_or_player, maybe_player)
 		inv:set_stack("armor", i, ItemStack(""))
 	end
 	x_player_armor.set_player_armor(player)
-	x_player_armor.update_player_visuals(player)
 end
 
 ---Retrieves the player's skin texture.
@@ -327,8 +331,6 @@ function armor.set_inventory_stack(self_or_player, maybe_player, i, stack)
 	inv:set_stack("armor", slot_idx, to_put)
 	armor.save_armor_inventory(player)
 	x_player_armor.set_player_armor(player)
-	x_player_armor.update_player_visuals(player)
-	x_player_armor.run_callbacks("on_update", player)
 	x_player_armor.ui.refresh_player_formspec(player)
 end
 

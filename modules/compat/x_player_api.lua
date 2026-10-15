@@ -80,7 +80,7 @@ function x_api_compat.init()
 	-- Register wield change listener for event-driven slot syncing (zero globalstep polling)
 	if x_api.register_on_wield_change then
 		x_api.register_on_wield_change(function(player, _wield_name, _prev_wield_name, _wielded, _current_wield_idx, _prev_wield_idx)
-			-- Sync tracked wield state, open formspecs, and combat HUD paperdoll slot 6
+			-- Sync tracked wield state and combat HUD paperdoll slot 6
 			x_player_armor.ui.check_wield_change(player)
 
 			-- Immediately re-evaluate armor group modifiers, weapon enchantments, and physics
@@ -99,7 +99,7 @@ function x_api_compat.on_equip(player, item_name)
 	if not x_api then
 		return
 	end
-	local item_def = core.registered_items[item_name] or (x_player_armor.registered_armors and x_player_armor.registered_armors[item_name])
+	local item_def = x_player_armor.get_armor_def(item_name)
 	local custom_sound = item_def and (item_def.sound_equip or (item_def.sounds and item_def.sounds.equip))
 	if custom_sound and custom_sound ~= "" then
 		core.sound_play(custom_sound, {pos = player:get_pos(), gain = 0.8, max_hear_distance = 16.0})
@@ -133,68 +133,23 @@ function x_api_compat.attach_shield(player, item_or_stack, custom_opts)
 	end
 
 	local first_person = x_api_compat.get_shield_first_person(player)
-	local shield_trans = x_player_armor.constants.SHIELD_OFFSET or {}
-	local glb_trans = shield_trans.glb or {}
-	local b3d_trans = shield_trans.b3d or {}
-
-	-- Resolve item-level custom transforms if specified
-	local item_name = (type(item_or_stack) == "userdata" and item_or_stack:get_name())
-		or (type(item_or_stack) == "string" and item_or_stack:match("%S+"))
-		or ""
-	local item_def = core.registered_items[item_name]
-	local item_offset = item_def and (item_def.shield_offset or item_def.shield_transform)
-
-	local pos_glb = (custom_opts and custom_opts.pos_glb)
-		or (item_offset and item_offset.glb and item_offset.glb.pos)
-		or (item_offset and item_offset.pos)
-		or (custom_opts and custom_opts.pos)
-		or glb_trans.pos
-	local rot_glb = (custom_opts and custom_opts.rot_glb)
-		or (item_offset and item_offset.glb and item_offset.glb.rot)
-		or (item_offset and item_offset.rot)
-		or (custom_opts and custom_opts.rot)
-		or glb_trans.rot
-
-	local pos_b3d = (custom_opts and custom_opts.pos_b3d)
-		or (item_offset and item_offset.b3d and item_offset.b3d.pos)
-		or (item_offset and item_offset.pos)
-		or (custom_opts and custom_opts.pos)
-		or b3d_trans.pos
-	local rot_b3d = (custom_opts and custom_opts.rot_b3d)
-		or (item_offset and item_offset.b3d and item_offset.b3d.rot)
-		or (item_offset and item_offset.rot)
-		or (custom_opts and custom_opts.rot)
-		or b3d_trans.rot
-
-	local custom_mesh = (custom_opts and custom_opts.mesh) or (item_def and (item_def.mesh or item_def.model))
-	local custom_textures = (custom_opts and custom_opts.textures)
-		or (item_def and (item_def.textures or (item_def.texture and {item_def.texture})))
-	local visual_type = (custom_opts and custom_opts.visual) or (custom_mesh and "mesh") or "wielditem"
+	local resolve_opts = custom_opts
+	if (not custom_opts or (custom_opts.torso_item == nil and custom_opts.shield_clearance == nil)) and player then
+		local _, inv = x_player_armor.get_valid_player(player)
+		local torso_stack = inv and inv:get_stack("armor", 2)
+		if torso_stack and not torso_stack:is_empty() then
+			resolve_opts = custom_opts and table.copy(custom_opts) or {}
+			resolve_opts.torso_item = torso_stack:get_name()
+		end
+	end
+	local opts = x_player_armor.visuals.resolve_shield_visual_opts(item_or_stack, resolve_opts)
 
 	local is_pure_b3d = (x_api.is_pure_native_b3d_active and x_api.is_pure_native_b3d_active(player)) or false
 	local fp_visible = (custom_opts and custom_opts.first_person ~= nil)
 		and (custom_opts.first_person == true)
 		or ((first_person ~= false) and not is_pure_b3d)
 
-	local opts = {
-		visual = visual_type,
-		mesh = custom_mesh,
-		textures = custom_textures,
-		first_person = fp_visible,
-		override_transform = true,
-		pos_glb = pos_glb,
-		rot_glb = rot_glb,
-		pos_b3d = pos_b3d,
-		rot_b3d = rot_b3d,
-	}
-
-	if custom_opts then
-		for k, v in pairs(custom_opts) do
-			if opts[k] == nil then
-				opts[k] = v
-			end
-		end
-	end
+	opts.first_person = fp_visible
 
 	return x_api.attach_left_wield_item(player, item_or_stack, opts)
 end

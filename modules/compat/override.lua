@@ -74,9 +74,10 @@ local function restore_clean_model(player)
 		local x_api = x_player_armor.get_mod_api("x_player_api")
 		if x_api and x_api.set_model then
 			local cur_model = x_api.get_model_name and x_api.get_model_name(p)
-			if cur_model and (cur_model == "3d_armor_character.b3d" or cur_model:find("3d_armor")) then
+			if cur_model and (cur_model == "3d_armor_character.b3d" or (cur_model:find("3d_armor", 1, true) and not cur_model:find("skinsdb", 1, true))) then
 				local default_model = (x_api.get_default_model and x_api.get_default_model()) or "character"
 				x_api.set_model(p, default_model)
+				x_player_armor.update_player_visuals(p)
 			end
 			return
 		end
@@ -85,8 +86,9 @@ local function restore_clean_model(player)
 		local p_api = x_player_armor.get_mod_api("player_api")
 		if p_api and p_api.set_model then
 			local cur_model = p_api.get_model and p_api.get_model(p)
-			if cur_model and (cur_model == "3d_armor_character.b3d" or cur_model:find("3d_armor")) then
+			if cur_model and (cur_model == "3d_armor_character.b3d" or (cur_model:find("3d_armor", 1, true) and not cur_model:find("skinsdb", 1, true))) then
 				p_api.set_model(p, "character.b3d")
+				x_player_armor.update_player_visuals(p)
 			end
 		end
 	end
@@ -127,20 +129,20 @@ function override.cleanup_legacy_item(legacy_name, modern_name)
 	end
 
 	-- Check if item was registered in engine registries
-	local item_existed = (core.registered_items and core.registered_items[clean_legacy] ~= nil) or
-			(core.registered_tools and core.registered_tools[clean_legacy] ~= nil) or
-			(core.registered_nodes and core.registered_nodes[clean_legacy] ~= nil) or
-			(core.registered_craftitems and core.registered_craftitems[clean_legacy] ~= nil)
+	local item_existed = (core.registered_items[clean_legacy] ~= nil) or
+			(core.registered_tools[clean_legacy] ~= nil) or
+			(core.registered_nodes[clean_legacy] ~= nil) or
+			(core.registered_craftitems[clean_legacy] ~= nil)
 
 	-- Unregister item from engine and enforce alias to modern equivalent
 	core.register_alias_force(clean_legacy, clean_modern)
 
-	-- Defensive cleanup of Luanti item registries
-	if core.registered_items then rawset(core.registered_items, clean_legacy, nil) end
-	if core.registered_tools then rawset(core.registered_tools, clean_legacy, nil) end
-	if core.registered_nodes then rawset(core.registered_nodes, clean_legacy, nil) end
-	if core.registered_craftitems then rawset(core.registered_craftitems, clean_legacy, nil) end
-	if core.registered_aliases then rawset(core.registered_aliases, clean_legacy, clean_modern) end
+	-- Cleanup of Luanti item registries
+	rawset(core.registered_items, clean_legacy, nil)
+	rawset(core.registered_tools, clean_legacy, nil)
+	rawset(core.registered_nodes, clean_legacy, nil)
+	rawset(core.registered_craftitems, clean_legacy, nil)
+	rawset(core.registered_aliases, clean_legacy, clean_modern)
 
 	if item_existed then
 		core.log("action", string.format("[x_player_armor] Cleaned up legacy registration: '%s' -> '%s'.", clean_legacy, clean_modern))
@@ -299,6 +301,85 @@ function override.takeover_legacy_armor()
 	if not override.join_hook_registered then
 		override.join_hook_registered = true
 		core.register_on_joinplayer(restore_clean_model)
+	end
+
+	-- Hook engine and mod visual triggers (player_api.set_model, skins, armor visual methods)
+	override.hook_visual_triggers()
+end
+
+---Hooks model setting and skin changing functions to ensure armor visuals reconcile seamlessly.
+function override.hook_visual_triggers()
+	local function schedule_restore_if_valid(player)
+		if player and player:is_player() and (not player.is_valid or player:is_valid()) then
+			x_player_armor.visuals.schedule_player_restore(player:get_player_name())
+		end
+	end
+
+	local function update_visuals_if_valid(self_or_player, maybe_player)
+		local player = (type(self_or_player) == "userdata" and self_or_player)
+			or (type(maybe_player) == "userdata" and maybe_player)
+		if player and player:is_player() and (not player.is_valid or player:is_valid()) then
+			x_player_armor.visuals.update_player_visuals(player)
+		end
+	end
+
+	local p_api = x_player_armor.get_mod_api("player_api")
+	if p_api and p_api.set_model and not p_api._x_pa_set_model_wrapped then
+		local orig_set_model = p_api.set_model
+		p_api._x_pa_set_model_wrapped = true
+		p_api.set_model = function(player, model_name)
+			orig_set_model(player, model_name)
+			schedule_restore_if_valid(player)
+		end
+	end
+
+	local x_api = x_player_armor.get_mod_api("x_player_api")
+	if x_api and x_api.set_model and not x_api._x_pa_set_model_wrapped then
+		local orig_x_set_model = x_api.set_model
+		x_api._x_pa_set_model_wrapped = true
+		x_api.set_model = function(player, model_name)
+			orig_x_set_model(player, model_name)
+			schedule_restore_if_valid(player)
+		end
+	end
+
+	local skins_api = x_player_armor.get_mod_api("skins")
+	if skins_api and not skins_api._x_pa_wrapped then
+		skins_api._x_pa_wrapped = true
+		if skins_api.update_player_skin then
+			local orig_update_skin = skins_api.update_player_skin
+			skins_api.update_player_skin = function(player)
+				orig_update_skin(player)
+				schedule_restore_if_valid(player)
+			end
+		end
+		if skins_api.set_player_skin then
+			local orig_set_skin = skins_api.set_player_skin
+			skins_api.set_player_skin = function(player, skin)
+				local res = orig_set_skin(player, skin)
+				schedule_restore_if_valid(player)
+				return res
+			end
+		end
+	end
+
+	if _G.armor and not _G.armor._x_pa_wrapped then
+		_G.armor._x_pa_wrapped = true
+		local orig_armor_vis = _G.armor.update_player_visuals
+		_G.armor.update_player_visuals = function(self_or_player, maybe_player)
+			if orig_armor_vis then
+				orig_armor_vis(self_or_player, maybe_player)
+			end
+			update_visuals_if_valid(self_or_player, maybe_player)
+		end
+
+		local orig_armor_set = _G.armor.set_player_armor
+		_G.armor.set_player_armor = function(self_or_player, maybe_player)
+			if orig_armor_set then
+				orig_armor_set(self_or_player, maybe_player)
+			end
+			update_visuals_if_valid(self_or_player, maybe_player)
+		end
 	end
 end
 

@@ -82,7 +82,7 @@ local function get_item_sound(stack, sound_type, default_sound)
 		return default_sound
 	end
 	local iname = stack:get_name()
-	local def = stack:get_definition() or (x_player_armor.registered_armors and x_player_armor.registered_armors[iname])
+	local def = stack:get_definition() or x_player_armor.get_armor_def(iname)
 	if def then
 		if def.sounds and def.sounds[sound_type] then
 			return def.sounds[sound_type]
@@ -101,6 +101,11 @@ local function save_inventory(player, inv)
 	local meta = player:get_meta()
 	local list = inv:get_list("armor")
 	if not list then return end
+
+	local name = player.get_player_name and player:get_player_name()
+	if name and x_player_armor.visuals and x_player_armor.visuals.last_death_armor then
+		x_player_armor.visuals.last_death_armor[name] = nil
+	end
 
 	local serialized = {}
 	for i = 1, #list do
@@ -226,10 +231,8 @@ function inventory.init_player_inventory(player)
 			save_inventory(player_ref, inv_ref)
 			play_sound(player_ref, get_item_sound(stack, "equip", constants.SOUNDS.equip))
 			x_player_armor.set_player_armor(player_ref)
-			x_player_armor.update_player_visuals(player_ref)
 			x_player_armor.run_callbacks("on_equip", player_ref, index, stack)
 			x_player_armor.compat_x_player_api.on_equip(player_ref, stack:get_name())
-			x_player_armor.run_callbacks("on_update", player_ref)
 			x_player_armor.ui.refresh_player_formspec(player_ref)
 		end,
 
@@ -237,17 +240,13 @@ function inventory.init_player_inventory(player)
 			save_inventory(player_ref, inv_ref)
 			play_sound(player_ref, get_item_sound(stack, "unequip", constants.SOUNDS.unequip))
 			x_player_armor.set_player_armor(player_ref)
-			x_player_armor.update_player_visuals(player_ref)
 			x_player_armor.run_callbacks("on_unequip", player_ref, index, stack)
-			x_player_armor.run_callbacks("on_update", player_ref)
 			x_player_armor.ui.refresh_player_formspec(player_ref)
 		end,
 
 		on_move = function(inv_ref, _from_list, _from_index, _to_list, _to_index, _count, player_ref)
 			save_inventory(player_ref, inv_ref)
 			x_player_armor.set_player_armor(player_ref)
-			x_player_armor.update_player_visuals(player_ref)
-			x_player_armor.run_callbacks("on_update", player_ref)
 			x_player_armor.ui.refresh_player_formspec(player_ref)
 		end,
 	}, name)
@@ -319,10 +318,8 @@ function inventory.equip_item(player, itemstack)
 
 	play_sound(player, get_item_sound(to_put, "equip", constants.SOUNDS.equip))
 	x_player_armor.set_player_armor(player)
-	x_player_armor.update_player_visuals(player)
 	x_player_armor.run_callbacks("on_equip", player, target_idx, to_put)
 	x_player_armor.compat_x_player_api.on_equip(player, to_put:get_name())
-	x_player_armor.run_callbacks("on_update", player)
 	x_player_armor.ui.refresh_player_formspec(player)
 	return old_stack
 end
@@ -367,9 +364,7 @@ function inventory.unequip_element(player, element)
 	save_inventory(player, inv)
 	play_sound(player, get_item_sound(stack, "unequip", constants.SOUNDS.unequip))
 	x_player_armor.set_player_armor(player)
-	x_player_armor.update_player_visuals(player)
 	x_player_armor.run_callbacks("on_unequip", player, target_idx, stack)
-	x_player_armor.run_callbacks("on_update", player)
 	x_player_armor.ui.refresh_player_formspec(player)
 	return stack
 end
@@ -384,20 +379,18 @@ function inventory.handle_player_death(player)
 	if not list then return end
 
 	-- Snapshot worn armor before dropping/clearing for downstream corpse visual attachments
-	if name and x_player_armor.visuals then
-		local snapshot = {}
-		for i = 1, #list do
-			local stack = list[i]
-			if stack and not stack:is_empty() then
-				table.insert(snapshot, ItemStack(stack))
-			end
+	local snapshot = {}
+	for i = 1, #list do
+		local stack = list[i]
+		if stack and not stack:is_empty() then
+			table.insert(snapshot, ItemStack(stack))
 		end
-		x_player_armor.visuals.last_death_armor = x_player_armor.visuals.last_death_armor or {}
-		x_player_armor.visuals.last_death_armor[name] = snapshot
 	end
+	x_player_armor.visuals.last_death_armor[name] = snapshot
 
 	local pos = player:get_pos()
 	local bones_installed = core.get_modpath("bones") ~= nil
+	local modified = false
 
 	for i = 1, #list do
 		local stack = list[i]
@@ -407,8 +400,10 @@ function inventory.handle_player_death(player)
 			if not is_soulbound then
 				if constants.DESTROY_ON_DEATH then
 					inv:set_stack("armor", i, ItemStack(""))
+					modified = true
 				elseif constants.DROP_ON_DEATH then
 					inv:set_stack("armor", i, ItemStack(""))
+					modified = true
 					if not bones_installed and pos then
 						core.add_item(pos, stack)
 					else
@@ -421,18 +416,25 @@ function inventory.handle_player_death(player)
 		end
 	end
 
-	save_inventory(player, inv)
-	x_player_armor.set_player_armor(player)
-	x_player_armor.update_player_visuals(player)
+	if modified then
+		save_inventory(player, inv)
+		x_player_armor.visuals.last_death_armor[name] = snapshot
+		x_player_armor.set_player_armor(player)
+	end
 end
 
 core.register_on_joinplayer(function(player)
 	inventory.init_player_inventory(player)
+	x_player_armor.gltf_assembler.update_player(player)
 	core.after(0.1, function()
 		if player:is_player() then
 			x_player_armor.visuals.cleanup_orphaned_visuals()
 			x_player_armor.set_player_armor(player)
-			x_player_armor.update_player_visuals(player)
+		end
+	end)
+	core.after(0.5, function()
+		if player:is_player() then
+			x_player_armor.visuals.verify_player_visuals(player)
 		end
 	end)
 end)
