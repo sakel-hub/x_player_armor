@@ -945,6 +945,7 @@ local function create_mock_player(name)
 	function player:set_breath(val) self.breath = val end
 	function player:set_armor_groups(groups) self.armor_groups = groups end
 	function player:set_physics_override(phys) self.physics = phys end
+	function player:get_physics_override() return self.physics end
 	player.properties = {textures = {"x_player_armor_character.png"}, mesh = "character.b3d"}
 	function player:get_properties() return self.properties end
 	function player:set_properties(p) for k, v in pairs(p) do self.properties[k] = v end end
@@ -1294,28 +1295,28 @@ test("Dual-Format Armor Attachments & Visuals Reconciliation", function()
 	assert(constants.ATTACH_TRANSFORMS.glb, "constants.ATTACH_TRANSFORMS.glb must exist")
 	assert(constants.ATTACH_TRANSFORMS.b3d, "constants.ATTACH_TRANSFORMS.b3d must exist")
 
-	-- Verify GLB transforms: Native unified Blender transforms (compensated for bone rest translations & limb 180 flips)
+	-- Verify GLB transforms: Bone-local transforms (origin-centered with zero lever arm)
 	local glb = constants.ATTACH_TRANSFORMS.glb
-	assert(glb.head.pos.y == -12.6 and glb.head.rot.x == 0 and glb.head.rot.y == 0, "GLB head pos.y must be -12.6 and rot (0, 0, 0)")
-	assert(glb.torso.pos.y == -6.3 and glb.torso.rot.x == 0 and glb.torso.rot.y == 0, "GLB torso pos.y must be -6.3 and rot (0, 0, 0)")
-	assert(glb.sleeve_l.pos.x == 3.15 and glb.sleeve_l.pos.y == 11.55 and glb.sleeve_l.rot.x == 180, "GLB sleeve_l pos=(3.15, 11.55, 0), rot.x=180")
-	assert(glb.sleeve_r.pos.x == -3.15 and glb.sleeve_r.pos.y == 11.55 and glb.sleeve_r.rot.x == 180, "GLB sleeve_r pos=(-3.15, 11.55, 0), rot.x=180")
-	assert(glb.legs_l.pos.x == 1.05 and glb.legs_l.pos.y == 6.3 and glb.legs_l.rot.x == 180, "GLB legs_l pos=(1.05, 6.3, 0), rot.x=180")
-	assert(glb.legs_r.pos.x == -1.05 and glb.legs_r.pos.y == 6.3 and glb.legs_r.rot.x == 180, "GLB legs_r pos=(-1.05, 6.3, 0), rot.x=180")
-	assert(glb.feet_l.pos.x == 1.05 and glb.feet_l.pos.y == 6.3 and glb.feet_l.rot.x == 180, "GLB feet_l pos=(1.05, 6.3, 0), rot.x=180")
-	assert(glb.feet_r.pos.x == -1.05 and glb.feet_r.pos.y == 6.3 and glb.feet_r.rot.x == 180, "GLB feet_r pos=(-1.05, 6.3, 0), rot.x=180")
-	assert(glb.shield.rot.x == 180 and glb.shield.rot.y == 0 and glb.shield.rot.z == 0, "GLB shield rot must be (180, 0, 0)")
-	assert(glb.shield.pos.x == 3.35 and glb.shield.pos.y == 11.55 and glb.shield.pos.z == -0.2, "GLB shield pos must be (3.35, 11.55, -0.2)")
+	assert(glb.head.pos.y == 0 and glb.head.rot.x == 0 and glb.head.rot.y == 0, "GLB head pos.y must be 0 and rot (0, 0, 0)")
+	assert(glb.torso.pos.y == 0 and glb.torso.rot.x == 0 and glb.torso.rot.y == 0, "GLB torso pos.y must be 0 and rot (0, 0, 0)")
+	assert(glb.sleeve_l.pos.x == 0 and glb.sleeve_l.pos.y == 0 and glb.sleeve_l.rot.x == 180, "GLB sleeve_l pos=(0, 0, 0), rot.x=180")
+	assert(glb.sleeve_r.pos.x == 0 and glb.sleeve_r.pos.y == 0 and glb.sleeve_r.rot.x == 180, "GLB sleeve_r pos=(0, 0, 0), rot.x=180")
+	assert(glb.legs_l.pos.x == 0 and glb.legs_l.pos.y == 0 and glb.legs_l.rot.x == 180, "GLB legs_l pos=(0, 0, 0), rot.x=180")
+	assert(glb.legs_r.pos.x == 0 and glb.legs_r.pos.y == 0 and glb.legs_r.rot.x == 180, "GLB legs_r pos=(0, 0, 0), rot.x=180")
+	assert(glb.feet_l.pos.x == 0 and glb.feet_l.pos.y == 0 and glb.feet_l.rot.x == 180, "GLB feet_l pos=(0, 0, 0), rot.x=180")
+	assert(glb.feet_r.pos.x == 0 and glb.feet_r.pos.y == 0 and glb.feet_r.rot.x == 180, "GLB feet_r pos=(0, 0, 0), rot.x=180")
+	assert(glb.shield.rot.x == -171.4 and glb.shield.rot.y == 70.5 and glb.shield.rot.z == -1.7, "GLB shield rot must be (-171.4, 70.5, -1.7)")
+	assert(glb.shield.pos.x == -0.95 and glb.shield.pos.y == 4.44 and glb.shield.pos.z == -1.48, "GLB shield pos must be (-0.95, 4.44, -1.48)")
 
-	-- Verify B3D transforms: Unified rot = (0, 180, 0)
+	-- Verify B3D transforms: Bone-local transforms
 	local b3d = constants.ATTACH_TRANSFORMS.b3d
 	assert(b3d.head.rot.x == 0 and b3d.head.rot.y == 180 and b3d.head.rot.z == 0, "B3D head rot must be (0, 180, 0)")
 	assert(b3d.torso.rot.x == 0 and b3d.torso.rot.y == 180 and b3d.torso.rot.z == 0, "B3D torso rot must be (0, 180, 0)")
 	assert(b3d.sleeve_l.rot.x == 0 and b3d.sleeve_l.rot.y == 180 and b3d.sleeve_l.rot.z == 0, "B3D sleeve_l rot must be (0, 180, 0)")
 	assert(b3d.legs_l.rot.x == 0 and b3d.legs_l.rot.y == 180 and b3d.legs_l.rot.z == 0, "B3D legs_l rot must be (0, 180, 0)")
 	assert(b3d.feet_l.rot.x == 0 and b3d.feet_l.rot.y == 180 and b3d.feet_l.rot.z == 0, "B3D feet_l rot must be (0, 180, 0)")
-	assert(b3d.shield.rot.x == 0 and b3d.shield.rot.y == 180 and b3d.shield.rot.z == 0, "B3D shield rot must be (0, 180, 0)")
-	assert(b3d.shield.pos.x == -0.20 and b3d.shield.pos.y == 0 and b3d.shield.pos.z == 0.20, "B3D shield pos must be (-0.20, 0, 0.20)")
+	assert(b3d.shield.rot.x == -171.4 and b3d.shield.rot.y == -109.5 and b3d.shield.rot.z == -1.7, "B3D shield rot must be (-171.4, -109.5, -1.7)")
+	assert(b3d.shield.pos.x == -0.95 and b3d.shield.pos.y == 4.44 and b3d.shield.pos.z == 1.48, "B3D shield pos must be (-0.95, 4.44, 1.48)")
 
 	-- Test Visuals update on native B3D player
 	local hero = create_mock_player("visual_tester")
@@ -1423,7 +1424,7 @@ test("SkinsDB 1.8 3D Rig Attachment Transforms & Torso Scaling Calibration", fun
 	local s_glb = constants.ATTACH_TRANSFORMS.skinsdb_glb
 	assert(s_glb.feet_l.scale and s_glb.feet_l.scale.y == 1.20, "Feet L GLB scale Y must be 1.20")
 	assert(s_glb.feet_l.scale.x == 1.14, "Feet L GLB scale X must be 1.14")
-	assert(s_glb.feet_l.pos and s_glb.feet_l.pos.y == 6.95, "Feet L GLB pos Y must be 6.95 to cancel 6.75 bone and envelope foot sole")
+	assert(s_glb.feet_l.pos and s_glb.feet_l.pos.y == -0.55, "Feet L GLB pos Y must be -0.55 to envelope foot sole")
 
 	-- 1. Standard player with character.b3d
 	local norm_hero = create_mock_player("norm_player")
@@ -2190,14 +2191,14 @@ test("Shield Left-Hand Attachment via x_player_api Subsystem", function()
 	assert(record.opts.mesh == x_player_armor.constants.MODELS.shield, "mesh must match shield model")
 	assert(record.item == "x_player_armor:shield_steel", "item must match shield item name")
 	assert(record.opts.override_transform == true, "opts.override_transform must be true for forearm attachment")
-	assert(record.opts.pos_glb ~= nil and record.opts.pos_glb.x == 3.35 and record.opts.pos_glb.y == 11.55 and record.opts.pos_glb.z == -0.2,
-		"opts.pos_glb must match calibrated SHIELD_OFFSET (3.35, 11.55, -0.2)")
-	assert(record.opts.rot_glb ~= nil and record.opts.rot_glb.x == 180 and record.opts.rot_glb.y == 0 and record.opts.rot_glb.z == 0,
-		"opts.rot_glb must match calibrated SHIELD_OFFSET (180, 0, 0)")
-	assert(record.opts.pos_b3d ~= nil and record.opts.pos_b3d.x == -0.20 and record.opts.pos_b3d.y == 0 and record.opts.pos_b3d.z == 0.20,
-		"opts.pos_b3d must match calibrated SHIELD_OFFSET (-0.20, 0, 0.20)")
-	assert(record.opts.rot_b3d ~= nil and record.opts.rot_b3d.x == 0 and record.opts.rot_b3d.y == 180 and record.opts.rot_b3d.z == 0,
-		"opts.rot_b3d must match calibrated SHIELD_OFFSET (0, 180, 0)")
+	assert(record.opts.pos_glb ~= nil and record.opts.pos_glb.x == -0.95 and record.opts.pos_glb.y == 4.44 and record.opts.pos_glb.z == -1.48,
+		"opts.pos_glb must match calibrated SHIELD_OFFSET (-0.95, 4.44, -1.48)")
+	assert(record.opts.rot_glb ~= nil and record.opts.rot_glb.x == -171.4 and record.opts.rot_glb.y == 70.5 and record.opts.rot_glb.z == -1.7,
+		"opts.rot_glb must match calibrated SHIELD_OFFSET (-171.4, 70.5, -1.7)")
+	assert(record.opts.pos_b3d ~= nil and record.opts.pos_b3d.x == -0.95 and record.opts.pos_b3d.y == 4.44 and record.opts.pos_b3d.z == 1.48,
+		"opts.pos_b3d must match calibrated SHIELD_OFFSET (-0.95, 4.44, 1.48)")
+	assert(record.opts.rot_b3d ~= nil and record.opts.rot_b3d.x == -171.4 and record.opts.rot_b3d.y == -109.5 and record.opts.rot_b3d.z == -1.7,
+		"opts.rot_b3d must match calibrated SHIELD_OFFSET (-171.4, -109.5, -1.7)")
 
 	-- 1c. Explicit bone_local mesh backward compatibility
 	x_player_armor.compat_x_player_api.attach_shield(mock_player, "x_player_armor:shield_steel", {bone_local = true})
@@ -2206,12 +2207,12 @@ test("Shield Left-Hand Attachment via x_player_api Subsystem", function()
 
 	-- 1b. Shield offset API getters and setters
 	local def_glb_offset = x_player_armor.get_shield_offset("glb")
-	assert(def_glb_offset.pos.x == 3.35, "get_shield_offset('glb') pos.x must be 3.35")
-	assert(def_glb_offset.pos.y == 11.55, "get_shield_offset('glb') pos.y must be 11.55")
-	assert(def_glb_offset.pos.z == -0.2, "get_shield_offset('glb') pos.z must be -0.2")
-	assert(def_glb_offset.rot.x == 180, "get_shield_offset('glb') rot.x must be 180")
-	assert(def_glb_offset.rot.y == 0, "get_shield_offset('glb') rot.y must be 0")
-	assert(def_glb_offset.rot.z == 0, "get_shield_offset('glb') rot.z must be 0")
+	assert(def_glb_offset.pos.x == -0.95, "get_shield_offset('glb') pos.x must be -0.95")
+	assert(def_glb_offset.pos.y == 4.44, "get_shield_offset('glb') pos.y must be 4.44")
+	assert(def_glb_offset.pos.z == -1.48, "get_shield_offset('glb') pos.z must be -1.48")
+	assert(def_glb_offset.rot.x == -171.4, "get_shield_offset('glb') rot.x must be -171.4")
+	assert(def_glb_offset.rot.y == 70.5, "get_shield_offset('glb') rot.y must be 70.5")
+	assert(def_glb_offset.rot.z == -1.7, "get_shield_offset('glb') rot.z must be -1.7")
 	assert(def_glb_offset.scale ~= nil and math.abs(def_glb_offset.scale.x - 1.0) < 0.01, "get_shield_offset('glb') scale.x must be 1.0")
 
 	x_player_armor.set_shield_offset("glb", {x = -1.0, y = 2.7, z = -3.2}, {x = 180, y = 50, z = 0}, {x = 1.2, y = 1.2, z = 1.2})
@@ -2220,7 +2221,7 @@ test("Shield Left-Hand Attachment via x_player_api Subsystem", function()
 	assert(updated_offset.rot.y == 50, "Updated rot y must be 50")
 	assert(updated_offset.scale.x == 1.2, "Updated scale x must be 1.2")
 	-- Reset to default
-	x_player_armor.set_shield_offset("glb", {x = 3.35, y = 11.55, z = -0.2}, {x = 180, y = 0, z = 0}, {x = 1.0, y = 1.0, z = 1.0})
+	x_player_armor.set_shield_offset("glb", {x = -0.95, y = 4.44, z = -1.48}, {x = -171.4, y = 70.5, z = -1.7}, {x = 1.0, y = 1.0, z = 1.0})
 
 	-- 2. 1st-person view configuration toggle
 	x_player_armor.compat_x_player_api.set_shield_first_person(mock_player, true)
@@ -5414,10 +5415,10 @@ test("Shield Visual Attachment to External Entities (attach_shield_to_entity)", 
 	assert(glb_shield ~= nil and glb_shield:is_valid(), "attach_shield_to_entity must return valid shield entity")
 	local _, bone_glb, pos_glb, rot_glb = glb_shield:get_attach()
 	assert(bone_glb == "Arm_Left", "Shield must be attached to Arm_Left")
-	assert(math.abs(pos_glb.x - 3.35) < 0.01 and math.abs(pos_glb.y - 11.55) < 0.01 and math.abs(pos_glb.z - (-0.2)) < 0.01,
-		"GLB standard shield must use calibrated SHIELD_OFFSET (3.35, 11.55, -0.2)")
-	assert(math.abs(rot_glb.x - 180) < 0.01 and math.abs(rot_glb.y - 0) < 0.01 and math.abs(rot_glb.z - 0) < 0.01,
-		"GLB standard shield must use calibrated SHIELD_OFFSET (180, 0, 0)")
+	assert(math.abs(pos_glb.x - (-0.95)) < 0.01 and math.abs(pos_glb.y - 4.44) < 0.01 and math.abs(pos_glb.z - (-1.48)) < 0.01,
+		"GLB standard shield must use calibrated SHIELD_OFFSET (-0.95, 4.44, -1.48)")
+	assert(math.abs(rot_glb.x - (-171.4)) < 0.01 and math.abs(rot_glb.y - 70.5) < 0.01 and math.abs(rot_glb.z - (-1.7)) < 0.01,
+		"GLB standard shield must use calibrated SHIELD_OFFSET (-171.4, 70.5, -1.7)")
 	local glb_lua = glb_shield:get_luaentity()
 	assert(glb_lua ~= nil and glb_lua._is_corpse == true, "Shield entity must have _is_corpse flag")
 	glb_shield:remove()
@@ -5434,10 +5435,10 @@ test("Shield Visual Attachment to External Entities (attach_shield_to_entity)", 
 	assert(b3d_shield ~= nil and b3d_shield:is_valid(), "B3D attach_shield_to_entity must return valid shield entity")
 	local _, bone_b3d, pos_b3d, rot_b3d = b3d_shield:get_attach()
 	assert(bone_b3d == "Arm_Left", "B3D shield must be attached to Arm_Left")
-	assert(math.abs(pos_b3d.x - (-0.20)) < 0.01 and math.abs(pos_b3d.y - 0) < 0.01 and math.abs(pos_b3d.z - 0.20) < 0.01,
-		"B3D standard shield must use calibrated SHIELD_OFFSET (-0.20, 0, 0.20)")
-	assert(math.abs(rot_b3d.x - 0) < 0.01 and math.abs(rot_b3d.y - 180) < 0.01 and math.abs(rot_b3d.z - 0) < 0.01,
-		"B3D standard shield must use calibrated SHIELD_OFFSET (0, 180, 0)")
+	assert(math.abs(pos_b3d.x - (-0.95)) < 0.01 and math.abs(pos_b3d.y - 4.44) < 0.01 and math.abs(pos_b3d.z - 1.48) < 0.01,
+		"B3D standard shield must use calibrated SHIELD_OFFSET (-0.95, 4.44, 1.48)")
+	assert(math.abs(rot_b3d.x - (-171.4)) < 0.01 and math.abs(rot_b3d.y - (-109.5)) < 0.01 and math.abs(rot_b3d.z - (-1.7)) < 0.01,
+		"B3D standard shield must use calibrated SHIELD_OFFSET (-171.4, -109.5, -1.7)")
 	b3d_shield:remove()
 
 	-- 3. Top-level x_player_armor.attach_shield delegates to attach_shield_to_entity when passed an entity
@@ -5664,10 +5665,14 @@ test("Shield Visual Transform Calibration & DRY Resolution (resolve_shield_visua
 	assert(opts_std ~= nil, "resolve_shield_visual_opts must return options table")
 	assert(opts_std.visual == "mesh", "Modular shield must use mesh visual")
 	assert(opts_std.mesh == "x_player_armor_shield.glb", "Standard shield mesh must be x_player_armor_shield.glb")
-	assert(opts_std.pos_glb and opts_std.pos_glb.x == 3.35 and opts_std.pos_glb.y == 11.55 and opts_std.pos_glb.z == -0.2,
-		"pos_glb must be calibrated (3.35, 11.55, -0.2)")
-	assert(opts_std.pos_b3d and opts_std.pos_b3d.x == -0.20 and opts_std.pos_b3d.y == 0 and opts_std.pos_b3d.z == 0.20,
-		"pos_b3d must be calibrated (-0.20, 0, 0.20)")
+	assert(opts_std.pos_glb and opts_std.pos_glb.x == -0.95 and opts_std.pos_glb.y == 4.44 and opts_std.pos_glb.z == -1.48,
+		"pos_glb must be calibrated (-0.95, 4.44, -1.48)")
+	assert(opts_std.rot_glb and opts_std.rot_glb.x == -171.4 and opts_std.rot_glb.y == 70.5 and opts_std.rot_glb.z == -1.7,
+		"rot_glb must be calibrated (-171.4, 70.5, -1.7)")
+	assert(opts_std.pos_b3d and opts_std.pos_b3d.x == -0.95 and opts_std.pos_b3d.y == 4.44 and opts_std.pos_b3d.z == 1.48,
+		"pos_b3d must be calibrated (-0.95, 4.44, 1.48)")
+	assert(opts_std.rot_b3d and opts_std.rot_b3d.x == -171.4 and opts_std.rot_b3d.y == -109.5 and opts_std.rot_b3d.z == -1.7,
+		"rot_b3d must be calibrated (-171.4, -109.5, -1.7)")
 
 	-- 3. Verify tower shield resolution
 	local opts_tower = x_player_armor.resolve_shield_visual_opts("x_player_armor:shield_enhanced_wood")
@@ -5761,7 +5766,7 @@ test("glTF In-Memory Assembler: Native Unified Blender Model Export & Material N
 		assert(mat.doubleSided == true, "Custom piece material must have doubleSided = true")
 	end
 
-	-- Validate that boot vertices are placed at character foot coordinates (world Y in [-0.15, 4.25])
+	-- Validate that boot vertices are placed at character foot coordinates (world Y in [-0.30, 4.25])
 	-- and NOT in the torso (Y in [6, 12])
 	local custom_node_l = parsed_json.nodes[#parsed_json.nodes - 1]
 	local custom_node_r = parsed_json.nodes[#parsed_json.nodes]
@@ -5770,10 +5775,10 @@ test("glTF In-Memory Assembler: Native Unified Blender Model Export & Material N
 
 	local mesh_l = parsed_json.meshes[custom_node_l.mesh + 1]
 	local pos_acc_l = parsed_json.accessors[mesh_l.primitives[1].attributes.POSITION + 1]
-	assert(pos_acc_l.min[2] >= -0.15 and pos_acc_l.min[2] <= 0.05,
-		"Left boot min Y must be at foot sole level (~ -0.08), got " .. tostring(pos_acc_l.min[2]))
+	assert(pos_acc_l.min[2] >= -0.30 and pos_acc_l.min[2] <= 0.05,
+		"Left boot min Y must be at foot sole level (~ -0.25 to -0.08), got " .. tostring(pos_acc_l.min[2]))
 	assert(pos_acc_l.max[2] >= 3.90 and pos_acc_l.max[2] <= 4.25,
-		"Left boot max Y must be at calf level (~ 4.10), got " .. tostring(pos_acc_l.max[2]))
+		"Left boot max Y must be at calf level (~ 3.94 to 4.10), got " .. tostring(pos_acc_l.max[2]))
 	assert(pos_acc_l.min[1] < 0, "Left boot must be on the left side (negative X)")
 end)
 
@@ -5803,12 +5808,47 @@ test("glTF In-Memory Assembler: Shield Prop Attachment Transform & Forearm Posit
 	assert(shield_node.name == "Custom_shield", "Last node must be Custom_shield")
 
 	-- Validate transformed position accessor:
-	-- Shield must be positioned at character forearm height (Y in [3.0, 10.5]), NOT at character feet (Y around [-3.5, 3.5])
+	-- Shield must be positioned at character forearm height (Y in [3.0, 10.8]), NOT at character feet (Y around [-3.5, 3.5])
+	-- and in front of the character's left forearm (negative Z in glTF right-handed space, where character faces -Z)
 	local mesh = parsed_json.meshes[shield_node.mesh + 1]
 	local pos_acc = parsed_json.accessors[mesh.primitives[1].attributes.POSITION + 1]
 	assert(pos_acc.min[2] >= 3.0, "Shield min Y must be at or above forearm height (>= 3.0), got " .. tostring(pos_acc.min[2]))
 	assert(pos_acc.max[2] <= 10.8, "Shield max Y must be at or below upper arm height (<= 10.8), got " .. tostring(pos_acc.max[2]))
 	assert(pos_acc.max[1] < 0, "Shield must be positioned on the character's left arm (negative X)")
+	assert(pos_acc.min[3] < -3.0 and pos_acc.max[3] < 2.0,
+		string.format("Shield must be positioned in front of left forearm (-Z), got Z in [%.2f, %.2f]", pos_acc.min[3], pos_acc.max[3]))
+
+	-- Verify shield orientation and downward tilt match original Blender rig:
+	-- In shield .glb mesh space, +Z is the arm-strap back and -Z is the outward front face/boss.
+	-- Under Arm_Left (pos = (-3.15, 11.55, 0), rot = (180, 0, 0)) + SHIELD_OFFSET.glb,
+	-- the transformed front normal (0, 0, -1) must point outward-left-forward (nx < -0.8, nz < -0.2)
+	-- with a slight downward tilt (ny < -0.1, ~ -10.2 deg).
+	local math_mod = assembler.math
+	local bone_mat = math_mod.trs_to_mat4(
+		{x = -3.15, y = 11.55, z = 0},
+		math_mod.euler_to_quat({x = 180, y = 0, z = 0}),
+		{x = 1, y = 1, z = 1}
+	)
+	local sh_off = x_player_armor.get_shield_offset("glb")
+	local piece_mat = math_mod.trs_to_mat4(
+		{x = sh_off.pos.x, y = sh_off.pos.y, z = -sh_off.pos.z},
+		math_mod.euler_to_quat({x = -sh_off.rot.x, y = -sh_off.rot.y, z = sh_off.rot.z}),
+		sh_off.scale
+	)
+	local world_mat = math_mod.mat4_mul(bone_mat, piece_mat)
+	local front_nx, front_ny, front_nz = -world_mat[1][3], -world_mat[2][3], -world_mat[3][3]
+	assert(front_nx < -0.8 and front_nz < -0.2,
+		string.format("Shield front normal (-Z) must point outward-left and forward, got (%.3f, %.3f, %.3f)", front_nx, front_ny, front_nz))
+	assert(front_ny < -0.10 and front_ny > -0.25,
+		string.format("Shield front normal (-Z) must preserve slight downward tilt (~-0.177), got %.3f", front_ny))
+	local strap_x = world_mat[1][3] * 0.5 + world_mat[1][4]
+	local strap_z = world_mat[3][3] * 0.5 + world_mat[3][4]
+	local boss_x = world_mat[1][3] * (-0.4) + world_mat[1][4]
+	local boss_z = world_mat[3][3] * (-0.4) + world_mat[3][4]
+	local strap_dist_sq = (strap_x - (-3.15))^2 + (strap_z - 0)^2
+	local boss_dist_sq = (boss_x - (-3.15))^2 + (boss_z - 0)^2
+	assert(strap_dist_sq < boss_dist_sq,
+		"Shield arm straps (+Z) must be closer to the left arm than the front boss (-Z) (straps facing inward)")
 
 	-- Cross-mod parity check: Also verify x_mobs boss shield assembly (x_mobs_shield_resonant_prism.glb)
 	local x_mobs_shield = {
@@ -5832,6 +5872,8 @@ test("glTF In-Memory Assembler: Shield Prop Attachment Transform & Forearm Posit
 	assert(xm_pos_acc.min[2] >= 3.0, "x_mobs shield min Y must be at forearm height (>= 3.0), got " .. tostring(xm_pos_acc.min[2]))
 	assert(xm_pos_acc.max[2] <= 10.8, "x_mobs shield max Y must be at or below upper arm (<= 10.8), got " .. tostring(xm_pos_acc.max[2]))
 	assert(xm_pos_acc.max[1] < 0, "x_mobs shield must be positioned on character's left arm (negative X)")
+	assert(xm_pos_acc.min[3] < -3.0 and xm_pos_acc.max[3] < 2.0,
+		string.format("x_mobs shield must be positioned in front of left forearm (-Z), got Z in [%.2f, %.2f]", xm_pos_acc.min[3], xm_pos_acc.max[3]))
 end)
 
 test("Armor Stand: Slot 6 Wield Item Attachment & Dynamic Update / Cleanup", function()
@@ -5968,6 +6010,124 @@ test("glTF Assembler: Pipeline Consistency, PREVIEW_SLOTS, and Zero-Wield Fallba
 	assert(media_mod.delivered_players[dummy_file] == nil, "prune_cache must clear delivered_players for pruned file")
 	assert(media_mod.player_ready_media[dummy_file] == nil, "prune_cache must clear player_ready_media for pruned file")
 	assert(media_mod.cache_index[dummy_file] == nil, "prune_cache must clear cache_index for pruned file")
+
+end)
+
+test("Bulky Torso Armor Shield Clearance: Dynamic Forearm Offset Across Player, Stand, Corpse & glTF Preview", function()
+	-- Register a bulky chestplate with shield_clearance matching x_mobs:chestplate_titan_bastion
+	x_player_armor.register_armor("test_armor:bulky_chestplate", {
+		description = "Bulky Monolith Cuirass",
+		element = "torso",
+		level = 25,
+		texture = "x_mobs_armor_titan_bastion.png",
+		models = {
+			torso = "x_mobs_chestplate_titan_bastion.glb",
+			sleeve_l = "x_mobs_sleeve_l_titan_bastion.glb",
+			sleeve_r = "x_mobs_sleeve_r_titan_bastion.glb",
+		},
+		shield_clearance = {
+			glb = {pos = {x = -0.90, y = 0, z = -0.32}},
+			b3d = {pos = {x = -0.90, y = 0, z = 0.32}},
+		},
+	})
+
+	x_player_armor.register_armor("test_armor:bulky_shield", {
+		description = "Basalt Crest Tower Shield",
+		element = "shield",
+		level = 18,
+		mesh = "x_mobs_shield_titan_bastion.glb",
+		texture = "x_mobs_armor_titan_bastion.png",
+	})
+
+	-- 1. Verify resolve_shield_visual_opts with and without bulky torso
+	local base_opts = x_player_armor.visuals.resolve_shield_visual_opts("test_armor:bulky_shield")
+	assert(math.abs(base_opts.pos_glb.x - (-0.95)) < 1e-4 and math.abs(base_opts.pos_glb.z - (-1.48)) < 1e-4,
+		"Without bulky torso, shield must use baseline GLB pos {-0.95, 4.44, -1.48}")
+
+	local slim_opts = x_player_armor.visuals.resolve_shield_visual_opts("test_armor:bulky_shield", {
+		torso_item = "x_player_armor:chestplate_steel",
+	})
+	assert(math.abs(slim_opts.pos_glb.x - (-0.95)) < 1e-4 and math.abs(slim_opts.pos_glb.z - (-1.48)) < 1e-4,
+		"With slim standard torso, shield must remain at baseline GLB pos {-0.95, 4.44, -1.48}")
+
+	local bulky_opts = x_player_armor.visuals.resolve_shield_visual_opts("test_armor:bulky_shield", {
+		torso_item = "test_armor:bulky_chestplate",
+	})
+	assert(math.abs(bulky_opts.pos_glb.x - (-1.85)) < 1e-4 and math.abs(bulky_opts.pos_glb.z - (-1.80)) < 1e-4,
+		"With bulky torso, shield GLB pos must be offset by {-0.90, 0, -0.32} to {-1.85, 4.44, -1.80}")
+	assert(math.abs(bulky_opts.pos_b3d.x - (-1.85)) < 1e-4 and math.abs(bulky_opts.pos_b3d.z - 1.80) < 1e-4,
+		"With bulky torso, shield B3D pos must be offset by {-0.90, 0, 0.32} to {-1.85, 4.44, 1.80}")
+
+	-- Verify constants.SHIELD_OFFSET was not mutated in-place
+	assert(x_player_armor.constants.SHIELD_OFFSET.glb.pos.x == -0.95,
+		"constants.SHIELD_OFFSET.glb.pos.x must remain immutable (-0.95)")
+
+	-- 2. Verify corpse / standalone entity automatic torso clearance inheritance
+	local mock_corpse = core.add_entity({x = 0, y = 0, z = 0}, "x_player_armor:stand_entity")
+	x_player_armor.attach_armor_to_entity(mock_corpse, {"test_armor:bulky_chestplate"}, "glb")
+	local shield_ent = x_player_armor.attach_shield_to_entity(mock_corpse, "test_armor:bulky_shield", "glb")
+	assert(shield_ent ~= nil, "attach_shield_to_entity must return valid entity")
+	local _, _, att_pos = shield_ent:get_attach()
+	assert(att_pos and math.abs(att_pos.x - (-1.85)) < 1e-4 and math.abs(att_pos.z - (-1.80)) < 1e-4,
+		"Shield attached to entity wearing bulky chestplate must inherit clearance pos {-1.85, 4.44, -1.80}")
+
+	-- 3. Verify glTF Assembler applies torso shield_clearance to Custom_shield in 3D UI preview
+	local assembler = x_player_armor.gltf_assembler
+	local slim_pieces = {
+		{
+			piece_id = "torso",
+			element = "torso",
+			model_file = "x_player_armor_chestplate.glb",
+			item_name = "x_player_armor:chestplate_steel",
+		},
+		{
+			piece_id = "shield",
+			element = "shield",
+			model_file = "x_mobs_shield_titan_bastion.glb",
+			mod_hint = "x_mobs",
+			item_name = "test_armor:bulky_shield",
+		},
+	}
+	local bulky_pieces = {
+		{
+			piece_id = "torso",
+			element = "torso",
+			model_file = "x_mobs_chestplate_titan_bastion.glb",
+			mod_hint = "x_mobs",
+			item_name = "test_armor:bulky_chestplate",
+		},
+		{
+			piece_id = "sleeve_l",
+			element = "torso",
+			model_file = "x_mobs_sleeve_l_titan_bastion.glb",
+			mod_hint = "x_mobs",
+			item_name = "test_armor:bulky_chestplate",
+		},
+		{
+			piece_id = "shield",
+			element = "shield",
+			model_file = "x_mobs_shield_titan_bastion.glb",
+			mod_hint = "x_mobs",
+			item_name = "test_armor:bulky_shield",
+		},
+	}
+
+	local bin_slim = assembler.assemble_glb(slim_pieces)
+	local len_slim = assembler.math.read_uint32(bin_slim, 13)
+	local json_slim = core.parse_json(bin_slim:sub(21, 20 + len_slim))
+	local sh_node_slim = json_slim.nodes[#json_slim.nodes]
+	local sh_acc_slim = json_slim.accessors[json_slim.meshes[sh_node_slim.mesh + 1].primitives[1].attributes.POSITION + 1]
+
+	local bin_bulky = assembler.assemble_glb(bulky_pieces)
+	local len_bulky = assembler.math.read_uint32(bin_bulky, 13)
+	local json_bulky = core.parse_json(bin_bulky:sub(21, 20 + len_bulky))
+	local sh_node_bulky = json_bulky.nodes[#json_bulky.nodes]
+	local sh_acc_bulky = json_bulky.accessors[json_bulky.meshes[sh_node_bulky.mesh + 1].primitives[1].attributes.POSITION + 1]
+
+	assert(math.abs((sh_acc_bulky.min[1] - sh_acc_slim.min[1]) - (-0.90)) < 1e-3,
+		"Assembled preview shield min X must be shifted outward by -0.90 when bulky chestplate is worn")
+	assert(math.abs((sh_acc_bulky.min[3] - sh_acc_slim.min[3]) - (-0.32)) < 1e-3,
+		"Assembled preview shield min Z (glTF right-handed, character faces -Z) must be shifted forward by -0.32 when bulky chestplate is worn")
 end)
 
 print(string.format("\n=========================================="))

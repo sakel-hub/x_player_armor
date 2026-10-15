@@ -238,8 +238,10 @@ local function spawn_piece(target, piece_id, default_texture, glow, player_name,
 		backface_culling = backface_culling,
 		shaded = shaded,
 	})
-	-- 5th argument 'false' disables forced_visible, avoiding first-person view frustum clipping
-	obj:set_attach(parent, bone, pos, rot, false)
+	-- 5th argument: true for standalone entities (corpses, stands) to guarantee rendering;
+	-- false for living players to avoid first-person view frustum clipping
+	local force_vis = (player_name == nil)
+	obj:set_attach(parent, bone, pos, rot, force_vis)
 	if target.observers and obj.set_observers then
 		obj:set_observers(target.observers)
 	end
@@ -405,20 +407,26 @@ function visuals.update_player_visuals(player)
 	-- Reconcile shield wield item via x_player_api
 	if has_x_api then
 		local target = worn_elements.shield
+		local torso_item = (worn_elements.torso and worn_elements.torso.item) or ""
+		local prev_torso_item = visuals.player_entities[name].shield_torso_item or ""
 		if target then
-			local stack_or_name = target.stack or target.item
-			local target_name = (type(stack_or_name) == "userdata" and stack_or_name:get_name())
-				or (type(stack_or_name) == "string" and stack_or_name:match("%S+"))
-				or ""
-			local current_left = x_player_armor.compat_x_player_api.get_left_wield_item(player)
-			local x_api = x_player_armor.get_mod_api("x_player_api")
-			local left_ent = x_api and x_api.get_left_wield_entity and x_api.get_left_wield_entity(player)
-			if current_left ~= "" and current_left == target_name and left_ent and left_ent:is_valid() then
-				x_player_armor.compat_x_player_api.update_shield(player, stack_or_name)
-			else
-				x_player_armor.compat_x_player_api.attach_shield(player, stack_or_name)
+			if not is_dead_cam then
+				local stack_or_name = target.stack or target.item
+				local target_name = (type(stack_or_name) == "userdata" and stack_or_name:get_name())
+					or (type(stack_or_name) == "string" and stack_or_name:match("%S+"))
+					or ""
+				local current_left = x_player_armor.compat_x_player_api.get_left_wield_item(player)
+				local x_api = x_player_armor.get_mod_api("x_player_api")
+				local left_ent = x_api and x_api.get_left_wield_entity and x_api.get_left_wield_entity(player)
+				if current_left ~= "" and current_left == target_name and prev_torso_item == torso_item and left_ent and left_ent:is_valid() then
+					x_player_armor.compat_x_player_api.update_shield(player, stack_or_name)
+				else
+					x_player_armor.compat_x_player_api.attach_shield(player, stack_or_name)
+				end
+				visuals.player_entities[name].shield_torso_item = torso_item
 			end
 		else
+			visuals.player_entities[name].shield_torso_item = nil
 			x_player_armor.compat_x_player_api.remove_shield(player)
 		end
 	end
@@ -436,15 +444,17 @@ function visuals.clear_all(player_name)
 	local player_data = visuals.player_entities[name]
 	if player_data then
 		for _, list in pairs(player_data) do
-			for i = 1, #list do
-				local obj = list[i]
-				if obj and obj:is_valid() then
-					local ent = obj:get_luaentity()
-					if ent then
-						ent._intentional_removal = true
+			if type(list) == "table" then
+				for i = 1, #list do
+					local obj = list[i]
+					if obj and obj:is_valid() then
+						local ent = obj:get_luaentity()
+						if ent then
+							ent._intentional_removal = true
+						end
+						obj:set_detach()
+						obj:remove()
 					end
-					obj:set_detach()
-					obj:remove()
 				end
 			end
 		end
@@ -669,6 +679,11 @@ function visuals.attach_armor_to_entity(parent, player_or_name, format)
 		return {}
 	end
 
+	local parent_lua = parent.get_luaentity and parent:get_luaentity()
+	if parent_lua then
+		parent_lua._x_pa_torso_item = nil
+	end
+
 	local fmt = format
 	if not fmt or fmt == "" then
 		local p_mesh = (parent.get_properties and parent:get_properties().mesh) or ""
@@ -748,6 +763,9 @@ function visuals.attach_armor_to_entity(parent, player_or_name, format)
 				end
 
 				if element and element ~= "shield" then
+					if element == "torso" and parent_lua then
+						parent_lua._x_pa_torso_item = iname
+					end
 					local piece_ids = (idef and idef.pieces) or constants.ELEMENT_PIECES[element]
 					if piece_ids then
 						for _, piece_id in ipairs(piece_ids) do
@@ -821,26 +839,26 @@ function visuals.resolve_shield_visual_opts(item_or_stack, custom_opts)
 			or (item_offset and item_offset.pos)
 			or (custom_opts and custom_opts.pos)
 			or glb_trans.pos
-			or {x = 3.35, y = 11.55, z = -0.2}
+			or {x = -0.95, y = 4.44, z = -1.48}
 		rot_glb = (custom_opts and custom_opts.rot_glb)
 			or (item_offset and item_offset.glb and item_offset.glb.rot)
 			or (item_offset and item_offset.rot)
 			or (custom_opts and custom_opts.rot)
 			or glb_trans.rot
-			or {x = 180, y = 0, z = 0}
+			or {x = -171.4, y = 70.5, z = -1.7}
 
 		pos_b3d = (custom_opts and custom_opts.pos_b3d)
 			or (item_offset and item_offset.b3d and item_offset.b3d.pos)
 			or (item_offset and item_offset.pos)
 			or (custom_opts and custom_opts.pos)
 			or b3d_trans.pos
-			or {x = -0.20, y = 0, z = 0.20}
+			or {x = -0.95, y = 4.44, z = 1.48}
 		rot_b3d = (custom_opts and custom_opts.rot_b3d)
 			or (item_offset and item_offset.b3d and item_offset.b3d.rot)
 			or (item_offset and item_offset.rot)
 			or (custom_opts and custom_opts.rot)
 			or b3d_trans.rot
-			or {x = 0, y = 180, z = 0}
+			or {x = -171.4, y = -109.5, z = -1.7}
 
 		scale = (custom_opts and (custom_opts.scale_glb or custom_opts.scale))
 			or (item_offset and item_offset.glb and item_offset.glb.scale)
@@ -848,6 +866,41 @@ function visuals.resolve_shield_visual_opts(item_or_stack, custom_opts)
 			or glb_trans.scale
 			or (item_def and item_def.visual_size)
 			or {x = 1, y = 1, z = 1}
+	end
+
+	-- Apply torso-driven shield_clearance offset if a bulky torso is worn (and no explicit custom pos override)
+	if not (custom_opts and (custom_opts.pos or custom_opts.pos_glb or custom_opts.pos_b3d)) then
+		local clearance = custom_opts and custom_opts.shield_clearance
+		if not clearance and custom_opts and custom_opts.torso_item then
+			local t_item = custom_opts.torso_item
+			local t_name = (type(t_item) == "userdata" and t_item:get_name())
+				or (type(t_item) == "table" and t_item.get_name and t_item:get_name())
+				or (type(t_item) == "table" and (t_item.name or t_item.item))
+				or (type(t_item) == "string" and t_item:match("%S+"))
+				or ""
+			if t_name ~= "" then
+				local t_def = x_player_armor.get_armor_def(t_name) or core.registered_items[t_name]
+				clearance = t_def and t_def.shield_clearance
+			end
+		end
+		if clearance then
+			local c_glb = (clearance.glb and clearance.glb.pos) or clearance.pos
+			if c_glb then
+				pos_glb = {
+					x = (pos_glb.x or 0) + (c_glb.x or 0),
+					y = (pos_glb.y or 0) + (c_glb.y or 0),
+					z = (pos_glb.z or 0) + (c_glb.z or 0),
+				}
+			end
+			local c_b3d = (clearance.b3d and clearance.b3d.pos) or clearance.pos
+			if c_b3d then
+				pos_b3d = {
+					x = (pos_b3d.x or 0) + (c_b3d.x or 0),
+					y = (pos_b3d.y or 0) + (c_b3d.y or 0),
+					z = (pos_b3d.z or 0) + (c_b3d.z or 0),
+				}
+			end
+		end
 	end
 
 	local opts = {
@@ -888,7 +941,16 @@ function visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_o
 		return nil
 	end
 
-	local opts = visuals.resolve_shield_visual_opts(item_or_stack, custom_opts)
+	local resolve_opts = custom_opts
+	if not custom_opts or (custom_opts.torso_item == nil and custom_opts.shield_clearance == nil) then
+		local parent_lua = parent.get_luaentity and parent:get_luaentity()
+		if parent_lua and parent_lua._x_pa_torso_item then
+			resolve_opts = custom_opts and table.copy(custom_opts) or {}
+			resolve_opts.torso_item = parent_lua._x_pa_torso_item
+		end
+	end
+
+	local opts = visuals.resolve_shield_visual_opts(item_or_stack, resolve_opts)
 	local item_name = opts.item_name
 	if not item_name or item_name == "" then
 		return nil

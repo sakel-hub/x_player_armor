@@ -252,7 +252,7 @@ function assembler.resolve_player_preview(player)
 		return nil, nil
 	end
 
-	local model_filename, assembled_data = get_or_assemble_glb(pieces, "x_pa_v21_")
+	local model_filename, assembled_data = get_or_assemble_glb(pieces, "x_pa_v24_")
 	if not assembled_data then
 		return nil, nil
 	end

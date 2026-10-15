@@ -82,6 +82,18 @@ function builder.assemble_glb(pieces_to_attach)
 	local write_f32 = math_mod.write_float32
 	local math_sqrt = math.sqrt
 
+	-- Detect if any worn torso piece in pieces_to_attach defines a shield_clearance offset
+	local torso_clearance = nil
+	for _, p in ipairs(pieces_to_attach) do
+		if p.element == "torso" or p.piece_id == "torso" then
+			local t_def = p.item_def or (p.item_name and x_player_armor.get_armor_def(p.item_name))
+			if t_def and t_def.shield_clearance then
+				torso_clearance = t_def.shield_clearance
+				break
+			end
+		end
+	end
+
 	for _, piece in ipairs(pieces_to_attach) do
 		local p_json, p_bin = loader_mod.get_piece_model(piece.model_file, piece.mod_hint)
 		if p_json and p_bin and p_json.meshes and #p_json.meshes > 0 then
@@ -115,22 +127,75 @@ function builder.assemble_glb(pieces_to_attach)
 			local node_scale = p_node and p_node.scale
 
 			local node_mat = math_mod.trs_to_mat4(node_pos, node_quat, node_scale)
+			local has_node_transform = (node_pos ~= nil) or (node_quat ~= nil)
+			if node_scale ~= nil then
+				local sx = math.abs((node_scale[1] or 1) - 1)
+				local sy = math.abs((node_scale[2] or 1) - 1)
+				local sz = math.abs((node_scale[3] or 1) - 1)
+				if sx > 1e-3 or sy > 1e-3 or sz > 1e-3 then
+					has_node_transform = true
+				end
+			end
 
+			local constants = x_player_armor.constants
+			local def_trans = constants and constants.ATTACH_TRANSFORMS and constants.ATTACH_TRANSFORMS.glb
+				and (constants.ATTACH_TRANSFORMS.glb[piece.piece_id] or constants.ATTACH_TRANSFORMS.glb[piece.element])
+			local c_delta = (piece.element == "shield" and torso_clearance)
+				and ((torso_clearance.glb and torso_clearance.glb.pos) or torso_clearance.pos)
+				or nil
 			local world_mat
 			if custom_trans then
-				local c_pos = custom_trans.pos or {x = 0, y = 0, z = 0}
-				local c_rot = custom_trans.rot or {x = 0, y = 0, z = 0}
-				local c_scale = custom_trans.scale or {x = 1, y = 1, z = 1}
-				local c_quat = math_mod.euler_to_quat(c_rot)
-				local custom_mat = math_mod.trs_to_mat4(c_pos, c_quat, c_scale)
-				if custom_trans.bone_local or (idef and idef.bone_local) then
-					local bone_name = custom_trans.bone or "Arm_Left"
+				local c_pos = custom_trans.pos or (def_trans and def_trans.pos) or {x = 0, y = 0, z = 0}
+				if c_delta then
+					c_pos = {
+						x = (c_pos.x or 0) + (c_delta.x or 0),
+						y = (c_pos.y or 0) + (c_delta.y or 0),
+						z = (c_pos.z or 0) + (c_delta.z or 0),
+					}
+				end
+				local c_rot = custom_trans.rot or (def_trans and def_trans.rot) or {x = 0, y = 0, z = 0}
+				local c_scale = custom_trans.scale or (def_trans and def_trans.scale) or {x = 1, y = 1, z = 1}
+				-- Conjugate Irrlicht left-handed set_attach transform by S_z = diag(1, 1, -1)
+				-- to match glTF right-handed coordinate space (where character faces -Z).
+				local pos_gltf = {x = c_pos.x or 0, y = c_pos.y or 0, z = -(c_pos.z or 0)}
+				local rot_gltf = {x = -(c_rot.x or 0), y = -(c_rot.y or 0), z = c_rot.z or 0}
+				local c_quat = math_mod.euler_to_quat(rot_gltf)
+				local custom_mat = math_mod.trs_to_mat4(pos_gltf, c_quat, c_scale)
+				if custom_trans.bone_local or (idef and idef.bone_local) or not has_node_transform then
+					local bone_name = custom_trans.bone
+						or (def_trans and def_trans.bone)
+						or "Arm_Left"
 					local bone_idx = bone_node_map[bone_name]
 					local bone_mat = (bone_idx and base_world_mats[bone_idx]) or math_mod.trs_to_mat4()
 					local bone_attach_mat = math_mod.mat4_mul(bone_mat, custom_mat)
 					world_mat = math_mod.mat4_mul(bone_attach_mat, node_mat)
 				else
 					world_mat = math_mod.mat4_mul(custom_mat, node_mat)
+				end
+			elseif not has_node_transform then
+				if def_trans then
+					local bone_name = def_trans.bone or "Body"
+					local bone_idx = bone_node_map[bone_name]
+					local bone_mat = (bone_idx and base_world_mats[bone_idx]) or math_mod.trs_to_mat4()
+					local c_pos = def_trans.pos or {x = 0, y = 0, z = 0}
+					if c_delta then
+						c_pos = {
+							x = (c_pos.x or 0) + (c_delta.x or 0),
+							y = (c_pos.y or 0) + (c_delta.y or 0),
+							z = (c_pos.z or 0) + (c_delta.z or 0),
+						}
+					end
+					local c_rot = def_trans.rot or {x = 0, y = 0, z = 0}
+					local c_scale = def_trans.scale or {x = 1, y = 1, z = 1}
+					-- Conjugate Irrlicht left-handed set_attach transform by S_z = diag(1, 1, -1)
+					-- to match glTF right-handed coordinate space (where character faces -Z).
+					local pos_gltf = {x = c_pos.x or 0, y = c_pos.y or 0, z = -(c_pos.z or 0)}
+					local rot_gltf = {x = -(c_rot.x or 0), y = -(c_rot.y or 0), z = c_rot.z or 0}
+					local c_quat = math_mod.euler_to_quat(rot_gltf)
+					local attach_mat = math_mod.trs_to_mat4(pos_gltf, c_quat, c_scale)
+					world_mat = math_mod.mat4_mul(bone_mat, attach_mat)
+				else
+					world_mat = node_mat
 				end
 			else
 				world_mat = node_mat

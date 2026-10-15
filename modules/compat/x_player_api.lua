@@ -133,7 +133,16 @@ function x_api_compat.attach_shield(player, item_or_stack, custom_opts)
 	end
 
 	local first_person = x_api_compat.get_shield_first_person(player)
-	local opts = x_player_armor.visuals.resolve_shield_visual_opts(item_or_stack, custom_opts)
+	local resolve_opts = custom_opts
+	if (not custom_opts or (custom_opts.torso_item == nil and custom_opts.shield_clearance == nil)) and player then
+		local _, inv = x_player_armor.get_valid_player(player)
+		local torso_stack = inv and inv:get_stack("armor", 2)
+		if torso_stack and not torso_stack:is_empty() then
+			resolve_opts = custom_opts and table.copy(custom_opts) or {}
+			resolve_opts.torso_item = torso_stack:get_name()
+		end
+	end
+	local opts = x_player_armor.visuals.resolve_shield_visual_opts(item_or_stack, resolve_opts)
 
 	local is_pure_b3d = (x_api.is_pure_native_b3d_active and x_api.is_pure_native_b3d_active(player)) or false
 	local fp_visible = (custom_opts and custom_opts.first_person ~= nil)

@@ -308,6 +308,8 @@ end
 ---@field first_person? boolean Whether shield is visible in 1st person view
 ---@field bone? string Target skeletal attachment bone (defaults to "Arm_Left")
 ---@field entity_name? string Custom Lua entity name to spawn
+---@field torso_item? string|ItemStack Equipped torso item or stack for resolving bulky sleeve shield_clearance
+---@field shield_clearance? XPlayerArmorShieldOffset Explicit torso shield clearance delta override
 
 ---Complete configuration table for armor and shield item registration.
 ---Supports custom 3D models, bone transforms, audio, environmental perks, physics, and combat mechanics.
@@ -342,6 +344,7 @@ end
 ---@field reciprocate_percent number? Percentage of incoming damage reflected to attacker. Ignored if reciprocate_damage is false or nil.
 ---@field wear_color XPlayerArmorWearColor? Durability bar color gradient configuration (see Luanti doc/lua_api.md: Item definition)
 ---@field shield_offset XPlayerArmorShieldOffset? Custom shield forearm attachment transforms for glb and b3d skeletons. Ignored if element is not "shield".
+---@field shield_clearance XPlayerArmorShieldOffset? Outward forearm offset applied to shields when this torso armor is worn.
 ---@field tower_shield boolean? Whether shield renders with tower shield model variant in preview and stand. Ignored if element is not "shield".
 ---@field block_reduction number? Frontal damage reduction fraction 0.0 to 1.0 (default: 0.20 or tiered). Ignored if element is not "shield".
 ---@field block_arc number? Custom frontal blocking arc angle in degrees (default: 44-64 deg tiered). Ignored if element is not "shield".
@@ -739,8 +742,8 @@ function api.get_shield_offset(format)
 		tbl = consts.SHIELD_OFFSET.glb
 	end
 	return tbl or {
-		pos = {x = 3.15, y = 11.55, z = 0},
-		rot = {x = 180, y = 0, z = 0},
+		pos = {x = -0.95, y = 4.44, z = -1.48},
+		rot = {x = -171.4, y = 70.5, z = -1.7},
 		scale = {x = 1.0, y = 1.0, z = 1.0},
 	}
 end

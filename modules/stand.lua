@@ -238,7 +238,9 @@ update_stand_entity = function(pos)
 
 		local shield_stack = list[5]
 		if shield_stack and not shield_stack:is_empty() then
-			local shield_visual = x_player_armor.visuals.attach_shield_to_entity(obj, shield_stack, "glb")
+			local shield_visual = x_player_armor.visuals.attach_shield_to_entity(obj, shield_stack, "glb", {
+				torso_item = list[2],
+			})
 			if shield_visual then
 				table.insert(attached, shield_visual)
 			end
