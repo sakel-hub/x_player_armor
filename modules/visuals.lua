@@ -954,10 +954,20 @@ function visuals.resolve_shield_visual_opts(item_or_stack, custom_opts)
 		end
 	end
 
+	local use_texture_alpha
+	if custom_opts and custom_opts.use_texture_alpha ~= nil then
+		use_texture_alpha = (custom_opts.use_texture_alpha == true)
+	elseif item_def and item_def.use_texture_alpha ~= nil then
+		use_texture_alpha = (item_def.use_texture_alpha == true)
+	else
+		use_texture_alpha = (visual_type ~= "mesh")
+	end
+
 	local opts = {
 		visual = visual_type,
 		mesh = custom_mesh,
 		textures = custom_textures,
+		use_texture_alpha = use_texture_alpha,
 		override_transform = true,
 		pos_glb = pos_glb,
 		rot_glb = rot_glb,
@@ -1040,6 +1050,7 @@ function visuals.attach_shield_to_entity(parent, item_or_stack, format, custom_o
 				textures = opts.textures or {item_name},
 				wield_item = item_name,
 				visual_size = v_size,
+				use_texture_alpha = (opts.use_texture_alpha == true),
 				pointable = false,
 				glow = glow,
 			})

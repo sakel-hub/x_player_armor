@@ -5672,6 +5672,7 @@ test("Shield Visual Transform Calibration & DRY Resolution (resolve_shield_visua
 	assert(opts_std ~= nil, "resolve_shield_visual_opts must return options table")
 	assert(opts_std.visual == "mesh", "Modular shield must use mesh visual")
 	assert(opts_std.mesh == "x_player_armor_shield.glb", "Standard shield mesh must be x_player_armor_shield.glb")
+	assert(opts_std.use_texture_alpha == false, "3D mesh shield must default use_texture_alpha to false")
 	assert(opts_std.pos_glb and opts_std.pos_glb.x == -0.95 and opts_std.pos_glb.y == 4.44 and opts_std.pos_glb.z == -1.48,
 		"pos_glb must be calibrated (-0.95, 4.44, -1.48)")
 	assert(opts_std.rot_glb and opts_std.rot_glb.x == -171.4 and opts_std.rot_glb.y == 70.5 and opts_std.rot_glb.z == -1.7,
@@ -5685,6 +5686,7 @@ test("Shield Visual Transform Calibration & DRY Resolution (resolve_shield_visua
 	local opts_tower = x_player_armor.resolve_shield_visual_opts("x_player_armor:shield_enhanced_wood")
 	assert(opts_tower ~= nil, "Tower shield opts must be resolved")
 	assert(opts_tower.mesh == "x_player_armor_shield_tower.glb", "Tower shield mesh must be x_player_armor_shield_tower.glb")
+	assert(opts_tower.use_texture_alpha == false, "Tower 3D mesh shield must default use_texture_alpha to false")
 
 	-- 4. Verify custom opts overrides are respected
 	local opts_override = x_player_armor.resolve_shield_visual_opts("x_player_armor:shield_steel", {
@@ -5692,6 +5694,7 @@ test("Shield Visual Transform Calibration & DRY Resolution (resolve_shield_visua
 		visual = "wielditem",
 	})
 	assert(opts_override.visual == "wielditem", "Custom visual override must be preserved")
+	assert(opts_override.use_texture_alpha == true, "Wielditem visual override must default use_texture_alpha to true")
 	assert(opts_override.pos_glb.x == 1.0 and opts_override.pos_glb.y == 2.0 and opts_override.pos_glb.z == 3.0,
 		"Custom pos_glb override must be preserved")
 end)
