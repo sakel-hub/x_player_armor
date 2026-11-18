@@ -118,38 +118,13 @@ function armor.get_valid_player(self_or_player, maybe_player, _mod)
 	return x_player_armor.get_valid_player(player)
 end
 
----Returns a map of armor elements currently worn by the player.
+---Returns a map of armor elements currently worn by the player to their item technical names.
 ---@param self_or_player any
 ---@param maybe_player any
----@return table<string, boolean>
+---@return table<string, string>
 function armor.get_weared_armor_elements(self_or_player, maybe_player)
 	local player = resolve_args(self_or_player, maybe_player)
-	local name, inv = x_player_armor.get_valid_player(player)
-	if not name or not inv then
-		return {}
-	end
-	local weared = {}
-	local list = inv:get_list("armor")
-	if not list then
-		return weared
-	end
-	for i = 1, #list do
-		local stack = list[i]
-		if stack and not stack:is_empty() then
-			local def = stack:get_definition()
-			local groups = def and def.groups
-			local item_name = stack:get_name()
-			for _, element in ipairs(armor.elements) do
-				if (groups and (groups["armor_" .. element] or 0) > 0) or
-				   core.get_item_group(item_name, "armor_" .. element) > 0 or
-				   (element == "shield" and ((groups and (groups.shield or 0) > 0) or core.get_item_group(item_name, "shield") > 0)) then
-					weared[element] = true
-					break
-				end
-			end
-		end
-	end
-	return weared
+	return x_player_armor.get_weared_armor_elements(player)
 end
 
 ---Removes all armor items from the player's equipped inventory.
@@ -157,14 +132,7 @@ end
 ---@param maybe_player any
 function armor.remove_all(self_or_player, maybe_player)
 	local player = resolve_args(self_or_player, maybe_player)
-	local name, inv = x_player_armor.get_valid_player(player)
-	if not name or not inv then
-		return
-	end
-	for i = 1, 6 do
-		inv:set_stack("armor", i, ItemStack(""))
-	end
-	x_player_armor.set_player_armor(player)
+	x_player_armor.remove_all(player)
 end
 
 ---Retrieves the player's skin texture.

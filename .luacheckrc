@@ -30,6 +30,7 @@ read_globals = {
     "unified_inventory",
     "i3",
     "player_monoids",
+    "armor_monoid",
     "pova",
     "playerphysics",
     "bones",

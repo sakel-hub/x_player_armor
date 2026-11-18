@@ -53,18 +53,23 @@ function effects.update_player_armor(player)
 					has_reciprocate = true
 				end
 
-				-- Add element defense contribution (O(1) direct slot lookup, with clean loop fallback)
-				local primary_el = constants.SLOT_ELEMENTS[idx]
-				local primary_grp = primary_el and constants.ELEMENT_GROUPS[primary_el]
-				local lvl = primary_grp and (groups[primary_grp] or 0) or 0
-				if lvl == 0 then
-					local dynamic_elements = x_player_armor.get_elements()
-					for e = 1, #dynamic_elements do
-						local req = "armor_" .. dynamic_elements[e]
-						local gval = groups[req] or def[req] or 0
-						if gval > 0 then
-							lvl = gval
-							break
+				-- Add element defense contribution (prefer explicit armor_groups.fleshy per 3d_armor standard, with slot group fallback)
+				local lvl
+				if def.armor_groups and type(def.armor_groups.fleshy) == "number" then
+					lvl = def.armor_groups.fleshy
+				else
+					local primary_el = constants.SLOT_ELEMENTS[idx]
+					local primary_grp = primary_el and constants.ELEMENT_GROUPS[primary_el]
+					lvl = primary_grp and (groups[primary_grp] or 0) or 0
+					if lvl == 0 then
+						local dynamic_elements = x_player_armor.get_elements()
+						for e = 1, #dynamic_elements do
+							local req = "armor_" .. dynamic_elements[e]
+							local gval = groups[req] or def[req] or 0
+							if gval > 0 then
+								lvl = gval
+								break
+							end
 						end
 					end
 				end
@@ -168,11 +173,14 @@ function effects.update_player_armor(player)
 	player_def.has_shield = has_shield
 	player_def.has_reciprocate = has_reciprocate
 
-	-- Maintain player_def.groups with safe index metatable
+	-- Maintain player_def.groups with safe index metatable and clear stale unequipped group keys
 	if not player_def.groups or not getmetatable(player_def.groups) then
 		player_def.groups = setmetatable(player_def.groups or {}, {
 			__index = function() return 0 end,
 		})
+	end
+	for k in pairs(player_def.groups) do
+		player_def.groups[k] = nil
 	end
 	player_def.groups.fleshy = total_level
 	for grp, val in pairs(custom_group_levels) do
@@ -187,20 +195,41 @@ function effects.update_player_armor(player)
 	end
 
 	-- Update Luanti engine armor groups
+	local amonoid = x_player_armor.get_mod_api("armor_monoid")
 	local armor_groups = utils.copy_table(x_player_armor.registered_groups)
+	local armor_change = {}
+	local fleshy_base = x_player_armor.registered_groups.fleshy or 100
 	armor_groups.fleshy = fleshy_val
+	armor_change.fleshy = fleshy_base > 0 and (fleshy_val / fleshy_base) or 0
 	for grp, base in pairs(x_player_armor.registered_groups) do
+		if amonoid and amonoid.registered_groups and amonoid.registered_groups[grp] == nil and amonoid.register_armor_group then
+			amonoid.register_armor_group(grp, base)
+		end
 		if grp ~= "fleshy" then
 			local lvl = custom_group_levels[grp] or 0
-			armor_groups[grp] = math.max(0, base - lvl)
+			local raw_group_val = math.max(0, base - lvl)
+			armor_groups[grp] = raw_group_val
+			armor_change[grp] = base > 0 and (raw_group_val / base) or 0
 		end
+	end
+	if armor_groups.fall_damage_add_percent ~= nil then
+		armor_groups.fall_damage_add_percent = armor_groups.fall_damage_add_percent - 100
 	end
 
 	local ds = rawget(_G, "deathstats")
 	local ds_data = ds and type(ds.player_camera_data) == "table" and ds.player_camera_data[name]
 	if ds_data then
 		ds_data.old_armor_groups = armor_groups
+	elseif amonoid and amonoid.monoid then
+		amonoid.monoid:add_change(player, armor_change, "x_player_armor:armor")
 	else
+		local existing_groups = player:get_armor_groups()
+		if armor_groups.fall_damage_add_percent == nil and existing_groups and existing_groups.fall_damage_add_percent ~= nil then
+			armor_groups.fall_damage_add_percent = existing_groups.fall_damage_add_percent
+		end
+		if existing_groups and existing_groups.immortal and existing_groups.immortal ~= 0 and armor_groups.immortal == nil then
+			armor_groups.immortal = existing_groups.immortal
+		end
 		player:set_armor_groups(armor_groups)
 	end
 

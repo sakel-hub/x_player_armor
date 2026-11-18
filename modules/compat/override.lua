@@ -184,8 +184,15 @@ function override.takeover_legacy_armor()
 		return
 	end
 
-	-- Ingest already-registered armor items from legacy armor.registered_armors
+	-- Ingest already-registered armor items and custom groups from legacy armor
 	local old_armor = override.captured_legacy_armor
+	if old_armor and type(old_armor.registered_groups) == "table" then
+		for grp, base in pairs(old_armor.registered_groups) do
+			if x_player_armor.registered_groups[grp] == nil and type(base) == "number" then
+				x_player_armor.register_armor_group(grp, base)
+			end
+		end
+	end
 	if old_armor and type(old_armor.registered_armors) == "table" then
 		for item_name, def in pairs(old_armor.registered_armors) do
 			local clean_name = item_name:gsub("^:", "")
@@ -223,23 +230,23 @@ function override.takeover_legacy_armor()
 		end
 	end
 
-	-- Transfer any non-internal callbacks registered on legacy armor
+	-- Transfer any non-internal callbacks registered on legacy armor without duplicating across passes
 	if old_armor and type(old_armor.registered_callbacks) == "table" then
 		for event, fns in pairs(old_armor.registered_callbacks) do
-			if type(fns) == "table" then
+			local target = x_player_armor.callbacks[event]
+			if target and type(fns) == "table" then
 				for i = 1, #fns do
 					local fn = fns[i]
-					if not override.is_legacy_callback(fn) then
-						if event == "on_equip" then
-							x_player_armor.register_on_equip(fn)
-						elseif event == "on_unequip" then
-							x_player_armor.register_on_unequip(fn)
-						elseif event == "on_damage" then
-							x_player_armor.register_on_damage(fn)
-						elseif event == "on_destroy" then
-							x_player_armor.register_on_destroy(fn)
-						elseif event == "on_update" then
-							x_player_armor.register_on_update(fn)
+					if type(fn) == "function" and not override.is_legacy_callback(fn) then
+						local already_registered = false
+						for k = 1, #target do
+							if target[k] == fn then
+								already_registered = true
+								break
+							end
+						end
+						if not already_registered then
+							table.insert(target, fn)
 						end
 					end
 				end

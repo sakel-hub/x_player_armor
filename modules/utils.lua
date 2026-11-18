@@ -373,11 +373,10 @@ function utils.format_armor_tooltip_from_def(name, def)
 	end
 
 	local lvl = 0
-	if element then
-		lvl = groups["armor_" .. element] or 0
-	end
-	if lvl == 0 and def.armor_groups and def.armor_groups.fleshy then
+	if def.armor_groups and type(def.armor_groups.fleshy) == "number" then
 		lvl = def.armor_groups.fleshy
+	elseif element then
+		lvl = groups["armor_" .. element] or 0
 	end
 
 	local uses = groups.armor_uses or def.armor_uses or 200

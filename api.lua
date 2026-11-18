@@ -34,7 +34,7 @@ local default_hud = {
 }
 
 local api = {
-	version = "2.0.0",
+	version = "2.0.6",
 	def = {},
 	vfx = {},
 	skins = {},
@@ -525,12 +525,12 @@ function api.register_armor(name, def)
 
 	-- Resolve defense level rating
 	local level = def.level
+	if not level and def.armor_groups and type(def.armor_groups.fleshy) == "number" then
+		level = def.armor_groups.fleshy
+	end
 	if not level and element then
 		local grp_name = element_groups[element]
 		level = grp_name and (def.groups[grp_name] or def[grp_name])
-	end
-	if not level and def.armor_groups and def.armor_groups.fleshy then
-		level = def.armor_groups.fleshy
 	end
 	level = level or 1
 	def.level = level
@@ -744,34 +744,54 @@ function api.register_armor(name, def)
 	end
 end
 
----Returns a map of armor elements currently worn by the player.
----@nodiscard
----@param player ObjectRef Target player
----@return table<string, boolean> worn_elements Map of worn element names to true (e.g. {head = true, torso = true})
-function api.get_worn_elements(player)
+---Scans a player's equipped armor inventory and maps worn element keys to booleans or item names.
+---@param player ObjectRef
+---@param as_boolean boolean
+---@return table<string, any>
+local function collect_worn_elements(player, as_boolean)
 	local name, inv = api.get_valid_player(player)
 	if not name or not inv then return {} end
-	local worn = {}
+	local result = {}
 	local list = inv:get_list("armor")
-	if not list then return worn end
+	if not list then return result end
 	local elements = api.get_elements()
 	for i = 1, #list do
 		local stack = list[i]
 		if stack and not stack:is_empty() then
+			local def = stack:get_definition()
+			local groups = def and def.groups
 			local iname = stack:get_name()
-			for _, el in ipairs(elements) do
-				if core.get_item_group(iname, "armor_" .. el) > 0
-						or (el == "shield" and core.get_item_group(iname, "shield") > 0) then
-					worn[el] = true
+			for e = 1, #elements do
+				local el = elements[e]
+				if (groups and (groups["armor_" .. el] or 0) > 0)
+					or core.get_item_group(iname, "armor_" .. el) > 0
+					or (el == "shield" and ((groups and (groups.shield or 0) > 0) or core.get_item_group(iname, "shield") > 0)) then
+					if not result[el] then
+						result[el] = as_boolean and true or iname
+					end
 					break
 				end
 			end
 		end
 	end
-	return worn
+	return result
 end
 
-api.get_weared_armor_elements = api.get_worn_elements
+---Returns a map of armor elements currently worn by the player.
+---@nodiscard
+---@param player ObjectRef Target player
+---@return table<string, boolean> worn_elements Map of worn element names to true (e.g. {head = true, torso = true})
+function api.get_worn_elements(player)
+	return collect_worn_elements(player, true)
+end
+
+---Returns a map of armor elements currently worn by the player to their item technical names.
+---@nodiscard
+---@param player ObjectRef Target player
+---@return table<string, string> weared_armor Map of worn element names to equipped item technical names
+function api.get_weared_armor_elements(player)
+	return collect_worn_elements(player, false)
+end
 
 ---Unequips all armor items from the player's equipped inventory.
 ---@param player ObjectRef Target player to remove all equipped armor from
@@ -790,7 +810,12 @@ end
 ---@param group string Armor group name (e.g. "fleshy")
 ---@param base number Baseline value (default: 100)
 function api.register_armor_group(group, base)
+	base = base or 100
 	api.registered_groups[group] = base
+	local amonoid = api.get_mod_api("armor_monoid")
+	if amonoid and amonoid.register_armor_group then
+		amonoid.register_armor_group(group, base)
+	end
 end
 
 ---Gets the shield attachment transform for a given model format ("glb" or "b3d").

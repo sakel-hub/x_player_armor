@@ -2042,13 +2042,21 @@ test("Legacy 3d_armor Global Shim & Dual Syntax Parity", function()
 	local helmet_stack = ItemStack("3d_armor:helmet_steel")
 	local ret1 = armor.equip(player, helmet_stack)
 	assert(ret1 ~= nil, "armor.equip via dot syntax must succeed")
-	assert(armor.get_weared_armor_elements(player).head == true, "Head element must be marked as worn")
+	local worn_head = armor.get_weared_armor_elements(player).head
+	assert(worn_head == "x_player_armor:helmet_steel" or worn_head == "3d_armor:helmet_steel",
+		"Head element must map to steel helmet item name, got: " .. tostring(worn_head))
+	assert(x_player_armor.get_worn_elements(player).head == true,
+		"x_player_armor.get_worn_elements must mark head element as true")
 
 	-- 2. Equip via armor:equip (colon syntax)
 	local chest_stack = ItemStack("3d_armor:chestplate_steel")
 	local ret2 = armor:equip(player, chest_stack)
 	assert(ret2 ~= nil, "armor:equip via colon syntax must succeed")
-	assert(armor:get_weared_armor_elements(player).torso == true, "Torso element must be marked as worn via colon call")
+	local worn_torso = armor:get_weared_armor_elements(player).torso
+	assert(worn_torso == "x_player_armor:chestplate_steel" or worn_torso == "3d_armor:chestplate_steel",
+		"Torso element must map to steel chestplate item name via colon call, got: " .. tostring(worn_torso))
+	assert(x_player_armor.get_worn_elements(player).torso == true,
+		"x_player_armor.get_worn_elements must mark torso element as true")
 
 	-- 3. Check serialize_inventory_list
 	local _, inv = x_player_armor.get_valid_player(player)
@@ -6520,6 +6528,178 @@ test("character_anim compatibility and B3D wiggler bypass", function()
 	_G.character_anim = nil
 	core.get_modpath = old_get_modpath
 	os.remove(dummy_b3d)
+end)
+
+test("Cloudcraft & armor_monoid Compatibility (Issue #4)", function()
+	local saved_legacy_detected = x_player_armor.override.legacy_detected
+	local saved_captured_legacy = x_player_armor.override.captured_legacy_armor
+	local saved_fall_group = x_player_armor.registered_groups.fall_damage_add_percent
+	local saved_arcane_group = x_player_armor.registered_groups.arcane
+	local saved_armor_monoid = rawget(_G, "armor_monoid")
+	local saved_on_equip_count = #x_player_armor.callbacks.on_equip
+
+	-- Register cloudcraft-style on_equip callback calling item_name:find("^cloudcraft:")
+	local awards_unlocked = {}
+	local function cloud_on_equip(cb_player, _index, _item)
+		local equipment = armor:get_weared_armor_elements(cb_player) or {}
+		local elements = {}
+		for element, item_name in pairs(equipment) do
+			if item_name:find("^cloudcraft:") then
+				elements[element] = true
+			end
+		end
+		if elements.head and elements.torso and elements.legs and elements.feet then
+			awards_unlocked[cb_player:get_player_name()] = "cloudcraft:weightless"
+		end
+	end
+
+	-- Simulate legacy 3d_armor + cloudcraft registering fall_damage_add_percent and on_equip before takeover
+	local mock_legacy_armor = {
+		version = "0.4.13",
+		_is_x_player_armor = nil,
+		registered_groups = {
+			fleshy = 100,
+			fall_damage_add_percent = 100,
+		},
+		registered_armors = {},
+		registered_callbacks = {
+			on_equip = { cloud_on_equip },
+		},
+	}
+	rawset(_G, "armor", mock_legacy_armor)
+	x_player_armor.override.takeover_legacy_armor()
+	-- Run a second takeover pass (simulating core.register_on_mods_loaded) and verify callback deduplication
+	x_player_armor.override.takeover_legacy_armor()
+	dofile(core.get_modpath("x_player_armor") .. "/modules/compat/armor.lua")
+
+	assert(#x_player_armor.callbacks.on_equip == saved_on_equip_count + 1,
+		"Repeated takeover passes must not duplicate migrated callbacks")
+	assert(x_player_armor.registered_groups.fall_damage_add_percent == 100,
+		"Legacy registered_groups must be migrated during takeover")
+
+	-- Register cloudcraft-style cloud armor pieces
+	local cloud_pieces = {
+		{name = "cloudcraft:cloud_helmet", element = "armor_head", fleshy = 2},
+		{name = "cloudcraft:cloud_chestplate", element = "armor_torso", fleshy = 4},
+		{name = "cloudcraft:cloud_leggings", element = "armor_legs", fleshy = 3},
+		{name = "cloudcraft:cloud_boots", element = "armor_feet", fleshy = 1},
+	}
+	for i = 1, #cloud_pieces do
+		local piece = cloud_pieces[i]
+		armor:register_armor(piece.name, {
+			description = piece.name,
+			groups = {
+				[piece.element] = 1,
+				armor_use = 10000,
+				physics_gravity = -0.125,
+				physics_jump = 0.05,
+			},
+			armor_groups = {
+				fleshy = piece.fleshy,
+				fall_damage_add_percent = 25,
+			},
+			damage_groups = {},
+		})
+	end
+
+	assert(x_player_armor.registered_armors["cloudcraft:cloud_chestplate"].level == 4,
+		"register_armor must prefer armor_groups.fleshy over armor_<element> slot marker")
+
+	local player = create_mock_player("cloud_tester")
+	x_player_armor.inventory.init_player_inventory(player)
+	local _, inv = x_player_armor.get_valid_player(player)
+
+	-- Standalone check: unequipped player must have 0 fall_damage_add_percent (not +100)
+	x_player_armor.set_player_armor(player)
+	assert(player:get_armor_groups().fall_damage_add_percent == 0,
+		"Unequipped player fall_damage_add_percent must be 0, got: " .. tostring(player:get_armor_groups().fall_damage_add_percent))
+
+	-- Trigger detached_inventory on_put with a standard helmet: must not crash on boolean indexing
+	local steel_helmet = ItemStack("x_player_armor:helmet_steel")
+	inv:set_stack("armor", 1, steel_helmet)
+	inv.callbacks.on_put(inv, "armor", 1, steel_helmet, player)
+	assert(awards_unlocked["cloud_tester"] == nil, "Non-cloudcraft helmet must not unlock weightless award")
+	armor:remove_all(player)
+
+	-- Equip full cloud armor set via detached inventory on_put and verify fall immunity, defense, and award
+	for slot_idx = 1, #cloud_pieces do
+		local stack = ItemStack(cloud_pieces[slot_idx].name)
+		inv:set_stack("armor", slot_idx, stack)
+		inv.callbacks.on_put(inv, "armor", slot_idx, stack, player)
+	end
+	assert(awards_unlocked["cloud_tester"] == "cloudcraft:weightless",
+		"Equipping full cloud armor set must unlock weightless award")
+	assert(player:get_armor_groups().fall_damage_add_percent == -100,
+		"Full cloud armor set must yield fall_damage_add_percent == -100, got: " .. tostring(player:get_armor_groups().fall_damage_add_percent))
+	assert(player:get_armor_groups().fleshy == 90,
+		"Full cloud armor set must yield fleshy == 90, got: " .. tostring(player:get_armor_groups().fleshy))
+	assert(x_player_armor.get_player_def(player).level == 10,
+		"Full cloud armor set must yield player_def.level == 10, got: " .. tostring(x_player_armor.get_player_def(player).level))
+	assert(x_player_armor.get_player_def(player).groups.fall_damage_add_percent == 100,
+		"Full cloud armor set must record player_def.groups.fall_damage_add_percent == 100")
+
+	-- Verify primary slot priority over auxiliary slot 6 in get_weared_armor_elements
+	inv:set_stack("armor", 6, ItemStack("x_player_armor:helmet_steel"))
+	assert(armor:get_weared_armor_elements(player).head == "cloudcraft:cloud_helmet",
+		"Primary head slot must take priority over auxiliary slot 6")
+	inv:set_stack("armor", 6, ItemStack(""))
+
+	-- Verify armor_monoid integration, auto-sync, and forwarding via armor:register_armor_group
+	local registered_monoid_groups = {fleshy = 100}
+	local last_monoid_change = nil
+	local last_monoid_id = nil
+	rawset(_G, "armor_monoid", {
+		registered_groups = registered_monoid_groups,
+		register_armor_group = function(grp, base)
+			registered_monoid_groups[grp] = base
+		end,
+		monoid = {
+			add_change = function(_self, _p, change, id)
+				last_monoid_change = change
+				last_monoid_id = id
+			end,
+		},
+	})
+
+	armor:register_armor_group("fall_damage_add_percent", 100)
+	assert(registered_monoid_groups.fall_damage_add_percent == 100,
+		"armor:register_armor_group must forward custom groups to armor_monoid")
+
+	x_player_armor.registered_groups.arcane = 100
+	x_player_armor.set_player_armor(player)
+	assert(registered_monoid_groups.arcane == 100,
+		"effects.update_player_armor must auto-sync unregistered groups to armor_monoid")
+	assert(last_monoid_id == "x_player_armor:armor",
+		"effects.update_player_armor must use armor_monoid change ID 'x_player_armor:armor'")
+	assert(last_monoid_change and last_monoid_change.fleshy == 0.9,
+		"Full cloud armor set must pass fleshy = 0.9 multiplier to armor_monoid")
+	assert(last_monoid_change and last_monoid_change.fall_damage_add_percent == 0,
+		"Full cloud armor set must pass fall_damage_add_percent = 0 multiplier to armor_monoid")
+
+	armor:remove_all(player)
+	assert(last_monoid_change and last_monoid_change.fall_damage_add_percent == 1,
+		"Unequipped player must pass fall_damage_add_percent = 1 multiplier to armor_monoid")
+	assert(x_player_armor.get_player_def(player).groups.fall_damage_add_percent == 0,
+		"remove_all must clear stale custom group values from player_def.groups")
+	local saved_meta_inv = core.deserialize(player:get_meta():get_string("x_player_armor_inventory"))
+	assert(type(saved_meta_inv) == "table" and saved_meta_inv[1] == "",
+		"armor:remove_all must persist cleared inventory metadata")
+
+	-- Cleanup
+	rawset(_G, "armor_monoid", saved_armor_monoid)
+	while #x_player_armor.callbacks.on_equip > saved_on_equip_count do
+		table.remove(x_player_armor.callbacks.on_equip)
+	end
+	for i = 1, #cloud_pieces do
+		local pname = cloud_pieces[i].name
+		core.registered_tools[pname] = nil
+		core.registered_items[pname] = nil
+		x_player_armor.registered_armors[pname] = nil
+	end
+	x_player_armor.registered_groups.fall_damage_add_percent = saved_fall_group
+	x_player_armor.registered_groups.arcane = saved_arcane_group
+	x_player_armor.override.legacy_detected = saved_legacy_detected
+	x_player_armor.override.captured_legacy_armor = saved_captured_legacy
 end)
 
 print(string.format("\n=========================================="))
